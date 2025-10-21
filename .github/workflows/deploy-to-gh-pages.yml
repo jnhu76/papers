@@ -1,0 +1,59 @@
+name: Deploy to GH-Pages
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+    
+    - name: Create deployment directory
+      run: |
+        mkdir -p deploy
+        
+    - name: Copy necessary files
+      run: |
+        # 复制根目录的HTML文件
+        cp index.html deploy/ 2>/dev/null || true
+        
+        # 复制papers.json
+        cp papers.json deploy/ 2>/dev/null || true
+        
+        # 复制整个papers目录（只包含HTML和必要的静态资源）
+        if [ -d "papers" ]; then
+          mkdir -p deploy/papers
+          # 使用find命令复制papers目录下的所有HTML文件和必要的子目录结构
+          find papers -type f \( -name "*.html" -o -name "*.css" -o -name "*.js" -o -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" \) \
+            -exec cp --parents {} deploy/ \;
+        fi
+        
+        # 创建CNAME文件（如果有自定义域名）
+        if [ -f "CNAME" ]; then
+          cp CNAME deploy/
+        fi
+        
+        echo "Files to be deployed:"
+        find deploy -type f | sort
+    
+    - name: Deploy to gh-pages branch
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./deploy
+        force_orphan: true  # 保持gh-pages分支的清洁
+        keep_files: false   # 不保留之前的文件
