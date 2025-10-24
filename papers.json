@@ -1,0 +1,123 @@
+[
+  {
+    "id": "9b5f5c6c8c2f",
+    "title": "Scalable Address Spaces using Concurrent Interval Skiplist",
+    "authors": [
+      "Kim, Tae Woo",
+      "Kwon, Youngjin",
+      "Kang, Jeehoon"
+    ],
+    "year": 2025,
+    "conference": "ACM SIGOPS 31st Symposium on Operating Systems Principles (SOSP '25)",
+    "category": "操作系统",
+    "keywords": [
+      "操作系统",
+      "地址空间",
+      "可扩展性",
+      "并发数据结构",
+      "内存管理",
+      "并行操作",
+      "区间跳表"
+    ],
+    "abstract": "A kernel's address space design can significantly bottleneck multi-threaded applications, as address space operations such as mmap() and mumap() are serialized by coarse-grained locks like Linux's mmap_lock. Such locks have long been known as one of the most intractable contention points in memory management. While prior works have attempted to address this issue, they either fail to sufficiently parallelize operations or are impractical for real-world kernels. We present the first scalable and practical address space design that parallelizes critical operations. We identify key scalability bottlenecks—many of which extend beyond address spaces—and address them with targeted solutions. At its core is the concurrent interval skiplist, a new data structure that integrates mapping and locking for parallel interval operations. We implement our design on Linux 6.8 and evaluate it on a dual-socket 48-core machine. Our results show a significant throughput improvement of 13.1× for an mmap() microbenchmark, 4.49× for LevelDB, 3.19× for the Apache web server, 1.47× for Metis MapReduce, and 1.27× for Psearchy text indexing.",
+    "htmlFile": "papers/2025/9b5f5c6c8c2f/index.html"
+  },
+  {
+    "id": "b4a1c8b4a1c8",
+    "title": "How to Copy Memory? Coordinated Asynchronous Copy as a First-Class OS Service",
+    "authors": [
+      "Jingkai He",
+      "Yunpeng Dong",
+      "Dong Du",
+      "Mo Zou",
+      "Zhitai Yu",
+      "Yuxin Ren",
+      "Ning Jia",
+      "Yubin Xia",
+      "Haibo Chen"
+    ],
+    "year": 2025,
+    "conference": "ACM SIGOPS 31st Symposium on Operating Systems Principles (SOSP '25)",
+    "category": "操作系统",
+    "keywords": [
+      "内存复制",
+      "异步复制",
+      "操作系统服务",
+      "操作系统",
+      "内存管理",
+      "性能优化",
+      "硬件加速"
+    ],
+    "abstract": "In modern systems, memory copy remains a critical performance bottleneck across various scenarios, playing a pervasive role in system-wide execution such as syscalls, IPC, and user-mode applications. Numerous efforts have aimed at optimizing copy performance, including zero-copy with page remapping and hardware-accelerated copy. However, they typically target specific use cases, such as Linux zero-copy send() for messages of ≥10KB. This paper argues for copy as a first-class OS service, offering three key benefits: (1) with the asynchronous copy abstraction provided by the service, applications can overlap their execution with copy; (2) the service can effectively utilize hardware capabilities to enhance copy performance; (3) the service's global view of copies further enables holistic optimization. To this end, we introduce Copier, a new OS service of coordinated asynchronous copy, to serve both user-mode applications and OS services. We build Copier-Linux to demonstrate Copier's ability to improve performance for diverse use cases, including Redis, Protobuf, network stack, proxy, etc. Evaluations show that Copier achieves up to a 1.8× speedup for real-world applications like Redis and a 1.6× improvement over zIO, the state-of-the-art in optimizing copy efficiency. To further facilitate adoption, we develop a toolchain to ease the use of Copier. We also integrate Copier into a commercial smartphone OS (HarmonyOS 5.0), achieving promising results.",
+    "htmlFile": "papers/2025/b4a1c8b4a1c8/index.html"
+  },
+  {
+    "id": "d6d3c8e8f2d2",
+    "title": "Mantle: Efficient Hierarchical Metadata Management for Cloud Object Storage Services",
+    "authors": [
+      "Li, Jiahao",
+      "Cao, Biao",
+      "Jian, Jielong",
+      "Li, Cheng",
+      "Han, Sen",
+      "Wang, Yiduo",
+      "Wu, Yufei",
+      "Chen, Kang",
+      "Yin, Zhihui",
+      "Chen, Qiushi",
+      "Xiong, Jiwei",
+      "Zhao, Jie",
+      "Liu, Fengyuan",
+      "Xing, Yan",
+      "Duan, Liguo",
+      "Yu, Miao",
+      "Zheng, Ran",
+      "Wu, Feng",
+      "Meng, Xianjun"
+    ],
+    "year": 2025,
+    "conference": "ACM SIGOPS 31st Symposium on Operating Systems Principles (SOSP '25)",
+    "category": "分布式系统",
+    "keywords": [
+      "元数据管理",
+      "云对象存储",
+      "层次结构",
+      "路径解析",
+      "目录更新",
+      "可扩展性",
+      "性能优化"
+    ],
+    "abstract": "Cloud Object Storage Services (COSSs) are the primary storage backend in the cloud, supporting large-scale analytics and ML workloads that frequently access deep object paths and update metadata concurrently. However, current COSS architectures incur costly multi-round lookups and high directory contention, delaying job execution. Prior optimizations, largely designed for distributed file systems (with least adoption in clouds), do not apply due to COSS-specific constraints like stateless proxies and limited APIs. Mantle is a new COSS metadata service for modern cloud workloads. It adopts a two-layer architecture: a scalable, sharded database (TafDB) shared across namespaces and a per-namespace, single-server IndexMode consolidating lightweight directory metadata. With a fine-grained division of metadata and responsibility, Mantle supports up to 10 billion objects or directories in a single namespace and achieves 1.8 million lookups per second through scalable execution of single-RPC lookups on IndexMode. It also delivers up to 58K directory updates per second under high contention by integrating out-of-place delta updates in TafDB and offloading loop detection for cross-directory renames to IndexMode, both effectively eliminating coordination bottlenecks. Compared to the metadata services of Teetonic, InfiniFS and LocoFS, Mantle reduces metadata latency by 6.6-99.1% and improves throughput by 0.07-115.00%. With data access enabled, it shortens job completion times by 63.3-93.3% for interactive Spark analytics and 38.5-47.7% for AI-driven audio preprocessing tasks. Mantle has been deployed on Baidu Object Storage (BOS) for over 2 years, a service offered by Baidu Canghai Storage.",
+    "htmlFile": "papers/2025/d6d3c8e8f2d2/index.html"
+  },
+  {
+    "id": "d9c4a2e3b5f1",
+    "title": "Moirai: Optimizing Placement of Data and Compute in Hybrid Clouds",
+    "authors": [
+      "Qiu, Ziyue",
+      "Park, Hojin",
+      "Zhao, Jing",
+      "Wang, Yukai",
+      "Balyan, Arnav",
+      "Singh, Gurmeet",
+      "Zhang, Yangjun",
+      "Song, Suqiang (Jack)",
+      "Ganger, Gregory R.",
+      "Amvrosiadis, George"
+    ],
+    "year": 2025,
+    "conference": "ACM SIGOPS 31st Symposium on Operating Systems Principles (SOSP '25)",
+    "category": "分布式系统与云计算",
+    "keywords": [
+      "混合云",
+      "成本优化",
+      "数据布局",
+      "作业调度",
+      "网络开销",
+      "数据复制",
+      "作业路由"
+    ],
+    "abstract": "The deployment of large-scale data analytics between on-premise and cloud sites, i.e., hybrid clouds, requires careful partitioning of both data and computation to avoid massive networking costs. We present Moirai, a cost-optimization framework that analyzes job accesses and data dependencies and optimizes the placement of both in hybrid clouds. Moirai informs the job scheduler of data location and access predictions, so it can determine where jobs should be executed to minimize data transfer costs. Our optimizer achieves scalability and cost efficiency by exploiting recurring jobs to identify data dependencies and job access characteristics and reduces the search space by excluding data not accessed recently. We validate Moirai using 4-month traces that span 66.7M queries accessing 13.3EB from Presto and Spark clusters deployed at Uber, a multi-national transportation company leveraging large-scale data analytics for its operations. Moirai reduces hybrid cloud deployment costs by over 97% relative to the state-of-the-art partitioning approach from Alibaba and other public approaches. The savings come from 95–99.5% reduction in cloud egress, up to 99% reduction in replication, and 89–98% reduction in on-premises network infrastructure requirements. We also describe concrete steps being taken towards deploying Moirai in production.",
+    "htmlFile": "papers/2025/d9c4a2e3b5f1/index.html"
+  }
+]
