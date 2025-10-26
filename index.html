@@ -475,32 +475,52 @@
         // 工具函数 - 检测最新的 papers 文件
         async function findLatestPapersFile() {
             try {
-                // 首先尝试获取版本信息文件
-                const versionResponse = await fetch('./papers_version.json');
-                if (versionResponse.ok) {
-                    const versionInfo = await versionResponse.json();
+                // 尝试获取最新的 papers_*.json 文件
+                const response = await fetch('./');
+                if (!response.ok) return null;
+                
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = Array.from(doc.querySelectorAll('a[href$=".json"]'));
+                
+                // 过滤出 papers_*.json 文件
+                const paperFiles = links
+                    .map(link => link.href)
+                    .filter(href => href.includes('papers_'))
+                    .map(href => {
+                        const filename = href.split('/').pop();
+                        const timestamp = filename.replace('papers_', '').replace('.json', '');
+                        return {
+                            url: href,
+                            timestamp: parseInt(timestamp),
+                            filename: filename
+                        };
+                    })
+                    .filter(file => !isNaN(file.timestamp))
+                    .sort((a, b) => b.timestamp - a.timestamp); // 按时间戳降序排列
+                
+                if (paperFiles.length > 0) {
                     return {
-                        url: versionInfo.file,
-                        timestamp: versionInfo.timestamp
+                        url: paperFiles[0].filename,
+                        timestamp: paperFiles[0].timestamp
                     };
                 }
             } catch (error) {
-                console.log('版本信息文件不存在，尝试自动检测...');
+                console.log('自动检测文件失败:', error);
             }
 
-            // 如果没有版本信息文件，尝试自动检测
+            // 如果没有找到带时间戳的文件，尝试加载默认的 papers.json
             try {
-                // 这里可以添加其他检测逻辑，比如扫描目录
-                // 目前我们假设最新的文件就是 papers.json
                 const response = await fetch('./papers.json');
                 if (response.ok) {
                     return {
                         url: './papers.json',
-                        timestamp: Date.now() // 使用当前时间作为时间戳
+                        timestamp: Date.now()
                     };
                 }
             } catch (error) {
-                console.warn('自动检测文件失败:', error);
+                console.warn('加载默认文件失败:', error);
             }
 
             return null;
