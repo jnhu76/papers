@@ -92,6 +92,47 @@
             background: rgba(59, 130, 246, 0.9);
             color: white;
         }
+
+        .virtual-scroll-container {
+            overflow-y: auto;
+            max-height: 70vh;
+            position: relative;
+        }
+
+        .virtual-scroll-content {
+            position: relative;
+        }
+
+        .virtual-item {
+            position: absolute;
+            width: 100%;
+            transition: top 0.2s ease;
+        }
+
+        .update-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
         
         /* 移动端优化 */
         @media (max-width: 768px) {
@@ -123,6 +164,10 @@
                 flex-wrap: wrap;
                 gap: 0.5rem;
             }
+
+            .virtual-scroll-container {
+                max-height: 60vh;
+            }
         }
     </style>
 </head>
@@ -144,27 +189,12 @@
                     </div>
                 </div>
                 
-                <!-- <div class="nav-container flex space-x-1">
-                    <button class="nav-item active px-4 py-2 rounded-lg text-sm font-medium" data-filter="all">
-                        全部论文
-                    </button>
-                    <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-filter="recent">
-                        最新发布
-                    </button>
-                    <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-filter="人工智能">
-                        人工智能
-                    </button>
-                    <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-filter="自然语言处理">
-                        NLP
-                    </button>
-                    <button class="nav-item px-4 py-2 rounded-lg text-sm font-medium" data-filter="计算机视觉">
-                        CV
-                    </button>
-                </div> -->
-                
                 <div class="hidden md:flex items-center text-sm bg-white/80 px-3 py-1 rounded-full mt-4 md:mt-0">
                     <i class="fas fa-file-alt text-blue-500 mr-2"></i>
                     共 <span id="paperCount">0</span> 篇论文
+                    <span id="cacheStatus" class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full hidden">
+                        <i class="fas fa-database mr-1"></i>已缓存
+                    </span>
                 </div>
             </div>
         </div>
@@ -189,26 +219,16 @@
                     >
                     <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
-                
-                <!-- <div class="flex flex-wrap gap-2 mt-4 justify-center">
-                    <span class="text-xs text-gray-500">热门搜索：</span>
-                    <button class="keyword-tag px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs hover:bg-blue-200 transition-colors" data-keyword="机器学习">
-                        机器学习
-                    </button>
-                    <button class="keyword-tag px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs hover:bg-purple-200 transition-colors" data-keyword="深度学习">
-                        深度学习
-                    </button>
-                    <button class="keyword-tag px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs hover:bg-pink-200 transition-colors" data-keyword="神经网络">
-                        神经网络
-                    </button>
-                </div> -->
             </div>
         </div>
 
         <!-- 论文列表 -->
         <div id="loading" class="glass-card p-12 text-center">
-            <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
-            <p class="text-gray-600">正在加载论文数据...</p>
+            <div class="flex flex-col items-center">
+                <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600 mb-2">正在加载论文数据...</p>
+                <p id="loadingStatus" class="text-sm text-gray-500">初始化数据库</p>
+            </div>
         </div>
         
         <div id="noResults" class="glass-card p-12 text-center hidden">
@@ -226,6 +246,9 @@
             <div class="flex justify-between items-center mb-6">
                 <div class="text-sm text-gray-600">
                     显示 <span id="currentRange">0-0</span> 条，共 <span id="totalPapers">0</span> 篇论文
+                    <span id="dataSource" class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                        本地缓存
+                    </span>
                 </div>
                 <div class="flex items-center space-x-2 text-sm text-gray-600">
                     <span>排序：</span>
@@ -238,9 +261,11 @@
                 </div>
             </div>
             
-            <!-- 论文列表 -->
-            <div id="papersList" class="space-y-4 mb-8">
-                <!-- 论文项将通过JavaScript动态生成 -->
+            <!-- 虚拟滚动容器 -->
+            <div id="papersList" class="virtual-scroll-container mb-8">
+                <div class="virtual-scroll-content">
+                    <!-- 论文项将通过虚拟滚动动态生成 -->
+                </div>
             </div>
             
             <!-- 分页控件 -->
@@ -271,86 +296,218 @@
     </button>
 
     <script>
+        // 全局变量
         let allPapers = [];
         let filteredPapers = [];
         let currentPage = 1;
         const papersPerPage = 10;
         let currentSort = 'year-desc';
+        let virtualScroll = null;
+        let paperDatabase = null;
+        let autoUpdater = null;
 
-        // 加载论文数据
-        async function loadPapers() {
-            try {
-                const response = await fetch('./papers.json');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                allPapers = await response.json();
-                
-                // 修复论文链接路径
-                allPapers = allPapers.map(paper => {
-                    // 确保htmlFile路径正确
-                    if (paper.htmlFile && !paper.htmlFile.startsWith('http')) {
-                        // 如果路径已经是相对路径，保持原样
-                        if (paper.htmlFile.startsWith('./') || paper.htmlFile.startsWith('../') || paper.htmlFile.startsWith('/')) {
-                            return paper;
+        // IndexedDB 数据库类
+        class PaperDatabase {
+            constructor() {
+                this.dbName = 'AcademicPapersDB';
+                this.version = 3; // 版本号，数据更新时递增
+                this.currentDataHash = '';
+            }
+            
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+                    
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        
+                        // 创建论文存储
+                        if (!db.objectStoreNames.contains('papers')) {
+                            const store = db.createObjectStore('papers', { keyPath: 'id' });
+                            store.createIndex('title', 'title', { multiEntry: false });
+                            store.createIndex('authors', 'authors', { multiEntry: true });
+                            store.createIndex('year', 'year', { multiEntry: false });
+                            store.createIndex('category', 'category', { multiEntry: false });
+                            store.createIndex('conference', 'conference', { multiEntry: false });
                         }
-                        // 否则添加相对路径
-                        paper.htmlFile = './' + paper.htmlFile;
-                    }
-                    return paper;
+                        
+                        // 创建元数据存储
+                        if (!db.objectStoreNames.contains('metadata')) {
+                            const metadataStore = db.createObjectStore('metadata', { keyPath: 'key' });
+                        }
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve(this.db);
+                    };
+                    
+                    request.onerror = (event) => reject(event.target.error);
                 });
+            }
+
+            // 计算数据哈希
+            async calculateDataHash(papers) {
+                const dataStr = JSON.stringify(papers);
+                const encoder = new TextEncoder();
+                const data = encoder.encode(dataStr);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            // 获取元数据
+            async getMetadata(key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['metadata'], 'readonly');
+                    const store = transaction.objectStore('metadata');
+                    const request = store.get(key);
+                    
+                    request.onsuccess = () => resolve(request.result ? request.result.value : null);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            // 设置元数据
+            async setMetadata(key, value) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['metadata'], 'readwrite');
+                    const store = transaction.objectStore('metadata');
+                    const request = store.put({ key, value });
+                    
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            // 检查是否需要更新
+            async needsUpdate(papers) {
+                const newHash = await this.calculateDataHash(papers);
+                const oldHash = await this.getMetadata('dataHash');
+                return newHash !== oldHash;
+            }
+
+            // 获取所有论文
+            async getAllPapers() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['papers'], 'readonly');
+                    const store = transaction.objectStore('papers');
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            // 批量存储论文
+            async storePapers(papers) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['papers', 'metadata'], 'readwrite');
+                    const paperStore = transaction.objectStore('papers');
+                    const metadataStore = transaction.objectStore('metadata');
+                    
+                    // 清空现有数据
+                    const clearRequest = paperStore.clear();
+                    
+                    clearRequest.onsuccess = () => {
+                        // 添加新数据
+                        papers.forEach(paper => {
+                            paperStore.add(paper);
+                        });
+                        
+                        // 更新元数据
+                        this.calculateDataHash(papers).then(hash => {
+                            metadataStore.put({ key: 'dataHash', value: hash });
+                            metadataStore.put({ 
+                                key: 'lastUpdated', 
+                                value: new Date().toISOString() 
+                            });
+                            metadataStore.put({ 
+                                key: 'totalCount', 
+                                value: papers.length 
+                            });
+                        });
+                        
+                        resolve();
+                    };
+                    
+                    clearRequest.onerror = () => reject(clearRequest.error);
+                });
+            }
+
+            // 获取数据库统计信息
+            async getStats() {
+                const lastUpdated = await this.getMetadata('lastUpdated');
+                const totalCount = await this.getMetadata('totalCount');
                 
-                filteredPapers = [...allPapers];
-                
-                document.getElementById('paperCount').textContent = allPapers.length;
-                document.getElementById('mobilePaperCount').textContent = allPapers.length;
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('papersContainer').classList.remove('hidden');
-                
-                applySorting();
-                renderPapers();
-                setupPagination();
-            } catch (error) {
-                console.error('加载论文数据失败:', error);
-                document.getElementById('loading').innerHTML = `
-                    <div class="text-red-600">
-                        <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
-                        <p class="font-medium">加载论文数据失败</p>
-                        <p class="text-sm mt-2">请刷新页面重试或检查网络连接</p>
-                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                            重新加载
-                        </button>
-                    </div>
-                `;
+                return {
+                    lastUpdated,
+                    totalCount: totalCount || 0,
+                    isCached: !!lastUpdated
+                };
             }
         }
 
-        // 渲染论文列表
-        function renderPapers() {
-            const container = document.getElementById('papersList');
-            const totalPapers = document.getElementById('totalPapers');
-            
-            if (filteredPapers.length === 0) {
-                document.getElementById('papersContainer').classList.add('hidden');
-                document.getElementById('noResults').classList.remove('hidden');
-                return;
+        // 虚拟滚动类
+        class VirtualScroll {
+            constructor(container, itemHeight = 160) {
+                this.container = container;
+                this.itemHeight = itemHeight;
+                this.visibleItems = new Map();
+                this.startIndex = 0;
+                this.endIndex = 0;
+                this.scrollContent = container.querySelector('.virtual-scroll-content');
+                
+                this.init();
             }
             
-            document.getElementById('noResults').classList.add('hidden');
-            document.getElementById('papersContainer').classList.remove('hidden');
+            init() {
+                this.container.addEventListener('scroll', () => this.handleScroll());
+                this.updateContainerHeight();
+            }
             
-            totalPapers.textContent = filteredPapers.length;
+            updateContainerHeight() {
+                this.scrollContent.style.height = `${filteredPapers.length * this.itemHeight}px`;
+            }
             
-            // 计算当前页的论文范围
-            const startIndex = (currentPage - 1) * papersPerPage;
-            const endIndex = Math.min(startIndex + papersPerPage, filteredPapers.length);
-            const currentPapers = filteredPapers.slice(startIndex, endIndex);
+            handleScroll() {
+                const scrollTop = this.container.scrollTop;
+                this.startIndex = Math.max(0, Math.floor(scrollTop / this.itemHeight) - 2);
+                this.endIndex = Math.min(
+                    filteredPapers.length - 1,
+                    this.startIndex + Math.ceil(this.container.clientHeight / this.itemHeight) + 4
+                );
+                
+                this.renderVisibleItems();
+            }
             
-            document.getElementById('currentRange').textContent = `${startIndex + 1}-${endIndex}`;
+            renderVisibleItems() {
+                // 移除不可见的项目
+                for (let [index, element] of this.visibleItems) {
+                    if (index < this.startIndex || index > this.endIndex) {
+                        element.remove();
+                        this.visibleItems.delete(index);
+                    }
+                }
+                
+                // 添加可见的项目
+                for (let i = this.startIndex; i <= this.endIndex; i++) {
+                    if (!this.visibleItems.has(i) && filteredPapers[i]) {
+                        const element = this.createPaperElement(filteredPapers[i], i);
+                        this.visibleItems.set(i, element);
+                        this.scrollContent.appendChild(element);
+                    }
+                }
+            }
             
-            container.innerHTML = currentPapers.map(paper => `
-                <div class="paper-item p-6">
-                    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            createPaperElement(paper, index) {
+                const element = document.createElement('div');
+                element.className = 'virtual-item paper-item p-6';
+                element.style.top = `${index * this.itemHeight}px`;
+                element.style.height = `${this.itemHeight}px`;
+                
+                element.innerHTML = `
+                    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 h-full">
                         <div class="flex-grow">
                             <div class="flex flex-wrap items-center gap-2 mb-3">
                                 <span class="text-xs font-semibold px-2 py-1 rounded-full ${getCategoryColor(paper.category)}">
@@ -392,11 +549,292 @@
                             </a>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+                
+                return element;
+            }
+            
+            updateData(papers) {
+                filteredPapers = papers;
+                this.updateContainerHeight();
+                this.visibleItems.clear();
+                this.scrollContent.innerHTML = '';
+                this.handleScroll();
+            }
+            
+            refresh() {
+                this.updateContainerHeight();
+                this.handleScroll();
+            }
         }
 
-        // 根据分类获取颜色
+        // 自动更新器
+        class AutoUpdater {
+            constructor() {
+                this.checkInterval = 5 * 60 * 1000; // 5分钟检查一次
+                this.lastCheck = 0;
+            }
+            
+            start() {
+                // 页面可见时检查更新
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && this.shouldCheck()) {
+                        this.checkForUpdates();
+                    }
+                });
+                
+                // 定期检查
+                setInterval(() => this.checkForUpdates(), this.checkInterval);
+                
+                // 初始检查
+                setTimeout(() => this.checkForUpdates(), 10000);
+            }
+            
+            async checkForUpdates() {
+                try {
+                    const networkPapers = await fetchPapersFromNetwork();
+                    if (networkPapers && await paperDatabase.needsUpdate(networkPapers)) {
+                        await paperDatabase.storePapers(networkPapers);
+                        this.lastCheck = Date.now();
+                        
+                        // 如果当前正在显示数据，更新它
+                        if (allPapers.length > 0) {
+                            allPapers = networkPapers.map(fixPaperPaths);
+                            filteredPapers = [...allPapers];
+                            
+                            if (virtualScroll) {
+                                virtualScroll.updateData(filteredPapers);
+                            }
+                            
+                            this.showUpdateNotification();
+                            updatePaperCount();
+                        }
+                    }
+                } catch (error) {
+                    console.warn('自动更新检查失败:', error);
+                }
+            }
+            
+            shouldCheck() {
+                return Date.now() - this.lastCheck > this.checkInterval;
+            }
+            
+            showUpdateNotification() {
+                const notification = document.createElement('div');
+                notification.className = 'update-notification';
+                notification.innerHTML = `
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    论文数据已自动更新
+                `;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        // 工具函数
+        async function fetchPapersFromNetwork() {
+            try {
+                const response = await fetch('./papers.json');
+                if (!response.ok) throw new Error('Network response was not ok');
+                return await response.json();
+            } catch (error) {
+                console.warn('网络请求失败:', error);
+                return null;
+            }
+        }
+
+        function fixPaperPaths(paper) {
+            if (paper.htmlFile && !paper.htmlFile.startsWith('http')) {
+                if (paper.htmlFile.startsWith('./') || paper.htmlFile.startsWith('../') || paper.htmlFile.startsWith('/')) {
+                    return paper;
+                }
+                paper.htmlFile = './' + paper.htmlFile;
+            }
+            return paper;
+        }
+
+        function updateLoadingStatus(message) {
+            const statusElement = document.getElementById('loadingStatus');
+            if (statusElement) {
+                statusElement.textContent = message;
+            }
+        }
+
+        function showCacheStatus() {
+            const cacheStatus = document.getElementById('cacheStatus');
+            const dataSource = document.getElementById('dataSource');
+            if (cacheStatus) cacheStatus.classList.remove('hidden');
+            if (dataSource) dataSource.textContent = '本地缓存';
+        }
+
+        function showNetworkStatus() {
+            const dataSource = document.getElementById('dataSource');
+            if (dataSource) {
+                dataSource.textContent = '网络数据';
+                dataSource.className = dataSource.className.replace('bg-blue-100', 'bg-green-100');
+                dataSource.className = dataSource.className.replace('text-blue-800', 'text-green-800');
+            }
+        }
+
+        // 主要功能函数
+        async function loadPapers() {
+            try {
+                updateLoadingStatus('初始化数据库...');
+                
+                // 初始化数据库
+                paperDatabase = new PaperDatabase();
+                await paperDatabase.init();
+                
+                updateLoadingStatus('检查缓存数据...');
+                
+                // 获取缓存统计
+                const stats = await paperDatabase.getStats();
+                
+                let papers = [];
+                let dataSource = 'cache';
+                
+                // 尝试从网络获取最新数据
+                updateLoadingStatus('检查网络更新...');
+                const networkPapers = await fetchPapersFromNetwork();
+                
+                if (networkPapers) {
+                    if (stats.isCached && await paperDatabase.needsUpdate(networkPapers)) {
+                        // 数据有更新，存储到IndexedDB
+                        updateLoadingStatus('更新本地缓存...');
+                        await paperDatabase.storePapers(networkPapers);
+                        papers = networkPapers;
+                        dataSource = 'network';
+                        showNetworkStatus();
+                    } else if (!stats.isCached) {
+                        // 首次加载，存储到IndexedDB
+                        updateLoadingStatus('初始化本地缓存...');
+                        await paperDatabase.storePapers(networkPapers);
+                        papers = networkPapers;
+                        dataSource = 'network';
+                        showNetworkStatus();
+                    } else {
+                        // 使用缓存数据
+                        updateLoadingStatus('加载缓存数据...');
+                        papers = await paperDatabase.getAllPapers();
+                        dataSource = 'cache';
+                        showCacheStatus();
+                    }
+                } else if (stats.isCached) {
+                    // 网络失败，使用缓存数据
+                    updateLoadingStatus('网络不可用，加载缓存数据...');
+                    papers = await paperDatabase.getAllPapers();
+                    dataSource = 'cache';
+                    showCacheStatus();
+                } else {
+                    throw new Error('无法加载论文数据：网络不可用且无缓存数据');
+                }
+                
+                // 处理数据
+                allPapers = papers.map(fixPaperPaths);
+                filteredPapers = [...allPapers];
+                
+                updateLoadingStatus('初始化界面...');
+                
+                // 初始化虚拟滚动
+                const papersListContainer = document.getElementById('papersList');
+                virtualScroll = new VirtualScroll(papersListContainer);
+                
+                // 更新UI
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('papersContainer').classList.remove('hidden');
+                
+                updatePaperCount();
+                applySorting();
+                virtualScroll.updateData(filteredPapers);
+                setupPagination();
+                
+                // 启动自动更新
+                autoUpdater = new AutoUpdater();
+                autoUpdater.start();
+                
+                console.log(`数据加载完成，来源: ${dataSource}，共 ${allPapers.length} 篇论文`);
+                
+            } catch (error) {
+                console.error('加载论文数据失败:', error);
+                showError();
+            }
+        }
+
+        function updatePaperCount() {
+            document.getElementById('paperCount').textContent = allPapers.length;
+            document.getElementById('mobilePaperCount').textContent = allPapers.length;
+            document.getElementById('totalPapers').textContent = filteredPapers.length;
+        }
+
+        function showError() {
+            document.getElementById('loading').innerHTML = `
+                <div class="text-red-600">
+                    <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
+                    <p class="font-medium">加载论文数据失败</p>
+                    <p class="text-sm mt-2">请刷新页面重试或检查网络连接</p>
+                    <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        重新加载
+                    </button>
+                </div>
+            `;
+        }
+
+        // 原有的功能函数（稍作修改）
+        function applySorting() {
+            const [field, order] = currentSort.split('-');
+            
+            filteredPapers.sort((a, b) => {
+                let aVal = a[field];
+                let bVal = b[field];
+                
+                if (field === 'year') {
+                    aVal = parseInt(aVal);
+                    bVal = parseInt(bVal);
+                } else {
+                    aVal = aVal || '';
+                    bVal = bVal || '';
+                }
+                
+                if (order === 'desc') {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                } else {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                }
+            });
+            
+            if (virtualScroll) {
+                virtualScroll.updateData(filteredPapers);
+            }
+        }
+
+        function performSearch(query) {
+            if (!query.trim()) {
+                filteredPapers = [...allPapers];
+            } else {
+                const lowerQuery = query.toLowerCase();
+                filteredPapers = allPapers.filter(paper => 
+                    paper.title.toLowerCase().includes(lowerQuery) ||
+                    paper.authors.some(author => author.toLowerCase().includes(lowerQuery)) ||
+                    paper.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery)) ||
+                    paper.conference.toLowerCase().includes(lowerQuery) ||
+                    paper.abstract.toLowerCase().includes(lowerQuery) ||
+                    paper.category.toLowerCase().includes(lowerQuery)
+                );
+            }
+            
+            currentPage = 1;
+            applySorting();
+            if (virtualScroll) {
+                virtualScroll.updateData(filteredPapers);
+            }
+            setupPagination();
+        }
+
         function getCategoryColor(category) {
             const colors = {
                 '人工智能': 'bg-blue-100 text-blue-800',
@@ -404,13 +842,13 @@
                 '深度学习': 'bg-indigo-100 text-indigo-800',
                 '自然语言处理': 'bg-green-100 text-green-800',
                 '计算机视觉': 'bg-pink-100 text-pink-800',
-                '数据挖掘': 'bg-orange-100 text-orange-800'
+                '数据挖掘': 'bg-orange-100 text-orange-800',
+                '操作系统安全': 'bg-red-100 text-red-800'
             };
             
             return colors[category] || 'bg-gray-100 text-gray-800';
         }
 
-        // 设置分页
         function setupPagination() {
             const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
             const paginationContainer = document.getElementById('paginationNumbers');
@@ -420,6 +858,11 @@
             // 更新按钮状态
             prevBtn.disabled = currentPage === 1;
             nextBtn.disabled = currentPage === totalPages;
+            
+            // 计算显示范围
+            const startIndex = (currentPage - 1) * papersPerPage;
+            const endIndex = Math.min(startIndex + papersPerPage, filteredPapers.length);
+            document.getElementById('currentRange').textContent = `${startIndex + 1}-${endIndex}`;
             
             // 生成分页数字
             let paginationHTML = '';
@@ -462,99 +905,34 @@
             paginationContainer.querySelectorAll('button[data-page]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     currentPage = parseInt(e.target.dataset.page);
-                    renderPapers();
+                    if (virtualScroll) {
+                        virtualScroll.container.scrollTop = 0;
+                    }
                     setupPagination();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             });
             
             prevBtn.onclick = () => {
                 if (currentPage > 1) {
                     currentPage--;
-                    renderPapers();
+                    if (virtualScroll) {
+                        virtualScroll.container.scrollTop = 0;
+                    }
                     setupPagination();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             };
             
             nextBtn.onclick = () => {
                 if (currentPage < totalPages) {
                     currentPage++;
-                    renderPapers();
+                    if (virtualScroll) {
+                        virtualScroll.container.scrollTop = 0;
+                    }
                     setupPagination();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             };
         }
 
-        // 应用排序
-        function applySorting() {
-            const [field, order] = currentSort.split('-');
-            
-            filteredPapers.sort((a, b) => {
-                let aVal = a[field];
-                let bVal = b[field];
-                
-                if (field === 'year') {
-                    aVal = parseInt(aVal);
-                    bVal = parseInt(bVal);
-                } else {
-                    aVal = aVal || '';
-                    bVal = bVal || '';
-                }
-                
-                if (order === 'desc') {
-                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-                } else {
-                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-                }
-            });
-        }
-
-        // 搜索功能
-        function performSearch(query) {
-            if (!query.trim()) {
-                filteredPapers = [...allPapers];
-            } else {
-                const lowerQuery = query.toLowerCase();
-                filteredPapers = allPapers.filter(paper => 
-                    paper.title.toLowerCase().includes(lowerQuery) ||
-                    paper.authors.some(author => author.toLowerCase().includes(lowerQuery)) ||
-                    paper.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery)) ||
-                    paper.conference.toLowerCase().includes(lowerQuery) ||
-                    paper.abstract.toLowerCase().includes(lowerQuery) ||
-                    paper.category.toLowerCase().includes(lowerQuery)
-                );
-            }
-            
-            currentPage = 1;
-            applySorting();
-            renderPapers();
-            setupPagination();
-        }
-
-        // 分类筛选
-        function filterByCategory(category) {
-            if (category === 'all') {
-                filteredPapers = [...allPapers];
-            } else if (category === 'recent') {
-                const currentYear = new Date().getFullYear();
-                filteredPapers = allPapers.filter(paper => paper.year >= currentYear - 1);
-            } else {
-                filteredPapers = allPapers.filter(paper => 
-                    paper.category.includes(category) || 
-                    paper.keywords.some(keyword => keyword.toLowerCase().includes(category)) ||
-                    paper.conference.toLowerCase().includes(category)
-                );
-            }
-            
-            currentPage = 1;
-            applySorting();
-            renderPapers();
-            setupPagination();
-        }
-
-        // 返回顶部功能
         function setupBackToTop() {
             const backToTopBtn = document.getElementById('backToTop');
             
@@ -581,40 +959,16 @@
             filteredPapers = [...allPapers];
             currentPage = 1;
             applySorting();
-            renderPapers();
+            if (virtualScroll) {
+                virtualScroll.updateData(filteredPapers);
+            }
             setupPagination();
         });
 
         document.getElementById('sortSelect').addEventListener('change', (e) => {
             currentSort = e.target.value;
             applySorting();
-            renderPapers();
-        });
-
-        // 导航项点击事件
-        document.querySelectorAll('.nav-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // 移除所有active类
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                
-                // 添加active类到当前项
-                e.target.classList.add('active');
-                
-                // 执行筛选
-                const filter = e.target.dataset.filter;
-                filterByCategory(filter);
-            });
-        });
-
-        // 热门关键词点击事件
-        document.querySelectorAll('.keyword-tag').forEach(tag => {
-            tag.addEventListener('click', (e) => {
-                const keyword = e.target.dataset.keyword;
-                document.getElementById('searchInput').value = keyword;
-                performSearch(keyword);
-            });
+            setupPagination();
         });
 
         // 初始化
