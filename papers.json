@@ -1,5 +1,93 @@
 [
   {
+    "id": "6a1e9f9c8c4b",
+    "title": "AEOLIA: A Fast and Secure Userspace Interrupt-Based Storage Stack",
+    "authors": [
+      "Chuandong Li",
+      "Ran Yi",
+      "Zonghao Zhang",
+      "Jing Liu",
+      "Changwoo Min",
+      "Jie Zhang",
+      "Yingwei Luo",
+      "Xiaolin Wang",
+      "Zhenlin Wang",
+      "Diyu Zhou"
+    ],
+    "year": 2025,
+    "conference": "SOSP '25",
+    "category": "操作系统与存储系统",
+    "keywords": [
+      "用户中断",
+      "用户空间文件系统",
+      "用户空间NVMe驱动",
+      "高性能存储",
+      "调度"
+    ],
+    "abstract": "Polling-based userspace storage stacks achieve great I/O performance. However, they cannot efficiently and securely share disks and CPUs among multiple tasks. In contrast, interrupt-based kernel stacks inherently suffer from subpar I/O performance but achieve advantages in resource sharing.\n\nWe present AEOLIA, a novel storage stack that achieves great I/O performance while offering efficient and secure resource sharing. AEOLIA is an interrupt-based userspace storage stack, representing a new point in the design space previously considered unfeasible. Our main observation is that, contrary to conventional wisdom, polling offers only marginal disk performance improvements over interrupts. AEOLIA exploits user interrupt, an emerging hardware feature commonly used for userspace IPIs, in a novel way to deliver storage interrupts directly to userspace, thereby achieving high I/O performance with direct access. AEOLIA leverages the hardware intra-process isolation features and sched_ext, an eBPF-based userspace scheduling framework, to efficiently and securely share CPUs and disks among multiple tasks, challenging the common belief that these are inherent disadvantages of userspace storage stacks. The above design enables AEOLIA to realize AsofS, a high-performance library file system that securely and directly accesses disks. Our evaluation shows that AEOLIA outperforms Linux by 2x and AsofS outperforms ext4 by up to 19.1x, respectively.",
+    "htmlFile": "papers/2025/6a1e9f9c8c4b/index.html"
+  },
+  {
+    "id": "9a9e5f1a8c1c",
+    "title": "cache_ext: Customizing the Page Cache with eBPF",
+    "authors": [
+      "Tal Zussman",
+      "Andrew Cheng",
+      "Ioannis Zarkadas",
+      "Jeremy Carin",
+      "Hubertus Franke",
+      "Jonas Pfefferle",
+      "Asaf Cidon"
+    ],
+    "year": 2025,
+    "conference": "SOSP '25",
+    "category": "操作系统",
+    "keywords": [
+      "操作系统",
+      "eBPF",
+      "页缓存",
+      "缓存策略",
+      "内存管理",
+      "Linux内核",
+      "驱逐算法"
+    ],
+    "abstract": "The OS page cache is central to the performance of many applications, by reducing excessive accesses to storage. However, its one-size-fits-all eviction policy performs poorly in many workloads. While the systems community has experimented with a plethora of new and adaptive eviction policies in non-OS settings (e.g., key-value stores, CDNs), it is very difficult to implement such policies in the page cache, due to the complexity of modifying kernel code. To address these shortcomings, we design a flexible eBPF-based framework for the Linux page cache, called cache_ext, that allows developers to customize the page cache without modifying the kernel. cache_ext enables applications to customize the page cache policy for their specific needs, while also ensuring that different applications' policies do not interfere with each other and preserving the page cache's ability to share memory across different processes. We demonstrate the flexibility of cache_ext's interface by using it to implement eight different policies, including sophisticated eviction algorithms. Our evaluation shows that it is indeed beneficial for applications to customize the page cache to match their workloads' unique properties, and that they can achieve up to 70% higher throughput and 58% lower tail latency.",
+    "htmlFile": "papers/2025/9a9e5f1a8c1c/index.html"
+  },
+  {
+    "id": "9b5b6d5f3a8b",
+    "title": "Unlocking the Potential of CXL for Disaggregated Memory in Cloud-Native Databases",
+    "authors": [
+      "Xinjun Yang",
+      "Gerry Fan",
+      "Yuhui Wang",
+      "Yingqiang Zhang",
+      "Hao Chen*",
+      "Bo Wang",
+      "Weupu Hu",
+      "Feifei Li",
+      "Jing Fang",
+      "Jim Kao",
+      "Yang Kong",
+      "Tao Huang",
+      "Jianping Jiang"
+    ],
+    "year": 2025,
+    "conference": "SIGMOD-Companion",
+    "category": "数据库系统",
+    "keywords": [
+      "Compute Express Link (CXL)",
+      "云原生数据库",
+      "内存解耦",
+      "内存池化",
+      "缓存一致性",
+      "即时恢复",
+      "数据共享"
+    ],
+    "abstract": "Memory disaggregation has become a major trend in cloud-native databases. However, most existing memory disaggregation solutions suffer from read/write amplification, limited bandwidth, inefficient recovery, and challenges in data sharing. Fortunately, the emerging CXL technology introduces new opportunities for memory disaggregation design in cloud-native databases.\nTo overcome these challenges, we leverage the CXL switch to design _PolarCXLMem_, a CXL-switch-based disaggregated memory system for cloud-native databases. To the best of our knowledge, _PolarCXLMem_ is the first CXL-switch-based disaggregated memory system. Building on _PolarCXLMem_, we propose a novel instant recovery scheme, _PolarRecv_, which enables instant recovery and fast buffer pool warm-up after a crash. To further support _PolarCXLMem_ in multi-primary databases, we design a new cache coherency protocol that facilitates data sharing between database nodes based on _PolarCXLMem_. Finally, we evaluate _PolarCXLMem_ with PolarDB, a widely deployed cloud-native database, under various workloads. This is the first study, to our knowledge, that investigates the performance of CXL-based disaggregated memory in a commercially deployed cloud-native database. Our evaluation shows that _PolarCXLMem_ can improve throughput by up to 2.1x in pooling scenarios and 1.55x in sharing scenarios compared to RDMA-based systems.",
+    "htmlFile": "papers/2025/9b5b6d5f3a8b/index.html"
+  },
+  {
     "id": "9b5f5c6c8c2f",
     "title": "Scalable Address Spaces using Concurrent Interval Skiplist",
     "authors": [
@@ -189,5 +277,142 @@
     ],
     "abstract": "We present a case study formally verifying process isolation in the Tock production microcontroller OS kernel. Tock combines hardware memory protection units and language-level techniques—by writing the kernel in Rust—to enforce isolation between user and kernel code. Our effort to verify Tock’s process abstraction unearthed multiple, subtle bugs that broke isolation—many allowing malicious applications to compromise the whole OS. We describe this effort and TickTock, our fork of the Tock operating system kernel that eliminates isolation bugs by construction. TickTock uses Flux, an SMT-based Rust verifier, to formally specify and verify process isolation for all ARMy7-M platforms Tock supports and for three RISC-V 32-bit platforms. Our verification-guided design and implementation led to a new, granular process abstraction that is simpler than Tock’s, has formal security guarantees (that are verified in half a minute), and outperforms Tock on certain critical code paths.",
     "htmlFile": "papers/2025/e9c6b3a8f4d2/index.html"
+  },
+  {
+    "id": "f6e0b9d8c4a7",
+    "title": "Incremental Bidirectional Typing via Order Maintenance",
+    "authors": [
+      "Thomas J. Porter",
+      "Marisa Kirisame",
+      "Ivan Wei",
+      "Pavel Panchekha",
+      "Cyrus Omar"
+    ],
+    "year": 2024,
+    "conference": "POPL",
+    "category": "编程语言",
+    "keywords": [
+      "增量类型检查",
+      "双向类型系统",
+      "实时编程环境",
+      "顺序维护数据结构",
+      "标记λ演算",
+      "错误定位",
+      "程序编辑"
+    ],
+    "abstract": "Live programming environments provide various semantic services, including type checking and evaluation, continuously as the user is editing the program. The live paradigm promises to improve the developer experience, but liveness is an implementation challenge particularly when working with large programs. This paper specifies and efficiently implements a system the is able to incrementally update type information for a live program in response to fine-grained program edits. This information includes type error marks and information about the expected and actual type on every expression. The system is specified type-theoretically as a small-step dynamics that propagates updates through the marked and annotated program. Most updates flow according to a base bidirectional type system. Additional pointers are maintained to connect bound variables to their binding locations, with type updates traversing these pointers directly. Order maintenance data structures are employed to efficiently maintain these pointers and to prioritize the order of update propagation. We prove this system is equivalent to naive reanalysis in the Agda theorem prover, along with other important metatheoretic properties. We then provide an efficient OCaml implementation, detailing a number of impactful optimizations. We evaluate this implementation’s performance with a large stress-test and find that it is able to achieve dramatic speed-ups of 275.96× compared to from-scratch reanalysis.",
+    "htmlFile": "papers/2024/f6e0b9d8c4a7/index.html"
+  },
+  {
+    "id": "f8c5b9d6d9b8",
+    "title": "Fire-Flyer AI-HPC: A Cost-Effective Software-Hardware Co-Design for Deep Learning",
+    "authors": [
+      "Wei An",
+      "Xiao Bi",
+      "Guanting Chen",
+      "Shanhuang Chen",
+      "Chengqi Deng",
+      "Honghui Ding",
+      "Kai Dong",
+      "Qiushi Du",
+      "Wenjun Gao",
+      "Kang Guan",
+      "Jianzhong Guo",
+      "Yongqiang Guo",
+      "Zhe Fu",
+      "Ying He",
+      "Panpan Huang",
+      "Jiashi Li",
+      "Wenfeng Liang",
+      "Xiaodong Liu",
+      "Xin Liu",
+      "Yiyuan Liu",
+      "Yuxuan Liu",
+      "Shanghao Lu",
+      "Xuan Lu",
+      "Xiaotao Nie",
+      "Tian Pei",
+      "Junjie Qiu",
+      "Hui Qu",
+      "Zehui Ren",
+      "Zhangli Sha",
+      "Xuecheng Su",
+      "Xiaowen Sun",
+      "Yixuan Tan",
+      "Minghui Tang",
+      "Shiyu Wang",
+      "Yaohui Wang",
+      "Yongji Wang",
+      "Ziwei Xie",
+      "Yiliang Xiong",
+      "Yanhong Xu",
+      "Shengfeng Ye",
+      "Shuiping Yu",
+      "Yukun Zha",
+      "Liyue Zhang*",
+      "Haowei Zhang",
+      "Mingchuan Zhang",
+      "Wentao Zhang",
+      "Yichao Zhang",
+      "Chenggang Zhao",
+      "Yao Zhao",
+      "Shangyan Zhou",
+      "Shunfeng Zhou",
+      "Yuheng Zou"
+    ],
+    "year": 2024,
+    "conference": "arXiv",
+    "category": "高性能计算",
+    "keywords": [
+      "高性能计算",
+      "深度学习",
+      "大语言模型",
+      "AI Infra"
+    ],
+    "abstract": "The rapid progress in Deep Learning (DL) and Large Language Models (LLMs) has exponentially increased demands of computational power and bandwidth. This, combined with the high costs of faster computing chips and interconnects, has significantly inflated High Performance Computing (HPC) construction costs. To address these challenges, we introduce the Fire-Flyer AI-HPC architecture, a synergistic hardware-software co-design framework and its best practices. For DL training, we deployed the Fire-Flyer 2 with 10,000 PCIe A100 GPUs, achieved performance approximating the DGX-A100 while reducing costs by half and energy consumption by 40%. We specifically engineered IFFReduce to accelerate allreduce communication and implemented numerous measures to keep our Computation-Storage Integrated Network congestion-free. Through our software stack, including HaiScale, 3FS, and HAI-Platform, we achieved substantial scalability by overlapping computation and communication. Our system-oriented experience from DL training provides valuable insights to drive future advancements in AI-HPC.",
+    "htmlFile": "papers/2024/f8c5b9d6d9b8/index.html"
+  },
+  {
+    "id": "b9c5f8b8b9e3",
+    "title": "B-Trees Are Back: Engineering Fast and Pageable Node Layouts",
+    "authors": [
+      "Marcus Muller",
+      "Lawrence Benson",
+      "Viktor Leis"
+    ],
+    "year": 2023,
+    "conference": "SIGMOD",
+    "category": "数据库系统",
+    "keywords": [
+      "B-Tree",
+      "索引结构",
+      "内存数据库",
+      "存储引擎"
+    ],
+    "abstract": "Large main memory capacity and even larger data sets have motivated hybrid storage systems, which serve most transactions from memory, but can seamlessly transition to flash storage. In such systems, the data structure of choice is usually a B-Tree with pageable nodes. Most academic B-Tree work considers only fixed size records, making them unsuitable for most practical applications. Given the prevalence of B-Trees, surprisingly few available implementations and benchmarks of optimized B-Trees cover variable-sized records. In this paper, we describe an efficient B-Tree implementation supporting variable-sized records containing six known node layout optimizations. We evaluate each optimization to guide future implementations, and propose an optimized adaptive layout that can even compete with pure in-memory structures for many workloads. Our results show that well-engineered B-Trees can efficiently handle both in-memory and out-of-memory workloads.",
+    "htmlFile": "papers/2023/b9c5f8b8b9e3/index.html"
+  },
+  {
+    "id": "c5a9d1b4c3a2",
+    "title": "Virtual-Memory Assisted Buffer Management",
+    "authors": [
+      "Viktor Leis",
+      "Adnan Alhomssi",
+      "Tobias Ziegler",
+      "Yannick Loeck",
+      "Christian Dietrich"
+    ],
+    "year": 2023,
+    "conference": "SIGMOD",
+    "category": "数据库系统",
+    "keywords": [
+      "数据库管理系统",
+      "操作系统",
+      "缓存",
+      "缓冲区管理",
+      "虚拟内存"
+    ],
+    "abstract": "Most database management systems cache pages from storage in a main memory buffer pool. To do this, they either rely on a hash table that translates page identifiers into pointers, or on pointer swizzling which avoids this translation. In this work, we propose _vmcache_, a buffer manager design that instead uses hardware-supported virtual memory to translate page identifiers to virtual memory addresses. In contrast to existing mmap-based approaches, the DBMS retains control over page faulting and eviction. Our design is portable across modern operating systems, supports arbitrary graph data, enables variable-sized pages, and is easy to implement. One downside of relying on virtual memory is that with fast storage devices the existing operating system primitives for manipulating the page table can become a performance bottleneck. As a second contribution, we therefore propose _exmap_, which implements scalable page table manipulation on Linux. Together, vmcache and exmap provide flexible, efficient, and scalable buffer management on multi-core CPUs and fast storage devices.",
+    "htmlFile": "papers/2023/c5a9d1b4c3a2/index.html"
   }
 ]

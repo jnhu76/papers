@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unlocking the Potential of CXL for Disaggregated Memory in Cloud-Native Databases</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Unlocking the Potential of CXL for Disaggregated Memory in Cloud-Native Databases
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Xinjun Yang, Gerry Fan, Yuhui Wang, Yingqiang Zhang, Hao Chen*, Bo Wang, Wenpu Hu, Feifei Li, Jing Fang, Jim Kao, Yang Kong, Tao Huang, Jianping Jiang</div>
+                <div class="text-sm text-gray-600 mt-1">Alibaba Cloud Computing, XConn Technologies</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SIGMOD-Companion '25, June 22–27, 2025, Berlin, Germany</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://doi.org/10.1145/3722212.3724460</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Compute Express Link (CXL)</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Cloud-Native Databases</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Memory Disaggregation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12 md:mb-16">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>设计并实现了首个基于CXL交换机的分离式内存系统 <strong>PolarCXLMem</strong>，支持内存池化和数据共享</li>
+          <li>提出了基于PolarCXLMem的即时恢复方案 <strong>PolarRecv</strong>，显著提升数据库恢复性能</li>
+          <li>为多主数据库设计了基于PolarCXLMem的新型数据同步协议</li>
+          <li>在商业云原生数据库中全面评估了PolarCXLMem和PolarRecv在各种工作负载下的性能</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            内存分离已成为云原生数据库的主要趋势。然而，大多数现有的内存分离解决方案存在读/写放大、带宽限制、恢复效率低下以及数据共享挑战等问题。幸运的是，新兴的CXL技术为云原生数据库中的内存分离设计带来了新的机遇。
+          </p>
+          <p class="mb-4">
+            为了克服这些挑战，作者利用CXL交换机设计了<strong>PolarCXLMem</strong>，这是一个基于CXL交换机的分离式内存系统，专为云原生数据库优化。据作者所知，PolarCXLMem是首个基于CXL交换机的分离式内存系统。在PolarCXLMem的基础上，作者提出了一个新颖的即时恢复方案<strong>PolarRecv</strong>，能够在崩溃后实现即时恢复和快速缓冲池预热。
+          </p>
+          <p class="mb-4">
+            为了进一步在多主数据库中支持PolarCXLMem，作者设计了一个新的缓存一致性协议，促进了基于PolarCXLMem的数据库节点之间的数据共享。最后，作者在各种工作负载下使用广泛部署的云原生数据库PolarDB评估了PolarCXLMem。据作者所知，这是首个研究基于CXL的分离式内存在商业部署的云原生数据库中性能的工作。
+          </p>
+          <p>
+            评估结果显示，与基于RDMA的系统相比，PolarCXLMem在池化场景下可以将吞吐量提高多达2.1倍，在共享场景下可以提高1.55倍。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <!-- CXL介绍 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-network-wired mr-2 text-blue-500"></i>
+            CXL技术介绍
+          </h3>
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              Compute Express Link (CXL) 是一种用于数据中心高速、低延迟互连的技术，具有固有的缓存一致性、本地加载/存储支持、跨多个主机和设备的内存池化/共享等特性，使其在内存密集型应用中具有吸引力。
+            </p>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+              <h4 class="font-bold text-gray-700 mb-2">CXL版本演进</h4>
+              <ul class="list-disc list-inside space-y-2">
+                <li><strong>CXL 1.0 (2019)</strong>: 奠定基础，支持CXL.io、CXL.cache和CXL.mem协议</li>
+                <li><strong>CXL 2.0 (2020)</strong>: 引入内存池化，增加交换能力</li>
+                <li><strong>CXL 3.0 (2022)</strong>: 支持多级交换、动态容量设备和基于fabric的拓扑</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- CXL vs RDMA -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-balance-scale mr-2 text-blue-500"></i>
+            CXL与RDMA对比
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>CXL优势
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>低延迟</strong>: CXL比RDMA快8.3倍（读取64字节数据）</li>
+                <li><strong>加载/存储支持</strong>: 直接访问CXL内存，无需中间步骤</li>
+                <li><strong>简单性</strong>: 提供透明的内存空间，简化开发</li>
+                <li><strong>缓存一致性</strong>: CXL 3.0支持跨多个主机的硬件缓存一致性</li>
+              </ul>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>RDMA局限性
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>带宽限制</strong>: 在高并发下面临瓶颈</li>
+                <li><strong>读/写放大</strong>: 页面级数据传输导致效率低下</li>
+                <li><strong>编程复杂性</strong>: 需要专业接口和驱动程序</li>
+                <li><strong>缺乏缓存一致性</strong>: 需要应用层实现缓存一致性机制</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 内存分离在云数据库中的应用 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-database mr-2 text-blue-500"></i>
+            内存分离在云数据库中的应用
+          </h3>
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              数据库通常以页面粒度管理存储中的物理数据，并在内存缓冲池中缓存这些页面的子集以提高性能。在事务期间，事务引擎从缓冲池检索所需页面，并通过缓冲池提供的指针访问数据。
+            </p>
+            <p>
+              内存分离在数据库领域受到广泛关注。由于缓冲池是内存的主要用途，数据库通常将其容量扩展到分离式内存中，以容纳更多数据，从而减少昂贵的存储I/O操作。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-expand-arrows-alt mr-2"></i>读/写放大
+            </h4>
+            <p class="text-sm text-gray-700">
+              在RDMA系统中，即使只需要少量数据，也必须传输整个页面（4-16KB），导致显著的读/写放大（高达数十倍）。这消耗了大量RDMA带宽，是云数据库的关键资源。
+            </p>
+          </div>
+          
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-sync-alt mr-2"></i>恢复效率低下
+            </h4>
+            <p class="text-sm text-gray-700">
+              数据库崩溃后，分离式内存仅用于加速恢复期间的页面I/O。数据库仍需管理其恢复逻辑并恢复某些内存中数据，这需要相当长的时间。
+            </p>
+          </div>
+          
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2"></i>RDMA瓶颈
+            </h4>
+            <p class="text-sm text-gray-700">
+              在基于RDMA的分离式内存架构中，RDMA驱动程序可能成为性能瓶颈。现有IOPS受限的分离式应用在超过32个核心时无法良好扩展。
+            </p>
+          </div>
+          
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-share-alt mr-2"></i>缺乏缓存一致性
+            </h4>
+            <p class="text-sm text-gray-700">
+              在多个数据库节点之间共享分离式内存时，由于节点之间缺乏缓存一致性，数据库需要实现自己的缓存一致性机制，这会增加开销并限制性能。
+            </p>
+          </div>
+        </div>
+        
+        <!-- CXL交换机特性 -->
+        <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+          <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+            <i class="fas fa-exchange-alt mr-2"></i>
+            CXL交换机特性
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-bold text-gray-700 mb-2">硬件规格</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>使用XConn XC50256 CXL 2.0交换机</li>
+                <li>支持最多256通道</li>
+                <li>总交换容量2TB/s</li>
+                <li>支持高达16TB内存</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-bold text-gray-700 mb-2">访问延迟对比</h4>
+              <div class="text-sm">
+                <div class="flex justify-between mb-1">
+                  <span>本地DRAM:</span>
+                  <span class="font-mono">146 ns</span>
+                </div>
+                <div class="flex justify-between mb-1">
+                  <span>带交换机的CXL:</span>
+                  <span class="font-mono">549 ns</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>远程DRAM:</span>
+                  <span class="font-mono">231 ns</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- PolarCXLMem架构 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+            PolarCXLMem架构
+          </h3>
+          
+          <!-- 图4占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 4: PolarCXLMem架构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="论文图4: PolarCXLMem架构图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> PolarCXLMem架构图，展示了基于CXL交换机的分离式内存系统设计
+            </div>
+          </div>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              PolarCXLMem是一个基于CXL交换机的分离式内存系统，专为云原生数据库设计。作者利用世界上首个CXL交换机设计了这一架构，据作者所知，这是首个基于CXL交换机的分离式内存系统。
+            </p>
+            <p class="mb-4">
+              在PolarCXLMem中，作者消除了基于RDMA的分离式内存系统中常见的分层内存结构。尽管CXL内存比本地DRAM慢，但它已经足够快用于缓冲池。通过将缓冲池直接放置在CXL内存上，可以获得与使用本地DRAM几乎相同的性能。
+            </p>
+            <p>
+              这种设计避免了分层内存结构中页面粒度数据传输导致的读/写放大，节省了带宽资源。同时，消除本地缓冲区避免了本地内存开销并节省了成本。
+            </p>
+          </div>
+        </div>
+        
+        <!-- PolarRecv即时恢复 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-redo-alt mr-2 text-blue-500"></i>
+            PolarRecv即时恢复
+          </h3>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              基于PolarCXLMem，作者提出了一个新颖的即时恢复方案PolarRecv。在PolarRecv中，作者将整个缓冲池（包括数据和元数据）移动到CXL内存。借助CXL的低延迟和加载/存储指令支持，数据库可以直接操作缓冲池的数据和元数据，而无需更改数据库逻辑。
+            </p>
+            <p class="mb-4">
+              数据库崩溃后，缓冲的数据及其元数据在CXL内存中保持完整。通过设计定制的恢复策略，可以从CXL内存将缓冲数据恢复到一致状态，绕过繁重的传统恢复过程，显著提高恢复性能。
+            </p>
+          </div>
+          
+          <!-- 技术细节卡片 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：PolarRecv恢复机制
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>元数据持久化:</strong> 每个页面的数据和元数据存储在CXL内存中的块结构中</li>
+                  <li><strong>锁状态检查:</strong> 恢复期间扫描每个页面的锁状态，检测崩溃时是否正在进行更新</li>
+                  <li><strong>LSN验证:</strong> 检查页面LSN与持久化重做日志中的最大LSN，确保不使用"过新"的页面</li>
+                  <li><strong>LRU一致性:</strong> 使用存储在CXL内存中的锁状态来检测和重建LRU列表</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">块结构设计:</strong>
+                    <p>每个页面组织为一个块结构，包含id、lock_state、prev、next和lsn字段，全部存储在CXL内存中</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">恢复流程:</strong>
+                    <p>扫描CXL内存中的页面，检查锁状态和LSN，必要时从重做日志恢复页面，而不是直接使用CXL内存中的版本</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">B树一致性:</strong>
+                    <p>通过检查相关页面的锁状态，识别未完成的SMO操作，从重做日志恢复相关页面，保持B树一致性</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <!-- 基于CXL的数据共享 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-share-alt mr-2 text-blue-500"></i>
+            基于CXL的数据共享
+          </h3>
+          
+          <!-- 图6占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 6: 基于PolarCXLMem的数据共享
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig6.png" alt="论文图6: 基于PolarCXLMem的数据共享架构" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 基于PolarCXLMem的多主数据库数据共享设计
+            </div>
+          </div>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              作者将PolarCXLMem适配用于多主数据库中的数据共享。由于尚不支持固有缓存一致性的CXL 3.0设备，作者为基于CXL 2.0的分离式内存设计了一个新的缓存一致性协议。
+            </p>
+            <p class="mb-4">
+              与基于RDMA的多主数据库中的现有缓存一致性方案（在页面级粒度同步数据，导致显著的读/写放大和高延迟）不同，作者提出的基于CXL的缓存一致性协议在缓存行（64B）粒度同步数据，最小化同步开销。
+            </p>
+            <p>
+              无效消息利用低延迟CXL接口，进一步减少延迟并提高效率。
+            </p>
+          </div>
+          
+          <!-- 技术特性网格 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>缓存行粒度同步
+              </h4>
+              <p class="text-sm text-gray-700">在64B缓存行粒度同步数据，而非整个页面，显著减少同步开销</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-share-nodes mr-2"></i>直接内存操作
+              </h4>
+              <p class="text-sm text-gray-700">数据库节点可直接操作CXL内存，无需将整个页面读入本地缓冲区</p>
+            </div>
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-sync-alt mr-2"></i>高效缓存一致性
+              </h4>
+              <p class="text-sm text-gray-700">使用CXL内存存储invalid和removal标志，结合页面锁定机制实现缓存一致性</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 实验设置 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-cogs mr-2 text-blue-500"></i>
+            实验设置
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-2">硬件配置</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>CXL设备: XConn XC50256 CXL 2.0交换机</li>
+                <li>内存: 8个DDR5模块，总计2TB</li>
+                <li>CPU: Intel Xeon Platinum 8575C (2.8GHz)</li>
+                <li>网络: 100Gbps Mellanox ConnectX-6</li>
+              </ul>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-2">测试基准</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>Sysbench (点查询、范围查询、读写)</li>
+                <li>TPC-C (在线事务处理)</li>
+                <li>TATP (电信应用事务处理)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PolarCXLMem池化性能 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>
+            PolarCXLMem池化性能
+          </h3>
+          
+          <!-- 图7占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 7: Sysbench点查询性能对比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig7.png" alt="论文图7: Sysbench点查询性能对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 基于RDMA和CXL的分离式内存系统在Sysbench点查询工作负载下的性能对比
+            </div>
+          </div>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              在点查询工作负载测试中，随着实例数量从1增加到12，PolarCXLMem的吞吐量按比例扩展，达到3.6M QPS（每秒查询数）。然而，基于RDMA的系统在3个实例时吞吐量就达到饱和，仅为1.1M QPS，原因是带宽饱和。
+            </p>
+            <p class="mb-4">
+              延迟趋势与吞吐量观察一致：达到3个实例后，随着实例数量增加，基于RDMA的系统由于带宽饱和而经历线性延迟上升，而PolarCXLMem保持稳定的延迟，即使实例扩展到12个也只有边际上升。
+            </p>
+            <p>
+              这种性能差异源于基于RDMA系统中的高读放大和带宽饱和，在3个实例时达到极限，而PolarCXLMem避免了读放大并且没有CXL带宽瓶颈。
+            </p>
+          </div>
+          
+          <!-- 性能分析部分 -->
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mt-6">
+            <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+              <i class="fas fa-chart-line mr-2"></i>性能分析：
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+              <div>
+                <strong class="text-purple-700">测试配置:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>硬件环境: 192 vCPU主机，每个实例16 vCPU</li>
+                  <li>工作负载: Sysbench点查询、范围查询、读写混合</li>
+                  <li>内存配置: RDMA系统使用30%本地缓冲，PolarCXLMem无本地缓冲</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-purple-700">关键结果:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>点查询: PolarCXLMem吞吐量比RDMA高2.27倍</li>
+                  <li>范围查询: PolarCXLMem在高并发下继续扩展，RDMA在4实例饱和</li>
+                  <li>读写混合: PolarCXLMem在8实例后继续扩展，RDMA达到瓶颈</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PolarRecv恢复性能 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-redo-alt mr-2 text-blue-500"></i>
+            PolarRecv恢复性能
+          </h3>
+          
+          <!-- 图10占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-800"></i>
+                原图 10: 恢复性能对比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig10.png" alt="论文图10: 恢复性能对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> PolarRecv与传统恢复方法在Sysbench点查询工作负载下的恢复时间对比
+            </div>
+          </div>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              在恢复性能测试中，PolarRecv显著优于传统恢复方法。对于具有100GB缓冲池的数据库，PolarRecv在不到1秒内完成恢复，而传统方法需要超过100秒。
+            </p>
+            <p class="mb-4">
+              恢复时间随缓冲池大小线性增加。对于1TB缓冲池，PolarRecv需要大约10秒恢复，而传统方法需要超过1000秒。这种显著的性能改进是因为PolarRecv绕过了传统的恢复过程，直接利用CXL内存中保持完整的缓冲池数据。
+            </p>
+            <p>
+              此外，PolarRecv在恢复后立即提供高吞吐量，因为缓冲池已经预热，而传统方法在恢复后需要时间重新预热缓冲池。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 数据共享性能 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-share-alt mr-2 text-blue-500"></i>
+            数据共享性能
+          </h3>
+          
+          <!-- 图12占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 12: 数据共享性能对比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig12.png" alt="论文图12: 数据共享性能对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 基于RDMA和CXL的数据共享方案在Sysbench点查询工作负载下的性能对比
+            </div>
+          </div>
+          
+          <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+              在数据共享性能测试中，基于CXL的方案显著优于基于RDMA的方案。随着实例数量从1增加到8，基于CXL的方案的吞吐量按比例扩展，达到2.4M QPS，而基于RDMA的方案在2个实例时达到饱和，仅为1.1M QPS。
+            </p>
+            <p class="mb-4">
+              延迟趋势与吞吐量观察一致：基于RDMA的方案在2个实例后延迟急剧上升，而基于CXL的方案保持稳定的延迟，即使扩展到8个实例也只有边际上升。
+            </p>
+            <p>
+              这种性能差异源于基于RDMA方案中的高读放大和带宽饱和，而基于CXL的方案避免了读放大，并且其缓存一致性协议在缓存行粒度同步数据，最小化同步开销。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者设计并实现了PolarCXLMem，这是首个基于CXL交换机的分离式内存系统，专为云原生数据库优化。在PolarCXLMem的基础上，作者提出了一个新颖的即时恢复方案PolarRecv，能够在崩溃后实现即时恢复和快速缓冲池预热。
+          </p>
+          <p class="mb-4">
+            为了在多主数据库中支持PolarCXLMem，作者设计了一个新的缓存一致性协议，促进了基于PolarCXLMem的数据库节点之间的数据共享。作者在各种工作负载下使用广泛部署的云原生数据库PolarDB评估了PolarCXLMem。
+          </p>
+          <p class="mb-4">
+            评估结果显示，与基于RDMA的系统相比，PolarCXLMem在池化场景下可以将吞吐量提高多达2.1倍，在共享场景下可以提高1.55倍。此外，PolarRecv可以将恢复时间从超过1000秒减少到不到10秒，对于1TB缓冲池。
+          </p>
+          <p>
+            据作者所知，这是首个研究基于CXL的分离式内存在商业部署的云原生数据库中性能的工作。作者的研究展示了CXL技术在云原生数据库中的巨大潜力，为未来的内存分离设计提供了新的方向。
+          </p>
+        </div>
+        
+        <!-- 未来工作 -->
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-6 rounded-r-lg mt-8">
+          <h4 class="font-bold text-yellow-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-road mr-2"></i>未来工作方向
+          </h4>
+          <ul class="list-disc list-inside space-y-3 text-gray-700">
+            <li>探索CXL 3.0的硬件缓存一致性特性，进一步优化多主数据库的数据共享性能</li>
+            <li>研究CXL内存与其他新兴内存技术（如持久内存）的结合使用</li>
+            <li>扩展PolarCXLMem以支持更多类型的云原生应用和数据库系统</li>
+            <li>优化CXL内存管理策略，提高资源利用率和成本效益</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

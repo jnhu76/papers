@@ -1,0 +1,10 @@
+{
+"id": "f6e0b9d8c4a7",
+"title": "Incremental Bidirectional Typing via Order Maintenance",
+"authors": ["Thomas J. Porter", "Marisa Kirisame", "Ivan Wei", "Pavel Panchekha", "Cyrus Omar"],
+"year": 2024,
+"conference": "POPL",
+"category": "编程语言",
+"keywords": ["增量类型检查", "双向类型系统", "实时编程环境", "顺序维护数据结构", "标记λ演算", "错误定位", "程序编辑"],
+"abstract": "Live programming environments provide various semantic services, including type checking and evaluation, continuously as the user is editing the program. The live paradigm promises to improve the developer experience, but liveness is an implementation challenge particularly when working with large programs. This paper specifies and efficiently implements a system the is able to incrementally update type information for a live program in response to fine-grained program edits. This information includes type error marks and information about the expected and actual type on every expression. The system is specified type-theoretically as a small-step dynamics that propagates updates through the marked and annotated program. Most updates flow according to a base bidirectional type system. Additional pointers are maintained to connect bound variables to their binding locations, with type updates traversing these pointers directly. Order maintenance data structures are employed to efficiently maintain these pointers and to prioritize the order of update propagation. We prove this system is equivalent to naive reanalysis in the Agda theorem prover, along with other important metatheoretic properties. We then provide an efficient OCaml implementation, detailing a number of impactful optimizations. We evaluate this implementation’s performance with a large stress-test and find that it is able to achieve dramatic speed-ups of 275.96× compared to from-scratch reanalysis."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "9b5b6d5f3a8b",
+  "title": "Unlocking the Potential of CXL for Disaggregated Memory in Cloud-Native Databases",
+  "authors": ["Xinjun Yang", "Gerry Fan", "Yuhui Wang", "Yingqiang Zhang", "Hao Chen*", "Bo Wang", "Weupu Hu", "Feifei Li", "Jing Fang", "Jim Kao", "Yang Kong", "Tao Huang", "Jianping Jiang"],
+  "year": 2025,
+  "conference": "SIGMOD-Companion",
+  "category": "数据库系统",
+  "keywords": ["Compute Express Link (CXL)", "云原生数据库", "内存解耦", "内存池化", "缓存一致性", "即时恢复", "数据共享"],
+  "abstract": "Memory disaggregation has become a major trend in cloud-native databases. However, most existing memory disaggregation solutions suffer from read/write amplification, limited bandwidth, inefficient recovery, and challenges in data sharing. Fortunately, the emerging CXL technology introduces new opportunities for memory disaggregation design in cloud-native databases.\nTo overcome these challenges, we leverage the CXL switch to design _PolarCXLMem_, a CXL-switch-based disaggregated memory system for cloud-native databases. To the best of our knowledge, _PolarCXLMem_ is the first CXL-switch-based disaggregated memory system. Building on _PolarCXLMem_, we propose a novel instant recovery scheme, _PolarRecv_, which enables instant recovery and fast buffer pool warm-up after a crash. To further support _PolarCXLMem_ in multi-primary databases, we design a new cache coherency protocol that facilitates data sharing between database nodes based on _PolarCXLMem_. Finally, we evaluate _PolarCXLMem_ with PolarDB, a widely deployed cloud-native database, under various workloads. This is the first study, to our knowledge, that investigates the performance of CXL-based disaggregated memory in a commercially deployed cloud-native database. Our evaluation shows that _PolarCXLMem_ can improve throughput by up to 2.1x in pooling scenarios and 1.55x in sharing scenarios compared to RDMA-based systems."
+}
