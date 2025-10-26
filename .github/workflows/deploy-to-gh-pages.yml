@@ -53,7 +53,10 @@ jobs:
         cp index.html deploy/ 2>/dev/null || true
         
         # 复制所有 papers_*.json 文件
-        cp papers_*.json deploy/ 2>/dev/null || true
+        cp papers_data.json deploy/ 2>/dev/null || true
+
+        # 复制 sw.js 文件
+        cp sw.js deploy/ 2>/dev/null || true        
         
         # 复制整个papers目录（只包含HTML和必要的静态资源）
         if [ -d "papers" ]; then
