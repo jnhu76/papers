@@ -52,6 +52,28 @@
     "htmlFile": "papers/2025/b4a1c8b4a1c8/index.html"
   },
   {
+    "id": "b5c8a1d4f7e2",
+    "title": "Prove It to the Kernel: Precise Extension Analysis via Proof-Guided Abstraction Refinement",
+    "authors": [
+      "Sun, Hao",
+      "Su, Zhendong"
+    ],
+    "year": 2025,
+    "conference": "SOSP '25",
+    "category": "操作系统与系统软件",
+    "keywords": [
+      "eBPF验证",
+      "抽象解释",
+      "证明引导的抽象精化",
+      "内核扩展",
+      "静态分析",
+      "形式化证明",
+      "SMT求解"
+    ],
+    "abstract": "Modern OS kernels, such as Linux, employ the eBPF subsystem to enable user space to extend kernel functionality. To ensure safety, an in-kernel verifier statically analyzes these extensions; however, its imprecise analysis frequently results in the erroneous rejection of safe extensions, exposing a critical tension between the precision and computational complexity of the verifier that limits kernel extensibility.\n\nWe propose a proof-guided abstraction refinement technique that significantly enhances the verifier's precision while preserving low kernel space complexity. Rather than incorporating sophisticated analysis (e.g., via new abstract domains) directly into the verifier, our key insight is to decouple the complex reasoning to user space while bridging the gap through formal proofs. Upon encountering uncertainties, the verifier initiates an abstraction refinement procedure rather than rejecting the extension. As the refinement involves nontrivial reasoning, the verifier simply delineates the task and delegates it to user space. A formal proof is produced externally, which the verifier subsequently checks in linear time before adopting the refined abstraction. Consequently, our approach achieves high precision via user space reasoning while confining kernel space operations to an efficient proof check. Evaluation results show that our technique enables the verifier to accept 403 out of 512 real-world eBPF programs that were previously rejected erroneously, paving the way for more reliable and flexible kernel extensions.",
+    "htmlFile": "papers/2025/b5c8a1d4f7e2/index.html"
+  },
+  {
     "id": "d6d3c8e8f2d2",
     "title": "Mantle: Efficient Hierarchical Metadata Management for Cloud Object Storage Services",
     "authors": [
@@ -119,5 +141,29 @@
     ],
     "abstract": "The deployment of large-scale data analytics between on-premise and cloud sites, i.e., hybrid clouds, requires careful partitioning of both data and computation to avoid massive networking costs. We present Moirai, a cost-optimization framework that analyzes job accesses and data dependencies and optimizes the placement of both in hybrid clouds. Moirai informs the job scheduler of data location and access predictions, so it can determine where jobs should be executed to minimize data transfer costs. Our optimizer achieves scalability and cost efficiency by exploiting recurring jobs to identify data dependencies and job access characteristics and reduces the search space by excluding data not accessed recently. We validate Moirai using 4-month traces that span 66.7M queries accessing 13.3EB from Presto and Spark clusters deployed at Uber, a multi-national transportation company leveraging large-scale data analytics for its operations. Moirai reduces hybrid cloud deployment costs by over 97% relative to the state-of-the-art partitioning approach from Alibaba and other public approaches. The savings come from 95–99.5% reduction in cloud egress, up to 99% reduction in replication, and 89–98% reduction in on-premises network infrastructure requirements. We also describe concrete steps being taken towards deploying Moirai in production.",
     "htmlFile": "papers/2025/d9c4a2e3b5f1/index.html"
+  },
+  {
+    "id": "e9c6b3a8f4d2",
+    "title": "TickTock: Verified Isolation in a Production Embedded OS",
+    "authors": [
+      "Rindisbacher, Vivien",
+      "Johnson, Evan",
+      "Pannuto, Pat",
+      "Savage, Stefan"
+    ],
+    "year": 2025,
+    "conference": "SOSP '25",
+    "category": "操作系统安全",
+    "keywords": [
+      "验证",
+      "进程隔离",
+      "内核安全",
+      "嵌入式系统",
+      "安全系统",
+      "精化类型",
+      "形式化验证"
+    ],
+    "abstract": "We present a case study formally verifying process isolation in the Tock production microcontroller OS kernel. Tock combines hardware memory protection units and language-level techniques—by writing the kernel in Rust—to enforce isolation between user and kernel code. Our effort to verify Tock’s process abstraction unearthed multiple, subtle bugs that broke isolation—many allowing malicious applications to compromise the whole OS. We describe this effort and TickTock, our fork of the Tock operating system kernel that eliminates isolation bugs by construction. TickTock uses Flux, an SMT-based Rust verifier, to formally specify and verify process isolation for all ARMy7-M platforms Tock supports and for three RISC-V 32-bit platforms. Our verification-guided design and implementation led to a new, granular process abstraction that is simpler than Tock’s, has formal security guarantees (that are verified in half a minute), and outperforms Tock on certain critical code paths.",
+    "htmlFile": "papers/2025/e9c6b3a8f4d2/index.html"
   }
 ]

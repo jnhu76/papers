@@ -1,0 +1,10 @@
+{
+  "id": "e9c6b3a8f4d2",
+  "title": "TickTock: Verified Isolation in a Production Embedded OS",
+  "authors": ["Rindisbacher, Vivien", "Johnson, Evan", "Pannuto, Pat", "Savage, Stefan"],
+  "year": 2025,
+  "conference": "SOSP '25",
+  "category": "操作系统安全",
+  "keywords": ["验证", "进程隔离", "内核安全", "嵌入式系统", "安全系统", "精化类型", "形式化验证"],
+  "abstract": "We present a case study formally verifying process isolation in the Tock production microcontroller OS kernel. Tock combines hardware memory protection units and language-level techniques—by writing the kernel in Rust—to enforce isolation between user and kernel code. Our effort to verify Tock’s process abstraction unearthed multiple, subtle bugs that broke isolation—many allowing malicious applications to compromise the whole OS. We describe this effort and TickTock, our fork of the Tock operating system kernel that eliminates isolation bugs by construction. TickTock uses Flux, an SMT-based Rust verifier, to formally specify and verify process isolation for all ARMy7-M platforms Tock supports and for three RISC-V 32-bit platforms. Our verification-guided design and implementation led to a new, granular process abstraction that is simpler than Tock’s, has formal security guarantees (that are verified in half a minute), and outperforms Tock on certain critical code paths."
+}

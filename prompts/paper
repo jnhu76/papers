@@ -10,7 +10,7 @@
 ## 🏗️ 技术架构要求
 ### 文件结构
 - 仅输出一个完整的 `index.html` 文件
-- 图像路径统一为：`./img/fig1.png`, `./img/fig2.svg` 等
+- 图像路径统一为：`./images/fig1.png`, `./images/fig2.svg` 等
 - 所有内容内嵌，无外部依赖
 
 ### 技术栈
@@ -116,7 +116,7 @@ const iconMap = {
   
   <!-- 原图展示区域 - 注意：使用img标签并直接设置src属性 -->
   <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
-    <img src="./img/fig[图号].[png|svg|jpg]" alt="论文图[图号]: [原图内容描述]" class="max-w-full h-auto rounded-lg">
+    <img src="./images/fig[图号].[png|svg|jpg]" alt="论文图[图号]: [原图内容描述]" class="max-w-full h-auto rounded-lg">
   </div>
   
   <!-- 图注 -->
@@ -227,7 +227,7 @@ const iconMap = {
       
       <!-- 原图占位符 - 注意：使用img标签并直接设置src属性 -->
       <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
-        <img src="./img/fig[图号].[png|svg|jpg]" alt="论文图[图号]: [原图内容描述]" class="max-w-full h-auto rounded-lg">
+        <img src="./images/fig[图号].[png|svg|jpg]" alt="论文图[图号]: [原图内容描述]" class="max-w-full h-auto rounded-lg">
       </div>
       
       <!-- 原图图注 -->
@@ -656,4 +656,4 @@ const figureIcons = {
 - **元信息展示**：采用网格布局清晰展示论文基本信息
 
 ### 图像处理关键要求
-**重要：在图像占位时，必须使用img标签并直接设置src属性值，而不是使用href属性。所有图像路径应统一设置为：`./img/fig1.png`, `./img/fig2.svg` 等格式。**
+**重要：在图像占位时，必须使用img标签并直接设置src属性值，而不是使用href属性。所有图像路径应统一设置为：`./images/fig1.png`, `./images/fig2.svg` 等格式。**
