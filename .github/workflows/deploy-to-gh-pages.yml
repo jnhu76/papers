@@ -20,25 +20,14 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
-    
-    - name: Install dependencies (if needed)
-      run: |
-        # 如果有 package.json 就安装依赖
-        if [ -f "package.json" ]; then
-          npm ci
-        fi
-    
+
     - name: Generate papers JSON file
       run: |
         # 清理旧的 papers_*.json 文件
         echo "Cleaning up old papers_*.json files..."
         rm -f papers_*.json
-        
-        # 清理可能存在的 papers.json
-        rm -f papers.json
-        rm -f papers_version.json
         
         # 运行生成脚本
         node ./scripts/generate_papers_json.js
@@ -65,12 +54,6 @@ jobs:
         
         # 复制所有 papers_*.json 文件
         cp papers_*.json deploy/ 2>/dev/null || true
-        
-        # 复制 papers.json（如果存在）
-        cp papers.json deploy/ 2>/dev/null || true
-        
-        # 复制 papers_version.json（如果存在）
-        cp papers_version.json deploy/ 2>/dev/null || true
         
         # 复制整个papers目录（只包含HTML和必要的静态资源）
         if [ -d "papers" ]; then
