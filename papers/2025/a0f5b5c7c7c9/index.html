@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pruning in Snowflake: Working Smarter, Not Harder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Pruning in Snowflake: Working Smarter, Not Harder
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Andreas Zimmerer, Damien Dam, Jan Kossmann, Juliane Waack, Ismail Oukid, Andreas Kipf</div>
+                <div class="text-sm text-gray-600 mt-1">University of Technology Nuremberg & Snowflake Inc.</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SIGMOD-Companion '25, June 22–27, 2025, Berlin, Germany</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">数据仓库</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">数据跳过</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">分区修剪</span>
+                  <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">Top-K查询</span>
+                  <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">分析查询处理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 核心贡献突出显示 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-6">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li>评估并量化了四种不同修剪技术的影响：过滤器修剪、LIMIT修剪、Top-K修剪和JOIN修剪</li>
+            <li>提出了针对LIMIT查询的新修剪技术，无论是否包含谓词</li>
+            <li>展示了传统用于搜索引擎的Top-K查询修剪技术如何适应和集成到SQL引擎中</li>
+            <li>通过指导性示例说明了这些技术的组合有效性</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            现代基于云的数据分析系统必须高效处理存储在云存储中的PB级数据。在像Snowflake这样的最先进系统中，一个关键的优化技术是分区修剪——跳过不包含计算查询结果相关信息的数椐块。
+          </p>
+          <p class="mb-4">
+            虽然基于查询谓词的分区修剪是一项成熟的技术，但作者提出了新的修剪技术，将分区修剪的范围扩展到LIMIT、Top-K和JOIN操作，显著扩大了各种查询类型的修剪机会。作者详细介绍了每种方法的实现，并检查了它们对实际工作负载的影响。
+          </p>
+          <p class="mb-4">
+            对Snowflake生产工作负载的分析表明，实际分析查询表现出比通常假设更高的选择性，产生了有效的分区修剪，并突显了对更现实基准测试的需求。作者展示了如何利用现代数据分析系统和Apache Iceberg等数据湖格式中可用的最小/最大元数据，在Snowflake数据平台上将处理的微分区数量减少99.4%。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            在基于云的数据分析系统中，修剪变得更加重要：这类系统将计算和存储解耦。因此，修剪不仅用于避免处理和从磁盘加载数据，而且对于避免昂贵的网络I/O也至关重要。考虑到扫描和过滤操作通常占处理时间的50%以上，有效的数据修剪成为基于云的数据分析系统中查询性能的关键驱动因素。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键洞察
+            </h5>
+            <p class="text-gray-700">Google的PowerPath平均跳过92.41%的数据，而Snowflake在所有客户工作负载中实现了惊人的99.4%数据跳过率。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Snowflake架构概述</h3>
+          <p class="mb-4">
+            Snowflake是一个基于云的数据平台，为企业客户提供跨多个云提供商的可扩展分析服务。其基础设计采用了<strong>多集群、共享数据架构</strong>：存储与以无共享设置组织的计算节点池解耦。
+          </p>
+          
+          <!-- 架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - Snowflake数据平台架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: Snowflake数据平台架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: Snowflake数据平台架构图，展示数据存储、虚拟仓库和云服务三个核心组件" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Snowflake数据平台的架构图，展示数据存储、虚拟仓库和云服务三个核心组件。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>架构组件技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>数据存储:</strong> 利用云对象存储作为解耦的存储层，表被隐式水平分区为微分区</li>
+                  <li><strong>虚拟仓库:</strong> 提供查询处理的计算资源，采用无共享架构组织计算节点</li>
+                  <li><strong>云服务:</strong> 控制平面处理传入查询，执行编译和优化步骤，并调度查询执行</li>
+                  <li><strong>元数据服务:</strong> 可扩展的事务性键值存储，管理存储在数据存储层中的分区元数据</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Snowflake中的修剪机制</h3>
+          <p class="mb-4">
+            在Snowflake中，修剪主要在<strong>微分区</strong>级别执行；对于Apache Parquet格式的表，修剪发生在文件、行组和页面级别。Snowflake基于为每个微分区维护的轻量级元数据执行最小/最大修剪，类似于区域映射或小型物化聚合。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-code-branch mr-2"></i>编译时修剪
+              </h4>
+              <p class="text-sm text-gray-700">在查询编译期间进行，由云服务层驱动。优势是修剪结果可以在查询编译期间用于进一步优化。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-play-circle mr-2"></i>运行时修剪
+              </h4>
+              <p class="text-sm text-gray-700">在虚拟仓库中的执行层进行查询执行期间进行。可以合并仅在查询执行期间可用的信息。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            尽管在通过辅助元数据和索引技术改进修剪方面进行了大量研究，但这些方法通常在理想化假设下运行。许多方法未能考虑复杂的实际场景。
+          </p>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>基准测试局限性
+            </h5>
+            <p class="text-gray-700">TPC-H等合成基准测试与实际工作负载相比表现出显著不同的修剪行为，无法准确捕捉分区修剪的重要性。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">技术挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6">
+            <div class="tech-card bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 text-base md:text-lg mb-2">
+                <i class="fas fa-filter mr-2"></i>复杂表达式修剪
+              </h4>
+              <p class="text-sm text-gray-700">现实查询中的许多谓词使用一元甚至n元函数，涉及多列并执行非平凡计算。</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fas fa-sort-amount-down mr-2"></i>LIMIT查询优化
+              </h4>
+              <p class="text-sm text-gray-700">大多数数据库系统简单地执行整个查询并在达到指定LIMIT时停止查询处理。</p>
+            </div>
+            
+            <div class="tech-card bg-teal-50 p-4 rounded-lg border border-teal-200">
+              <h4 class="font-bold text-teal-700 text-base md:text-lg mb-2">
+                <i class="fas fa-chart-line mr-2"></i>Top-K查询处理
+              </h4>
+              <p class="text-sm text-gray-700">标准堆基方法需要扫描整个表，对于数据分析系统中的大表变得昂贵。</p>
+            </div>
+            
+            <div class="tech-card bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2">
+                <i class="fas fa-code-branch mr-2"></i>JOIN操作优化
+              </h4>
+              <p class="text-sm text-gray-700">连接是数据库系统中一些最耗时和计算密集的操作，在连接操作期间避免不必要的工作至关重要。</p>
+            </div>
+            
+            <div class="tech-card bg-pink-50 p-4 rounded-lg border border-pink-200">
+              <h4 class="font-bold text-pink-700 text-base md:text-lg mb-2">
+                <i class="fas fa-balance-scale mr-2"></i>编译时与运行时平衡
+              </h4>
+              <p class="text-sm text-gray-700">在编译时修剪为大型表引入额外开销，可能变得过于昂贵。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">过滤器修剪</h3>
+          <p class="mb-4">
+            过滤器修剪是数据分析系统中修剪的传统方法。概念简单：使用查询的谓词，查询引擎尝试基于分区的元数据推断微分区是否可能包含相关数据。
+          </p>
+          
+          <!-- 过滤器修剪效果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图4 - 过滤器修剪的影响
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 过滤器修剪的影响
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: 过滤器修剪对包含至少一个谓词的SELECT查询的影响分布图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 过滤器修剪对包含至少一个谓词的SELECT查询的影响。基于2024年11月5日至7日所有客户的代表性随机样本。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>过滤器修剪技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>高有效性:</strong> 36%的查询修剪了至少约90%的分区</li>
+                  <li><strong>复杂表达式处理:</strong> 支持处理涉及多列和非平凡计算的复杂谓词</li>
+                  <li><strong>不精确过滤器重写:</strong> 允许将谓词放宽为支持修剪的不精确形式</li>
+                  <li><strong>编译时与运行时平衡:</strong> 采用过滤器重新排序和修剪截止策略优化性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">LIMIT查询修剪</h3>
+          <p class="mb-4">
+            LIMIT查询在BI工作负载中很常见，在探索不熟悉数据集的分析过程中经常使用。它们占在Snowflake上执行的查询的显著部分。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>创新方法
+            </h5>
+            <p class="text-gray-700">作者引入了第三类微分区：<strong>完全匹配分区</strong>，可以保证分区的所有行都满足所有查询谓词。</p>
+          </div>
+          
+          <!-- LIMIT修剪示例图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图5 - LIMIT修剪示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: LIMIT修剪示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: 具有四个微分区的表上使用谓词species LIKE 'Alpine%' AND s >= 50的查询的部分和完全匹配分区示例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在具有四个微分区的表上使用谓词species LIKE 'Alpine%' AND s >= 50的查询的部分和完全匹配分区示例。SPECIES的元数据被缩短。颜色突出显示哪些行/单元格（部分）匹配谓词。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>LIMIT修剪算法：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">完全匹配分区识别:</strong>
+                    <p>通过包含反向谓词的第二遍过滤器修剪过程来识别完全匹配分区，但不修改扫描集</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">LIMIT信息下推:</strong>
+                    <p>将LIMIT信息从LIMIT操作符下推到表扫描，需要"下推"LIMIT信息在编译器内</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化条件:</strong>
+                    <p>如果所有完全匹配分区的总行数满足或超过LIMIT子句中定义的k阈值，则扫描集仅构建为包含满足k所需的最少数量的完全匹配分区</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Top-K查询修剪</h3>
+          <p class="mb-4">
+            Snowflake在执行期间对Top-K查询采用专门的修剪技术，补充其他修剪机制。值得注意的是，在Snowflake上执行的所有SELECT查询中有5.55%属于此类。
+          </p>
+          
+          <!-- Top-K修剪效果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图9 - Top-K修剪的影响
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: Top-K修剪的影响
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: Top-K修剪在表扫描级别的修剪比率CDF和查询的相对运行时改进CDF" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 第一行显示成功应用Top-K修剪的表扫描级别Top-K修剪的修剪比率CDF（越高越好）。第二行中的图显示查询的相对运行时改进CDF。查询从2024年11月13日至19日期间的代表性实际工作负载中随机抽样，按查询执行时间分桶。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">算法核心:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>扩展堆基方法，利用Top-K堆中的最小元素（边界值）进行分区修剪</li>
+                      <li>Snowflake的灵活执行引擎支持将更新的边界值传递给表扫描</li>
+                      <li>在扫描微分区之前，将其元数据与边界值进行比较</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>成功应用的Top-K修剪的平均修剪比率约为77%</li>
+                      <li>在所有分桶中观察到查询运行时改进超过99.9%</li>
+                      <li>4.8%的查询也应用了JOIN修剪</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">JOIN查询修剪</h3>
+          <p class="mb-4">
+            连接是数据库系统中一些最耗时和计算密集的操作，在连接操作期间避免不必要的工作至关重要。
+          </p>
+          
+          <!-- JOIN修剪效果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-network-wired mr-2"></i>技术细节：图10 - JOIN修剪的影响
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 10: JOIN修剪的影响
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig10.png" alt="论文图10: 成功使用JOIN修剪的SELECT查询的JOIN修剪影响" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 成功使用JOIN修剪的SELECT查询的JOIN修剪影响。基于2024年11月5日至7日所有客户的代表性随机样本。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                <h5 class="font-semibold text-indigo-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>JOIN修剪技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>构建端值摘要:</strong> 在哈希连接的构建阶段总结构建端值，在准确性和内存大小之间取得平衡</li>
+                  <li><strong>探测端修剪:</strong> 将摘要与探测端分区的min/max值匹配，修剪min/max值不与摘要重叠的微分区</li>
+                  <li><strong>显著效果:</strong> 50%的查询看到扫描集减少至少72%，约13%的查询修剪比率为100%</li>
+                  <li><strong>网络I/O减少:</strong> 不仅减少CPU使用，还显著减少网络I/O，因为微分区在从存储加载之前被修剪</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">整体修剪效果</h3>
+          
+          <!-- 整体修剪效果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-pie mr-2"></i>技术细节：图1 - 不同修剪技术的修剪比率
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 不同修剪技术的修剪比率
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: Snowflake中合格查询的不同修剪技术的修剪比率。▼表示平均值。基于2024年11月5日至7日所有客户的代表性样本。" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Snowflake中合格查询的不同修剪技术的修剪比率。▼表示平均值。基于2024年11月5日至7日所有客户的代表性样本。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>数据来源: Snowflake生产工作负载</li>
+                      <li>时间范围: 2024年11月5日至7日</li>
+                      <li>样本大小: 所有客户的代表性随机样本</li>
+                      <li>度量指标: 修剪比率（被跳过的微分区比例）</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>过滤器修剪: 平均修剪比率约90%</li>
+                      <li>LIMIT修剪: 平均修剪比率约85%</li>
+                      <li>Top-K修剪: 平均修剪比率约77%</li>
+                      <li>JOIN修剪: 平均修剪比率约70%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">实际工作负载分析</h3>
+          <p class="mb-4">
+            作者分析了Snowflake生产工作负载中查询的修剪行为，揭示了与合成基准测试显著不同的模式。
+          </p>
+          
+          <!-- 工作负载分析图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-hourglass-half mr-2"></i>技术细节：图3 - 实际工作负载中的修剪行为
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 实际工作负载中的修剪行为
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 实际工作负载中的修剪行为分析，展示不同查询类型和应用场景的修剪效果分布" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 实际工作负载中的修剪行为分析，展示不同查询类型和应用场景的修剪效果分布。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>工作负载分析技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>高选择性查询:</strong> 实际分析查询表现出比通常假设更高的选择性，产生了有效的分区修剪</li>
+                  <li><strong>查询模式:</strong> 现实世界查询通常针对特定数据子集，如特定时间范围、客户或产品</li>
+                  <li><strong>基准测试差距:</strong> TPC-H等合成基准测试无法准确捕捉分区修剪在实际工作负载中的重要性</li>
+                  <li><strong>实际影响:</strong> 有效修剪对于基于云的分析系统至关重要，因为网络I/O成本显著</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">性能改进量化</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-4 text-center">
+                <i class="fas fa-bolt mr-2"></i>查询性能改进
+              </h4>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">Top-K查询:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-green-500 h-3 rounded-full" style="width: 99.9%"></div>
+                  </div>
+                  <span class="text-sm font-medium">99.9%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">LIMIT查询:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-blue-500 h-3 rounded-full" style="width: 95%"></div>
+                  </div>
+                  <span class="text-sm font-medium">95%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">JOIN查询:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-purple-500 h-3 rounded-full" style="width: 85%"></div>
+                  </div>
+                  <span class="text-sm font-medium">85%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-4 text-center">
+                <i class="fas fa-network-wired mr-2"></i>网络I/O减少
+              </h4>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">过滤器修剪:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-orange-500 h-3 rounded-full" style="width: 90%"></div>
+                  </div>
+                  <span class="text-sm font-medium">90%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">JOIN修剪:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-red-500 h-3 rounded-full" style="width: 70%"></div>
+                  </div>
+                  <span class="text-sm font-medium">70%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">总体减少:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-4">
+                    <div class="bg-pink-500 h-3 rounded-full" style="width: 99.4%"></div>
+                  </div>
+                  <span class="text-sm font-medium">99.4%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者评估并量化了四种不同修剪技术的影响：过滤器修剪、LIMIT修剪、Top-K修剪和JOIN修剪。对Snowflake生产工作负载的分析表明，实际分析查询表现出比通常假设更高的选择性，产生了有效的分区修剪，并突显了对更现实基准测试的需求。
+          </p>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要成果
+            </h5>
+            <p class="text-gray-700">作者展示了如何利用现代数据分析系统和Apache Iceberg等数据湖格式中可用的最小/最大元数据，在Snowflake数据平台上将处理的微分区数量减少99.4%。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">未来研究方向</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-search mr-2"></i>更智能的元数据
+              </h4>
+              <p class="text-sm text-gray-700">探索更丰富的元数据结构，如布隆过滤器、直方图或数据草图，以改进复杂谓词的修剪决策。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-robot mr-2"></i>机器学习增强
+              </h4>
+              <p class="text-sm text-gray-700">利用机器学习技术预测查询选择性，优化修剪决策，特别是在编译时信息有限的情况下。</p>
+            </div>
+            
+            <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+              <h4 class="font-bold text-teal-700 mb-2 flex items-center">
+                <i class="fas fa-layer-group mr-2"></i>分层修剪
+              </h4>
+              <p class="text-sm text-gray-700">研究在不同粒度级别（文件、行组、页面）的分层修剪策略，最大化修剪效果。</p>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-database mr-2"></i>自适应数据布局
+              </h4>
+              <p class="text-sm text-gray-700">探索根据查询工作负载模式动态调整数据布局和分区策略的方法。</p>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            作者的工作为现代云数据分析系统中的高效数据修剪设定了新的基准，展示了通过创新的修剪技术组合，可以显著减少处理的数据量，从而在云环境中实现更好的性能和成本效益。
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
