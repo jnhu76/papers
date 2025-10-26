@@ -414,7 +414,7 @@
         // 自动更新器
         class AutoUpdater {
             constructor() {
-                this.checkInterval = 5 * 60 * 1000;
+                this.checkInterval = 5 * 60 * 1000; // 5分钟
                 this.lastCheck = 0;
             }
             
@@ -472,72 +472,68 @@
             }
         }
 
-        // 工具函数 - 检测最新的 papers 文件
-        async function findLatestPapersFile() {
-            try {
-                // 尝试获取最新的 papers_*.json 文件
-                const response = await fetch('./');
-                if (!response.ok) return null;
-                
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const links = Array.from(doc.querySelectorAll('a[href$=".json"]'));
-                
-                // 过滤出 papers_*.json 文件
-                const paperFiles = links
-                    .map(link => link.href)
-                    .filter(href => href.includes('papers_'))
-                    .map(href => {
-                        const filename = href.split('/').pop();
-                        const timestamp = filename.replace('papers_', '').replace('.json', '');
+            // 工具函数 - 检测最新的 papers 文件
+            async function findLatestPapersFile() {
+                try {
+                    // 获取目录列表，查找所有 JSON 文件
+                    const response = await fetch('./');
+                    if (!response.ok) return null;
+                    
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const links = Array.from(doc.querySelectorAll('a[href$=".json"]'));
+                    
+                    // 提取所有 JSON 文件，并解析时间戳
+                    const jsonFiles = links
+                        .map(link => {
+                            const href = link.href;
+                            const filename = href.split('/').pop();
+                            // 直接使用文件名作为时间戳（去掉 .json 后缀）
+                            const timestamp = filename.replace('.json', '');
+                            return {
+                                url: filename,
+                                timestamp: parseInt(timestamp),
+                                filename: filename
+                            };
+                        })
+                        .filter(file => !isNaN(file.timestamp) && file.timestamp > 0) // 只保留有效的正数时间戳
+                        .sort((a, b) => b.timestamp - a.timestamp); // 按时间戳降序排列
+                    
+                    console.log('找到的 JSON 文件:', jsonFiles);
+                    
+                    if (jsonFiles.length > 0) {
+                        const latestFile = jsonFiles[0];
+                        console.log('选择最新文件:', latestFile);
                         return {
-                            url: href,
-                            timestamp: parseInt(timestamp),
-                            filename: filename
+                            url: latestFile.filename,
+                            timestamp: latestFile.timestamp
                         };
-                    })
-                    .filter(file => !isNaN(file.timestamp))
-                    .sort((a, b) => b.timestamp - a.timestamp); // 按时间戳降序排列
-                
-                if (paperFiles.length > 0) {
-                    return {
-                        url: paperFiles[0].filename,
-                        timestamp: paperFiles[0].timestamp
-                    };
+                    }
+                } catch (error) {
+                    console.log('自动检测文件失败:', error);
                 }
-            } catch (error) {
-                console.log('自动检测文件失败:', error);
-            }
 
-            // 如果没有找到带时间戳的文件，尝试加载默认的 papers.json
-            try {
-                const response = await fetch('./papers.json');
-                if (response.ok) {
-                    return {
-                        url: './papers.json',
-                        timestamp: Date.now()
-                    };
-                }
-            } catch (error) {
-                console.warn('加载默认文件失败:', error);
+                console.log('未找到有效的 JSON 文件');
+                return null;
             }
-
-            return null;
-        }
 
         // 工具函数 - 获取最新的论文数据
         async function fetchLatestPapersFile() {
             try {
                 const fileInfo = await findLatestPapersFile();
                 if (!fileInfo) {
+                    console.log('未找到可用的论文文件');
                     return null;
                 }
 
+                console.log('正在加载文件:', fileInfo.url);
                 const response = await fetch(fileInfo.url);
                 if (!response.ok) throw new Error('Network response was not ok');
                 
                 const papers = await response.json();
+                console.log('成功加载论文数据，数量:', papers.length);
+                
                 return {
                     papers,
                     timestamp: fileInfo.timestamp,

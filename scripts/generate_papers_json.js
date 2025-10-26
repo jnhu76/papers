@@ -24,7 +24,7 @@ function readMetadataFiles(dir, fileList = []) {
 function generatePapersJson() {
   const papersDir = './papers';  // 论文根目录
   const timestamp = Date.now();  // 获取当前时间戳
-  const outputFile = `./papers_${timestamp}.json`;
+  const outputFile = `./${timestamp}.json`;
 
   if (!fs.existsSync(papersDir)) {
     console.error(`目录 ${papersDir} 不存在`);
