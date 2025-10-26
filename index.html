@@ -275,7 +275,7 @@
         class PaperDatabase {
             constructor() {
                 this.dbName = 'AcademicPapersDB';
-                this.version = 3;
+                this.version = 4; // 增加版本号以支持新的元数据
                 this.currentDataHash = '';
             }
             
@@ -340,10 +340,12 @@
                 });
             }
 
-            async needsUpdate(papers) {
+            async needsUpdate(papers, fileTimestamp) {
                 const newHash = await this.calculateDataHash(papers);
                 const oldHash = await this.getMetadata('dataHash');
-                return newHash !== oldHash;
+                const oldTimestamp = await this.getMetadata('fileTimestamp');
+                
+                return newHash !== oldHash || fileTimestamp !== oldTimestamp;
             }
 
             async getAllPapers() {
@@ -357,7 +359,7 @@
                 });
             }
 
-            async storePapers(papers) {
+            async storePapers(papers, fileTimestamp) {
                 return new Promise((resolve, reject) => {
                     const transaction = this.db.transaction(['papers', 'metadata'], 'readwrite');
                     const paperStore = transaction.objectStore('papers');
@@ -380,6 +382,12 @@
                                 key: 'totalCount', 
                                 value: papers.length 
                             });
+                            if (fileTimestamp) {
+                                metadataStore.put({ 
+                                    key: 'fileTimestamp', 
+                                    value: fileTimestamp 
+                                });
+                            }
                         });
                         
                         resolve();
@@ -392,10 +400,12 @@
             async getStats() {
                 const lastUpdated = await this.getMetadata('lastUpdated');
                 const totalCount = await this.getMetadata('totalCount');
+                const fileTimestamp = await this.getMetadata('fileTimestamp');
                 
                 return {
                     lastUpdated,
                     totalCount: totalCount || 0,
+                    fileTimestamp: fileTimestamp || null,
                     isCached: !!lastUpdated
                 };
             }
@@ -421,13 +431,13 @@
             
             async checkForUpdates() {
                 try {
-                    const networkPapers = await fetchPapersFromNetwork();
-                    if (networkPapers && await paperDatabase.needsUpdate(networkPapers)) {
-                        await paperDatabase.storePapers(networkPapers);
+                    const result = await fetchLatestPapersFile();
+                    if (result && result.papers && await paperDatabase.needsUpdate(result.papers, result.timestamp)) {
+                        await paperDatabase.storePapers(result.papers, result.timestamp);
                         this.lastCheck = Date.now();
                         
                         if (allPapers.length > 0) {
-                            allPapers = networkPapers.map(fixPaperPaths);
+                            allPapers = result.papers.map(fixPaperPaths);
                             filteredPapers = [...allPapers];
                             
                             // 重新渲染当前页
@@ -462,14 +472,59 @@
             }
         }
 
-        // 工具函数
-        async function fetchPapersFromNetwork() {
+        // 工具函数 - 检测最新的 papers 文件
+        async function findLatestPapersFile() {
             try {
-                const response = await fetch('./papers.json');
-                if (!response.ok) throw new Error('Network response was not ok');
-                return await response.json();
+                // 首先尝试获取版本信息文件
+                const versionResponse = await fetch('./papers_version.json');
+                if (versionResponse.ok) {
+                    const versionInfo = await versionResponse.json();
+                    return {
+                        url: versionInfo.file,
+                        timestamp: versionInfo.timestamp
+                    };
+                }
             } catch (error) {
-                console.warn('网络请求失败:', error);
+                console.log('版本信息文件不存在，尝试自动检测...');
+            }
+
+            // 如果没有版本信息文件，尝试自动检测
+            try {
+                // 这里可以添加其他检测逻辑，比如扫描目录
+                // 目前我们假设最新的文件就是 papers.json
+                const response = await fetch('./papers.json');
+                if (response.ok) {
+                    return {
+                        url: './papers.json',
+                        timestamp: Date.now() // 使用当前时间作为时间戳
+                    };
+                }
+            } catch (error) {
+                console.warn('自动检测文件失败:', error);
+            }
+
+            return null;
+        }
+
+        // 工具函数 - 获取最新的论文数据
+        async function fetchLatestPapersFile() {
+            try {
+                const fileInfo = await findLatestPapersFile();
+                if (!fileInfo) {
+                    return null;
+                }
+
+                const response = await fetch(fileInfo.url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const papers = await response.json();
+                return {
+                    papers,
+                    timestamp: fileInfo.timestamp,
+                    fileUrl: fileInfo.url
+                };
+            } catch (error) {
+                console.warn('获取最新论文文件失败:', error);
                 return null;
             }
         }
@@ -592,22 +647,27 @@
                 
                 let papers = [];
                 let dataSource = 'cache';
+                let fileTimestamp = null;
                 
                 updateLoadingStatus('检查网络更新...');
-                const networkPapers = await fetchPapersFromNetwork();
+                const networkResult = await fetchLatestPapersFile();
                 
-                if (networkPapers) {
-                    if (stats.isCached && await paperDatabase.needsUpdate(networkPapers)) {
+                if (networkResult && networkResult.papers) {
+                    const needsUpdate = await paperDatabase.needsUpdate(networkResult.papers, networkResult.timestamp);
+                    
+                    if (stats.isCached && needsUpdate) {
                         updateLoadingStatus('更新本地缓存...');
-                        await paperDatabase.storePapers(networkPapers);
-                        papers = networkPapers;
+                        await paperDatabase.storePapers(networkResult.papers, networkResult.timestamp);
+                        papers = networkResult.papers;
                         dataSource = 'network';
+                        fileTimestamp = networkResult.timestamp;
                         showNetworkStatus();
                     } else if (!stats.isCached) {
                         updateLoadingStatus('初始化本地缓存...');
-                        await paperDatabase.storePapers(networkPapers);
-                        papers = networkPapers;
+                        await paperDatabase.storePapers(networkResult.papers, networkResult.timestamp);
+                        papers = networkResult.papers;
                         dataSource = 'network';
+                        fileTimestamp = networkResult.timestamp;
                         showNetworkStatus();
                     } else {
                         updateLoadingStatus('加载缓存数据...');
@@ -640,7 +700,7 @@
                 autoUpdater = new AutoUpdater();
                 autoUpdater.start();
                 
-                console.log(`数据加载完成，来源: ${dataSource}，共 ${allPapers.length} 篇论文`);
+                console.log(`数据加载完成，来源: ${dataSource}，共 ${allPapers.length} 篇论文，时间戳: ${fileTimestamp || 'N/A'}`);
                 
             } catch (error) {
                 console.error('加载论文数据失败:', error);
