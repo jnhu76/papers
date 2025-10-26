@@ -1,0 +1,10 @@
+{
+"id": "6a1e9f9c8c4b",
+"title": "AEOLIA: A Fast and Secure Userspace Interrupt-Based Storage Stack",
+"authors": ["Chuandong Li", "Ran Yi", "Zonghao Zhang", "Jing Liu", "Changwoo Min", "Jie Zhang", "Yingwei Luo", "Xiaolin Wang", "Zhenlin Wang", "Diyu Zhou"],
+"year": 2025,
+"conference": "SOSP '25",
+"category": "操作系统与存储系统",
+"keywords": ["用户中断", "用户空间文件系统", "用户空间NVMe驱动", "高性能存储", "调度"],
+"abstract": "Polling-based userspace storage stacks achieve great I/O performance. However, they cannot efficiently and securely share disks and CPUs among multiple tasks. In contrast, interrupt-based kernel stacks inherently suffer from subpar I/O performance but achieve advantages in resource sharing.\n\nWe present AEOLIA, a novel storage stack that achieves great I/O performance while offering efficient and secure resource sharing. AEOLIA is an interrupt-based userspace storage stack, representing a new point in the design space previously considered unfeasible. Our main observation is that, contrary to conventional wisdom, polling offers only marginal disk performance improvements over interrupts. AEOLIA exploits user interrupt, an emerging hardware feature commonly used for userspace IPIs, in a novel way to deliver storage interrupts directly to userspace, thereby achieving high I/O performance with direct access. AEOLIA leverages the hardware intra-process isolation features and sched_ext, an eBPF-based userspace scheduling framework, to efficiently and securely share CPUs and disks among multiple tasks, challenging the common belief that these are inherent disadvantages of userspace storage stacks. The above design enables AEOLIA to realize AsofS, a high-performance library file system that securely and directly accesses disks. Our evaluation shows that AEOLIA outperforms Linux by 2x and AsofS outperforms ext4 by up to 19.1x, respectively."
+}
