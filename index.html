@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>学术论文库 | Academic Papers</title>
     
     <!-- 统一CDN加载 -->
@@ -12,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <link rel="preload" href="./papers_data.json" as="fetch" crossorigin="anonymous" type="application/json">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -326,6 +330,13 @@
                 const oldHash = await this.getMetadata('dataHash');
                 const oldTimestamp = await this.getMetadata('fileTimestamp');
                 
+                console.log('🔍 检查数据更新:', {
+                    新时间戳: fileTimestamp,
+                    旧时间戳: oldTimestamp,
+                    新哈希: newHash?.substring(0, 8) + '...',
+                    旧哈希: oldHash?.substring(0, 8) + '...'
+                });
+                
                 return newHash !== oldHash || fileTimestamp !== oldTimestamp;
             }
 
@@ -411,6 +422,7 @@
             start() {
                 document.addEventListener('visibilitychange', () => {
                     if (!document.hidden && this.shouldCheck()) {
+                        console.log('🔄 页面可见性变化，检查数据更新');
                         this.checkForUpdates();
                     }
                 });
@@ -421,18 +433,31 @@
             
             async checkForUpdates() {
                 try {
+                    console.log('🔄 自动检查数据更新...');
                     const result = await fetchLatestPapersFile();
-                    if (result && result.papers && await paperDatabase.needsUpdate(result.papers, result.timestamp)) {
-                        await paperDatabase.storePapers(result.papers, result.timestamp);
-                        this.lastCheck = Date.now();
+                    if (result && result.papers) {
+                        const needsUpdate = await paperDatabase.needsUpdate(result.papers, result.timestamp);
                         
-                        if (allPapers.length > 0) {
-                            allPapers = result.papers.map(fixPaperPaths);
-                            filteredPapers = [...allPapers];
+                        if (needsUpdate) {
+                            console.log('🔄 检测到数据更新，正在同步...', {
+                                旧时间戳: await paperDatabase.getMetadata('fileTimestamp'),
+                                新时间戳: result.timestamp
+                            });
                             
-                            renderPapers();
-                            this.showUpdateNotification();
-                            updatePaperCount();
+                            await paperDatabase.storePapers(result.papers, result.timestamp);
+                            this.lastCheck = Date.now();
+                            
+                            if (allPapers.length > 0) {
+                                allPapers = result.papers.map(fixPaperPaths);
+                                filteredPapers = [...allPapers];
+                                
+                                renderPapers();
+                                this.showUpdateNotification();
+                                updatePaperCount();
+                                console.log('✅ 数据更新完成');
+                            }
+                        } else {
+                            console.log('✅ 数据已是最新版本');
                         }
                     }
                 } catch (error) {
@@ -449,7 +474,7 @@
                 notification.className = 'update-notification';
                 notification.innerHTML = `
                     <i class="fas fa-sync-alt mr-2"></i>
-                    论文数据已自动更新
+                    论文数据已自动更新 (${new Date().toLocaleTimeString()})
                 `;
                 document.body.appendChild(notification);
                 
@@ -461,14 +486,31 @@
             }
         }
 
-        // 工具函数 - 获取最新的论文数据
+        // 工具函数 - 获取最新的论文数据（禁用缓存版本）
         async function fetchLatestPapersFile() {
             try {
-                const response = await fetch('./papers_data.json');
-                if (!response.ok) throw new Error('Network response was not ok');
+                // 使用激进的缓存控制策略 - 添加随机参数确保每次都是新请求
+                const timestamp = Date.now();
+                const cacheBuster = Math.random().toString(36).substring(2, 15);
+                
+                const response = await fetch(`./papers_data.json?nocache=${timestamp}&rnd=${cacheBuster}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                        'DNT': '1'
+                    },
+                    cache: 'no-store', // 强制不缓存
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
                 const data = await response.json();
-                console.log('成功加载论文数据，时间戳:', data.time);
+                console.log('✅ 成功加载论文数据，文件时间戳:', data.time, '请求时间:', new Date().toLocaleString());
                 
                 return {
                     papers: data.papers,
@@ -476,7 +518,7 @@
                     fileUrl: 'papers_data.json'
                 };
             } catch (error) {
-                console.warn('获取论文文件失败:', error);
+                console.warn('❌ 获取论文文件失败:', error);
                 return null;
             }
         }
@@ -508,8 +550,7 @@
             const dataSource = document.getElementById('dataSource');
             if (dataSource) {
                 dataSource.textContent = '网络数据';
-                dataSource.className = dataSource.className.replace('bg-blue-100', 'bg-green-100');
-                dataSource.className = dataSource.className.replace('text-blue-800', 'text-green-800');
+                dataSource.className = 'ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full';
             }
         }
 
@@ -605,6 +646,25 @@
         // 主要功能函数
         async function loadPapers() {
             try {
+                // 强制更新Service Worker以确保使用最新版本
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (let registration of registrations) {
+                            console.log('🔄 强制更新Service Worker');
+                            registration.update();
+                            
+                            // 如果有等待的worker，立即激活
+                            if (registration.waiting) {
+                                registration.waiting.postMessage({type: 'SKIP_WAITING'});
+                                console.log('✅ 跳过等待，立即激活新Service Worker');
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Service Worker更新失败:', error);
+                    }
+                }
+                
                 updateLoadingStatus('初始化数据库...');
                 
                 paperDatabase = new PaperDatabase();
@@ -618,7 +678,7 @@
                 let dataSource = 'cache';
                 let fileTimestamp = null;
                 
-                updateLoadingStatus('检查网络更新...');
+                updateLoadingStatus('请求最新数据...');
                 const networkResult = await fetchLatestPapersFile();
                 
                 if (networkResult && networkResult.papers) {
@@ -631,6 +691,7 @@
                         dataSource = 'network';
                         fileTimestamp = networkResult.timestamp;
                         showNetworkStatus();
+                        console.log('🔄 使用网络数据更新缓存');
                     } else if (!stats.isCached) {
                         updateLoadingStatus('初始化本地缓存...');
                         await paperDatabase.storePapers(networkResult.papers, networkResult.timestamp);
@@ -638,17 +699,20 @@
                         dataSource = 'network';
                         fileTimestamp = networkResult.timestamp;
                         showNetworkStatus();
+                        console.log('🔄 初始化缓存数据');
                     } else {
                         updateLoadingStatus('加载缓存数据...');
                         papers = await paperDatabase.getAllPapers();
                         dataSource = 'cache';
                         showCacheStatus();
+                        console.log('💾 使用缓存数据');
                     }
                 } else if (stats.isCached) {
                     updateLoadingStatus('网络不可用，加载缓存数据...');
                     papers = await paperDatabase.getAllPapers();
                     dataSource = 'cache';
                     showCacheStatus();
+                    console.log('⚠️ 网络失败，使用缓存数据');
                 } else {
                     throw new Error('无法加载论文数据：网络不可用且无缓存数据');
                 }
@@ -669,10 +733,10 @@
                 autoUpdater = new AutoUpdater();
                 autoUpdater.start();
                 
-                console.log(`数据加载完成，来源: ${dataSource}，共 ${allPapers.length} 篇论文，时间戳: ${fileTimestamp || 'N/A'}`);
+                console.log(`✅ 数据加载完成，来源: ${dataSource}，共 ${allPapers.length} 篇论文，文件时间戳: ${fileTimestamp || 'N/A'}`);
                 
             } catch (error) {
-                console.error('加载论文数据失败:', error);
+                console.error('❌ 加载论文数据失败:', error);
                 showError();
             }
         }
