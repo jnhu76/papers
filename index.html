@@ -412,6 +412,50 @@
             }
         }
 
+        // 工具函数 - 获取最新的论文数据（禁用缓存版本）
+        async function fetchLatestPapersFile() {
+            try {
+                // 使用激进的缓存控制策略 - 添加随机参数确保每次都是新请求
+                const timestamp = Date.now();
+                const cacheBuster = Math.random().toString(36).substring(2, 15);
+                
+                console.log('🌐 开始请求JSON文件...');
+                const response = await fetch(`./papers_data.json?nocache=${timestamp}&rnd=${cacheBuster}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                        'DNT': '1'
+                    },
+                    cache: 'no-store', // 强制不缓存
+                    credentials: 'same-origin'
+                });
+                
+                console.log('📡 响应状态:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ 成功加载论文数据，文件时间戳:', data.time, '数据条数:', data.papers ? data.papers.length : 0);
+                
+                if (!data.papers || !Array.isArray(data.papers)) {
+                    throw new Error('JSON文件格式错误：缺少papers数组');
+                }
+                
+                return {
+                    papers: data.papers,
+                    timestamp: data.time,
+                    fileUrl: 'papers_data.json'
+                };
+            } catch (error) {
+                console.error('❌ 获取论文文件失败:', error);
+                return null;
+            }
+        }
+
         // 自动更新器
         class AutoUpdater {
             constructor() {

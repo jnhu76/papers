@@ -1,8 +1,8 @@
 // sw.js
-const CACHE_NAME = 'papers-cache-v2';
-const API_CACHE_NAME = 'papers-api-cache-v2';
+const CACHE_NAME = 'papers-cache-v3';
+const API_CACHE_NAME = 'papers-api-cache-v3';
 
-// 需要缓存的资源（移除了papers_data.json）
+// 需要缓存的资源（只缓存核心文件，排除CDN资源）
 const STATIC_RESOURCES = ['./', './index.html'];
 
 // 安装事件 - 缓存静态资源
@@ -16,6 +16,9 @@ self.addEventListener('install', (event) => {
                       .then(() => {
                         console.log('✅ 所有静态资源缓存完成');
                         return self.skipWaiting();
+                      })
+                      .catch(error => {
+                        console.error('❌ 缓存失败:', error);
                       }));
 });
 
@@ -42,9 +45,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // 对 CDN 资源完全绕过 Service Worker
+  if (url.hostname.includes('cdn.tailwindcss.com') ||
+      url.hostname.includes('cdnjs.cloudflare.com') ||
+      url.hostname.includes('fonts.googleapis.com') ||
+      url.hostname.includes('fonts.gstatic.com')) {
+    console.log('🌐 CDN资源绕过Service Worker:', url.hostname);
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // 对 papers_data.json 完全绕过 Service Worker 缓存
   if (url.pathname.endsWith('papers_data.json')) {
-    console.log('🚫 JSON文件绕过Service Worker缓存，直接请求:', url.pathname);
+    console.log('🚫 JSON文件绕过Service Worker缓存:', url.pathname);
     event.respondWith(fetch(event.request));
     return;
   }
@@ -54,10 +67,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then(response => {
-              // 更新缓存
-              const responseClone = response.clone();
-              caches.open(CACHE_NAME)
-                  .then(cache => cache.put(event.request, responseClone));
+              // 只缓存成功的响应
+              if (response.status === 200) {
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME)
+                    .then(cache => cache.put(event.request, responseClone));
+              }
               return response;
             })
             .catch(() => {
@@ -67,13 +82,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 其他资源保持缓存优先策略
-  event.respondWith(caches.match(event.request).then((response) => {
-    if (response) {
-      return response;
-    }
-    return fetch(event.request);
-  }));
+  // 其他同源资源保持缓存优先策略
+  if (url.origin === location.origin) {
+    event.respondWith(caches.match(event.request).then((response) => {
+      if (response) {
+        return response;
+      }
+      return fetch(event.request)
+          .then(response => {
+            // 只缓存成功的响应
+            if (response.status === 200) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME)
+                  .then(cache => cache.put(event.request, responseClone));
+            }
+            return response;
+          })
+          .catch(error => {
+            console.error('获取资源失败:', error);
+            throw error;
+          });
+    }));
+  } else {
+    // 其他跨域资源直接请求
+    event.respondWith(fetch(event.request));
+  }
 });
 
 // 接收来自页面的消息
