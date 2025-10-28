@@ -3,7 +3,7 @@
 "title": "Tiered Memory Management Beyond Hotness",
 "authors": ["Jinshu Liu", "Hamid Hadian", "Hanchen Xu", "Huaicheng Li"],
 "year": 2025,
-"conference": "OSDI'19",
+"conference": "OSDI",
 "category": "操作系统与内存管理",
 "keywords": ["分层内存", "内存管理", "Amortized Offcore Latency (AOL)", "Memory-Level Parallelism (MLP)", "CXL内存", "页面迁移", "性能优化"],
 "abstract": "Tiered memory systems often rely on access frequency (\"hotness\") to guide data placement. However, hot data is not always performance-critical, limiting the effectiveness of hotness-based policies. We introduce amortized offcore latency (AOL), a novel metric that precisely captures the true performance impact of memory accesses by accounting for memory access latency and memory-level parallelism (MLP). Leveraging AOL, we present two powerful tiering mechanisms: Soar, a profile-guided allocation policy that places objects based on their performance contribution, and Atro, a lightweight page migration regulation policy to eliminate unnecessary migrations. Soar and Atro outperform four state-of-the-art tiering designs across a diverse set of workloads by up to 12.4×, while underperforming in a few cases by no more than 3%."
