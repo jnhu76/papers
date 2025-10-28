@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prove It to the Kernel: Precise Extension Analysis via Proof-Guided Abstraction Refinement</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Prove It to the Kernel: Precise Extension Analysis via Proof-Guided Abstraction Refinement
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Hao Sun, Zhendong Su</div>
+                <div class="text-sm text-gray-600 mt-1">ETH Zurich, Switzerland</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, Seoul, Republic of Korea</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://doi.org/10.1145/3731569.3764796</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">eBPF</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Kernel Verification</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Abstract Interpretation</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Proof-Guided Refinement</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>新颖方法</strong>：提出了一种证明引导的抽象精化技术，通过精化卸载和高效证明检查增强内核验证器</li>
+          <li><strong>数据集</strong>：收集并公开了包含512个真实世界eBPF程序的数据集，为未来研究提供宝贵资源</li>
+          <li><strong>实现</strong>：实现了BCF（eBPF证书框架），显著提高了验证器精度，同时保持内核空间低开销</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">现代操作系统内核（如Linux）使用eBPF子系统来允许用户空间扩展内核功能。为确保安全性，内核验证器对这些扩展进行静态分析；然而，其不精确的分析经常导致错误拒绝安全扩展，暴露了验证器精度和计算复杂性之间的关键张力，限制了内核可扩展性。</p>
+          <p class="mb-4">作者提出了一种证明引导的抽象精化技术，显著提高了验证器的精度，同时保持低内核空间复杂性。关键见解是将复杂推理解耦到用户空间，同时通过形式化证明弥合差距。当遇到不确定性时，验证器启动抽象精化过程而不是拒绝扩展。</p>
+          <p class="mb-4">评估结果显示，该技术使验证器接受了512个真实世界eBPF程序中的403个，这些程序之前被错误拒绝，为更可靠和灵活的内核扩展铺平了道路。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">操作系统内核设计为高可扩展性，以适应不同的用户空间工作负载。eBPF子系统允许用户空间通过扩展向内核注入专门功能，支持各种任务，包括性能分析、安全监控、文件系统管理和设备驱动程序增强。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-bold text-blue-700 mb-2">eBPF验证器</h5>
+            <p class="text-gray-700">eBPF扩展在内核空间执行但由不受信任的第三方开发，因此内核必须严格确保其安全执行。这是通过<em>内核内</em>静态分析器（称为验证器）实现的，它利用抽象解释技术。验证器系统地探索所有潜在的控制流路径，并通过抽象语义解释每条指令，验证关键属性，如内存安全和正确的内核交互。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">eBPF验证过程</h3>
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <pre class="text-sm overflow-x-auto"><code>0: r1 = map_lookup(...) // r1 = ptr(size=16)
+1: r2 &= 0xf          // r2 ∈ [0,15]
+2: r2 <<= 1           // r2 ∈ [0,30]
+3: r1 += r2           // r1.off ∈ [0,30]
+4: r0 = *((u8 *)r1)   // unsafe: off+access_sz > mem_sz</code></pre>
+            <p class="text-sm text-gray-600 mt-2">代码清单1：正确拒绝不安全扩展。注释说明了验证器的分析过程。</p>
+          </div>
+          
+          <p class="mb-4">验证器使用高效的抽象域来近似每个变量的潜在值，包括四个不同的区间域（考虑不同位大小和符号表示）和一个三态域（跟踪单个位的状态）。这些抽象使得能够推导变量范围。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">尽管eBPF验证器提供了强大的安全保证和扩展的高性能，但设计精确的内核内验证器面临重大挑战，特别是在平衡分析精度与系统复杂性方面。</p>
+          
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-6">
+            <h5 class="font-bold text-red-700 mb-2">精度与复杂性的权衡</h5>
+            <p class="text-gray-700">提高精度通常需要纳入复杂的静态分析技术。然而，内核环境对验证器复杂性和运行时开销施加了严格约束。增加验证器复杂性不仅扩大了潜在攻击面，引入安全漏洞，还导致运行时开销，影响系统延迟并消耗内核资源，最终降低用户空间应用程序性能。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">精度限制示例</h3>
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <pre class="text-sm overflow-x-auto"><code>0: r1 &= 1          // r1 = 0000x (x表示未知)
+1: r2 = r1          // r2 = 0000x
+2: r2 <<= 1         // r2 = 000x0
+3: if r2 > 1 goto exit // fallthrough, r2 <= 0001 (因此x=0)
+4: r1 += 8          // r1 ∈ [0,8] (但r1必须为0)
+5: load_bytes(..., r1); // unsafe (错误拒绝)</code></pre>
+            <p class="text-sm text-gray-600 mt-2">代码清单2：安全扩展的错误拒绝。括号内是我们的注释。</p>
+          </div>
+          
+          <p class="mb-4">在实践中，eBPF扩展比这些简化示例更复杂，它们部署在各种场景中实现丰富功能。因此，验证器的固有精度不足已成为显著瓶颈。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h5 class="font-bold text-yellow-700 mb-2">精度限制</h5>
+              <ul class="list-disc list-inside text-gray-700">
+                <li>处理算术运算时丢失重要信息</li>
+                <li>精确计算被局部更新的过近似替代</li>
+                <li>复杂计算和变量间关系跟踪不足</li>
+              </ul>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-bold text-purple-700 mb-2">实际影响</h5>
+              <ul class="list-disc list-inside text-gray-700">
+                <li>许多安全扩展被错误拒绝</li>
+                <li>开发者需要大量手动工作解决验证器反馈</li>
+                <li>在某些情况下缓解不可行，限制内核可扩展性</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者提出了BCF（eBPF证书框架），一种证明引导的抽象精化技术，应用于增强eBPF验证器。该方法通过将复杂推理委托给用户空间，同时在内核空间进行高效证明检查，实现了高精度和低开销的平衡。</p>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：系统架构与工作流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: BCF工作流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: BCF工作流程" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> BCF的工作流程，展示了证明引导的抽象精化过程
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>工作流程:</strong> 验证器首先执行高效的抽象解释，当检测到潜在错误时触发精化过程</li>
+                  <li><strong>符号跟踪:</strong> 使用符号表达式捕获程序状态的精确表示</li>
+                  <li><strong>精化条件:</strong> 生成精化条件并委托给用户空间进行证明生成</li>
+                  <li><strong>证明检查:</strong> 在内核空间高效验证证明的有效性</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>BCF扩展了eBPF验证器，添加了向后分析、符号跟踪和证明检查功能。系统调用接口仅需五个额外字段，无需新的系统调用或命令。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>采用独立的二进制编码格式，基于紧凑的u32方案。操作符编码在第一个四字节单元中，封装操作、长度和类型信息。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>符号跟踪集成到分析阶段，仅在精化时启用，确保标准分析不受影响。证明检查器支持45个原始规则，包括布尔、等式和位向量理论的标准化规则。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">关键设计原则</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-shield-alt mr-2"></i>保持验证器简单
+              </h4>
+              <p class="text-sm text-gray-700">最大化验证器的分析使用，同时保持其效率。当验证器无法继续时，表示需要抽象精化而不是拒绝扩展。</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-arrows-split-up-and-left mr-2"></i>抽象精化
+              </h4>
+              <p class="text-sm text-gray-700">将计算密集型推理卸载到用户空间，验证器仅描述精化任务，复杂推理在用户空间执行。</p>
+            </div>
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-file-certificate mr-2"></i>机器可检查证明
+              </h4>
+              <p class="text-sm text-gray-700">要求机器可检查的证明来认证精化的有效性，仅在证明检查后采用精化。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">BCF实现细节</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-bold text-gray-700 mb-3">代码库概览</h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                <thead class="bg-gray-200">
+                  <tr>
+                    <th class="px-4 py-2 text-left">组件</th>
+                    <th class="px-4 py-2 text-left">语言</th>
+                    <th class="px-4 py-2 text-left">代码行数</th>
+                    <th class="px-4 py-2 text-left">位置</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">验证器</td>
+                    <td class="px-4 py-2">C</td>
+                    <td class="px-4 py-2">1663</td>
+                    <td class="px-4 py-2">内核空间</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">证明检查器</td>
+                    <td class="px-4 py-2">C</td>
+                    <td class="px-4 py-2">2337</td>
+                    <td class="px-4 py-2">内核空间</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">uapi</td>
+                    <td class="px-4 py-2">C</td>
+                    <td class="px-4 py-2">190</td>
+                    <td class="px-4 py-2">共享</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">加载器</td>
+                    <td class="px-4 py-2">C</td>
+                    <td class="px-4 py-2">349</td>
+                    <td class="px-4 py-2">用户空间</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2">求解器</td>
+                    <td class="px-4 py-2">C++</td>
+                    <td class="px-4 py-2">1837</td>
+                    <td class="px-4 py-2">用户空间</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">表1：主要组件的代码库概览</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">BCF工作流程</h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-4">1</div>
+              <div>
+                <h4 class="font-bold text-gray-800">初始抽象解释</h4>
+                <p class="text-gray-700">验证器执行其高效的抽象解释，当检测到潜在错误时触发精化过程。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold mr-4">2</div>
+              <div>
+                <h4 class="font-bold text-gray-800">向后分析和符号跟踪</h4>
+                <p class="text-gray-700">使用向后分析确定启动符号跟踪的适当程序位置，收集相关寄存器的符号表达式。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">3</div>
+              <div>
+                <h4 class="font-bold text-gray-800">精化抽象</h4>
+                <p class="text-gray-700">推导更精确的抽象，使分析能够继续进行，并使用符号信息捕获精化的正确性作为形式条件。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold mr-4">4</div>
+              <div>
+                <h4 class="font-bold text-gray-800">用户空间证明生成</h4>
+                <p class="text-gray-700">条件委托给用户空间，使用SMT求解器生成证明条件的有效性。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mr-4">5</div>
+              <div>
+                <h4 class="font-bold text-gray-800">内核空间证明检查</h4>
+                <p class="text-gray-700">收到证明后执行严格的证明检查，验证每个步骤是否符合规定的规则。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者使用一组真实世界的eBPF程序评估BCF，这些程序尽管安全，但被当前验证器错误拒绝。评估结果显示BCF在精度改进和开销方面表现优异。</p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
+            <h5 class="font-bold text-green-700 mb-2">关键发现</h5>
+            <ul class="list-disc list-inside text-gray-700">
+              <li><strong>精度改进:</strong> 通过集成BCF，验证器成功加载了512个eBPF程序中的403个，接受率达到78.7%</li>
+              <li><strong>高效证明检查:</strong> 平均证明大小限制在541字节，证明检查过程平均仅需48.5微秒</li>
+              <li><strong>低开销:</strong> 总分析时间平均为9.0秒，证明检查阶段占总时间不到1%，用户空间组件平均占21%</li>
+            </ul>
+          </div>
+          
+          <!-- 精度评估 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：精度评估结果
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 证明大小分布
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 证明大小分布" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 证明大小的分布，99.4%小于4096字节
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: AMD EPYC 9654 96核处理器，756 GiB内存</li>
+                      <li>软件栈: Linux v5.15, QEMU 6.2.0 with KVM加速</li>
+                      <li>工作负载: 512个真实世界eBPF程序</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>精度提升: 78.7%的程序被正确接受</li>
+                      <li>资源消耗: 证明检查平均48.5微秒</li>
+                      <li>扩展性: 证明大小平均541字节</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">数据集构建</h3>
+          
+          <p class="mb-4">收集因验证器精度不足而被错误拒绝的eBPF程序面临重大挑战。作者采用编译器驱动程序来丰富数据集，从46个流行的用户空间项目中编译程序，这些项目广泛使用eBPF，包括Cilium和Calico。</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-bold text-gray-700 mb-3">数据集详情</h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                <thead class="bg-gray-200">
+                  <tr>
+                    <th class="px-4 py-2 text-left">对象</th>
+                    <th class="px-4 py-2 text-left">项目</th>
+                    <th class="px-4 py-2 text-left">大小</th>
+                    <th class="px-4 py-2 text-left">描述</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">bpf_lxc.o</td>
+                    <td class="px-4 py-2">Cilium</td>
+                    <td class="px-4 py-2">269 KiB</td>
+                    <td class="px-4 py-2">容器身份和策略</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">bpf_host.o</td>
+                    <td class="px-4 py-2">Cilium</td>
+                    <td class="px-4 py-2">376 KiB</td>
+                    <td class="px-4 py-2">主机级策略和路由</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">pping_kern.o</td>
+                    <td class="px-4 py-2">xdp-project</td>
+                    <td class="px-4 py-2">19 KiB</td>
+                    <td class="px-4 py-2">基于XDP的时间戳</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">xdp_synproxy.o</td>
+                    <td class="px-4 py-2">xdp-project</td>
+                    <td class="px-4 py-2">9.9 KiB</td>
+                    <td class="px-4 py-2">基于XDP的SYN代理</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2">felix_bin_bpf.o</td>
+                    <td class="px-4 py-2">Calico</td>
+                    <td class="px-4 py-2">188 KiB</td>
+                    <td class="px-4 py-2">Pod网络策略</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">表2：编译程序子集的详情。完整数据集公开可用</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">组件性能评估</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-bold text-gray-700 mb-3">关键指标</h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                <thead class="bg-gray-200">
+                  <tr>
+                    <th class="px-4 py-2 text-left">指标</th>
+                    <th class="px-4 py-2 text-left">最小值</th>
+                    <th class="px-4 py-2 text-left">平均值</th>
+                    <th class="px-4 py-2 text-left">最大值</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">精化频率</td>
+                    <td class="px-4 py-2">1</td>
+                    <td class="px-4 py-2">446</td>
+                    <td class="px-4 py-2">16,048</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">符号跟踪长度</td>
+                    <td class="px-4 py-2">7</td>
+                    <td class="px-4 py-2">102</td>
+                    <td class="px-4 py-2">373</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">条件大小（字节）</td>
+                    <td class="px-4 py-2">88</td>
+                    <td class="px-4 py-2">836</td>
+                    <td class="px-4 py-2">2,128</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="px-4 py-2">证明检查时间（μs）</td>
+                    <td class="px-4 py-2">0.5</td>
+                    <td class="px-4 py-2">48.5</td>
+                    <td class="px-4 py-2">1,730.2</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2">总分析时间（s）</td>
+                    <td class="px-4 py-2">0.1</td>
+                    <td class="px-4 py-2">9.0</td>
+                    <td class="px-4 py-2">1,003.8</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">表3：BCF性能指标</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">精度改进分析</h3>
+          
+          <div class="performance-chart-placeholder bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700">精度改进对比</h6>
+            </div>
+            
+            <!-- 性能指标模拟 -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">BCF验证器:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full" style="width: 78.7%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">78.7%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">标准验证器:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-blue-500 h-4 rounded-full" style="width: 21.3%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">21.3%</span>
+              </div>
+            </div>
+            
+            <!-- 性能指标说明 -->
+            <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <div><span class="font-medium">测试环境:</span> AMD EPYC 9654 96核处理器，756 GiB内存</div>
+              <div><span class="font-medium">工作负载:</span> 512个真实世界eBPF程序</div>
+              <div><span class="font-medium">度量指标:</span> 程序接受率</div>
+              <div><span class="font-medium">提升比例:</span> 57.4%绝对提升</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者提出了BCF，一种证明引导的抽象精化技术，显著提高了eBPF验证器的精度，同时保持低内核空间复杂性。通过将复杂推理解耦到用户空间，同时通过形式化证明弥合差距，BCF解决了验证器精度和计算复杂性之间的关键张力。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-bold text-blue-700 mb-2">主要贡献总结</h5>
+            <ul class="list-disc list-inside text-gray-700">
+              <li><strong>新颖方法:</strong> 证明引导的抽象精化技术，通过精化卸载和高效证明检查增强内核验证器</li>
+              <li><strong>数据集:</strong> 收集并公开了包含512个真实世界eBPF程序的数据集，为未来研究提供宝贵资源</li>
+              <li><strong>实现:</strong> 实现了BCF（eBPF证书框架），显著提高了验证器精度，同时保持内核空间低开销</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">未来工作方向</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h5 class="font-bold text-yellow-700 mb-2">技术扩展</h5>
+              <ul class="list-disc list-inside text-gray-700">
+                <li>支持更复杂的程序结构，如循环和递归</li>
+                <li>扩展证明系统以覆盖更广泛的理论</li>
+                <li>优化用户空间求解器的性能</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-2">应用扩展</h5>
+              <ul class="list-disc list-inside text-gray-700">
+                <li>将方法应用于其他内核子系统</li>
+                <li>探索在实时系统中的适用性</li>
+                <li>研究在安全关键环境中的应用</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p class="mt-6 mb-4">BCF为更可靠和灵活的内核扩展铺平了道路，解决了现代操作系统内核可扩展性的关键挑战。通过证明引导的抽象精化，作者展示了如何在不牺牲安全性的情况下显著提高验证器精度，为未来内核验证技术的发展奠定了基础。</p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

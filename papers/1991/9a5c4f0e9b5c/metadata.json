@@ -1,0 +1,10 @@
+{
+  "id": "9a5c4f0e9b5c",
+  "title": "Dynamic File Allocation in Disk Arrays",
+  "authors": ["Gerhard Weikum", "Peter Zabback", "Peter Scheuermann"],
+  "year": 1991,
+  "conference": "SIGMOD",
+  "category": "数据库系统",
+  "keywords": ["磁盘阵列", "动态文件分配", "负载均衡", "数据布局", "去集群", "部分重组", "I/O性能"],
+  "abstract": "Large arrays of small disks are being considered as a promising approach to high performance I/O architectures. In this paper we deal with the problem of data placement in such a disk array. The prevalent approach is to decluster large files across a number of disks so as to minimize the access time to a file and balance the I/O load across the disks. The data placement problem entails determining the number of disks and the set of disks across which a file is declustered. Unlike previous work, this paper does not assume that all files are allocated at the same time but rather considers dynamic file creations. This makes the placement problem considerably harder because each placement decision has to take into account the current allocation state and the access frequencies of the disks and the existing files. As a result, file creation may involve partial reorganization on one or more disks. The paper proposes heuristic algorithms for the placement of dynamically created files. The algorithms provide a good compromise between maximizing I/O performance of the disk array and minimizing the work invested in partial reorganizations. The paper presents preliminary performance results of various alternative algorithms under a synthetic workload."
+}

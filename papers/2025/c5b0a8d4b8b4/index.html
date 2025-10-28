@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORTENMM: Efficient Memory Management with Strong Correctness Guarantees</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          CORTENMM: Efficient Memory Management with Strong Correctness Guarantees
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Junyang Zhang*, Xiangcan Xu, Yonghao Zou, Zhe Tang*, Xinyi Wan, Kang Hu*, Siyuan Wang*, Wenbo Xu*, Di Wang*, Hao Chen, Lin Huang, Shoumeng Yan, Yuval Tamir, Yingwei Luo*, Xiaolin Wang*, Huashan Yu*, Zhenlin Wang, Hongliang Tian, Diyu Zhou</div>
+                <div class="text-sm text-gray-600 mt-1">北京大学、Ant Group、UCLA、Michigan Tech</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, October 13–16, 2025, Seoul, Republic of Korea</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://doi.org/10.1145/3731569.3764836</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Memory Management</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Virtual Memory</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Concurrency</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Formal Verification</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">Scalability</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献高亮框 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-6">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>设计洞察</strong>: 揭示传统内存管理系统性能差和正确性问题的根源在于两级抽象，并证明软件级抽象在现代操作系统中已不再必要</li>
+            <li><strong>事务接口</strong>: 提出高效且经过形式化验证的MMU操作事务接口，为未来工作奠定基础</li>
+            <li><strong>CORTENMM系统</strong>: 设计实现了一个功能完整、高性能且提供强同步正确性保证的内存管理系统</li>
+            <li><strong>形式化验证</strong>: 对核心并发代码进行形式化验证，提供比传统测试更强的正确性保证</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            现代内存管理系统存在性能差和微妙的并发错误问题，既拖慢应用程序又引入安全漏洞。作者观察到这两个问题都源于传统内存管理系统的两级抽象设计：软件级抽象（如Linux中的VMA树）和硬件级抽象（通常是页表）。这种设计提高了可移植性，但需要正确且高效地同步两个截然不同且复杂的数据结构，这通常具有挑战性。
+          </p>
+          <p class="mb-4">
+            作者提出了CORTENMM，一个全新设计的内存管理系统，旨在同时实现高性能和同步正确性。关键洞察是大多数操作系统不再需要软件级抽象，因为主流ISA使用几乎相同的硬件MMU格式。因此，与先前设计不同，CORTENMM消除了软件级抽象以实现彻底的简化。
+          </p>
+          <p class="mb-4">
+            利用这种简化，CORTENMM提出了一个带有可扩展锁定协议的事务接口来编程MMU，通过避免软件级抽象中的额外争用来实现高性能。单级设计进一步使作者能够形式化验证在MMU上操作的并发代码（基本操作和锁定协议的正确性），从而提供强正确性保证。
+          </p>
+          <p>
+            评估显示，经过形式化验证的CORTENMM在实际应用中比Linux性能提升1.2倍到26倍。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">2.1 从零开始构建生产级操作系统</h3>
+          <p class="mb-4">
+            这项工作是在学术研究人员和行业从业者之间的合作背景下进行的，旨在从零开始开发一个名为Asterinas的生产级操作系统。作为这个更大项目的一部分，作者正在研究在内存管理系统中脱离长期存在的软件级抽象的潜在好处。
+          </p>
+          <p class="mb-4">
+            Asterinas操作系统被设计为通用目的，适用于各种生产环境。目标是在主流ISA（即x86、ARM和RISC-V）上构建一个生产强度、开源、可直接替代Linux的系统。开发团队目前约有30人，其中12人是全职工程师。Asterinas的核心部分（不包括驱动程序）由130K行代码组成。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">2.2 当前内存管理：优点、缺点和问题</h3>
+          <p class="mb-4">
+            本小节回顾了基于两级抽象的传统内存管理系统设计的优缺点。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>优点：支持高级内存管理语义和提高可移植性
+            </h4>
+            <p class="text-gray-700">
+              作者发现最早引入两级抽象的设计是1986年的SunOS。软件级抽象将进程地址空间表示为一组虚拟内存区域（VMA）。VMA表示一组具有相同属性（如相同的访问权限）的连续虚拟页面。
+            </p>
+            <p class="text-gray-700 mt-2">
+              SunOS引入软件级抽象有两个原因：首先，VMA维护硬件MMU中没有的状态，这些状态是高级内存管理语义所必需的；其次，软件级抽象将大多数内存管理代码与硬件解耦，便于移植到各种类型的硬件MMU。
+            </p>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>缺点：复杂的并发控制协议
+            </h4>
+            <p class="text-gray-700">
+              随着现代服务器通常包含数百个核心，两级抽象的一个缺点已经显现：需要复杂的细粒度并发控制。以最新的Linux设计为例，Linux内存管理使用四种不同的锁来管理并发访问。
+            </p>
+            <p class="text-gray-700 mt-2">
+              处理完整操作（如系统调用和页面错误）的锁定规则很难从基本规则推导出来，并且仅在代码中记录。这种复杂性使得正确实现并发控制变得困难。
+            </p>
+          </div>
+          
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-6">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-times-circle mr-2"></i>问题：多核应用的扩展性瓶颈和并发错误
+            </h4>
+            <p class="text-gray-700">
+              尽管有复杂的细粒度并发控制，Linux内存管理仍然是多线程应用程序的知名扩展性瓶颈。内存管理瓶颈严重影响了重要实际用例的性能。
+            </p>
+            <p class="text-gray-700 mt-2">
+              此外，现代内存管理系统容易受到微妙的并发错误影响，导致严重漏洞。例如，Linux在2023年4月引入了上述细粒度并发控制，在过去两年中已经出现了十个由此更改中的并发错误导致的CVE。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            尽管经过数十年的发展，现代内存管理仍然在性能和正确性方面面临挑战。即使经过一系列增强，Linux内存管理仍然是多线程应用程序的严重扩展性瓶颈。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>性能挑战
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>两级抽象引入额外的同步开销</li>
+                <li>VMA树和页表之间的状态不一致风险</li>
+                <li>并发页面错误在不相交内存区域上的扩展性受限</li>
+                <li>内存操作需要同时处理两个复杂数据结构</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-bug mr-2 text-red-500"></i>正确性挑战
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>复杂的锁定规则难以正确实现</li>
+                <li>微妙的并发错误导致严重安全漏洞</li>
+                <li>测试难以覆盖所有并发场景</li>
+                <li>代码复杂性增加维护难度</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>Linux内存管理锁定规则简化表
+            </h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b text-left">类型</th>
+                    <th class="py-2 px-4 border-b text-left">操作</th>
+                    <th class="py-2 px-4 border-b text-left">需要获取的锁</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b" rowspan="2">VMA</td>
+                    <td class="py-2 px-4 border-b">读取VMA字段</td>
+                    <td class="py-2 px-4 border-b">mmap_lock的读端或VMA锁</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">写入VMA字段</td>
+                    <td class="py-2 px-4 border-b">mmap_lock的写端和VMA锁</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">PT</td>
+                    <td class="py-2 px-4 border-b">访问页表</td>
+                    <td class="py-2 px-4 border-b">写入时获取锁；读取无需锁定</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b" rowspan="4">基本操作</td>
+                    <td class="py-2 px-4 border-b">页表遍历</td>
+                    <td class="py-2 px-4 border-b">读取VMA字段的锁</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">插入页表项</td>
+                    <td class="py-2 px-4 border-b">读取VMA字段的锁和目标页表的锁</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">清除页表项</td>
+                    <td class="py-2 px-4 border-b">读取VMA字段的锁和父页表的锁</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">释放页表</td>
+                    <td class="py-2 px-4 border-b">写入VMA字段的锁且页表项已清除</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            这些复杂的锁定规则使得正确实现并发控制变得极其困难，即使是经验丰富的操作系统开发者也难以避免引入并发错误。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">设计洞察</h3>
+          <p class="mb-4">
+            作者的关键洞察是两级抽象不再适合大多数现代操作系统，因为引入软件级抽象的两个主要原因已基本消失：
+          </p>
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>大多数现代ISA（如x86、ARM和RISC-V）使用基于多级基数树页表的类似MMU硬件</li>
+            <li>支持高级语义需要记录MMU中未包含的状态，但这并不强制要求另一个抽象级别</li>
+          </ul>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">3.3 单级抽象设计</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-sitemap mr-2 text-blue-500"></i>数据结构
+            </h4>
+            <p class="mb-4">
+              与先前设计不同，CORTENMM消除了软件级抽象及相关复杂性，实现了彻底的简化。CORTENMM将每个页表页面（PT页面）与一个页面描述符关联。页面描述符在操作系统启动期间分配在连续内存区域中。
+            </p>
+            <p class="mb-4">
+              每个描述符由相应PT页面的物理页面号（即物理地址除以页面大小）索引。描述符包括保护自身的锁、PT页面和每个PTE（页表项）的元数据数组。
+            </p>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-code mr-2 text-green-500"></i>编程接口
+            </h4>
+            <p class="mb-4">
+              利用单级抽象的简单性，作者进一步设计了一个可扩展且直观的并发控制机制。具体来说，CORTENMM引入了一个事务接口（图4）并将其作为编程MMU的唯一方式。
+            </p>
+            <p class="mb-4">
+              接口设计将并发控制与操作解耦；调用者首先调用AddrSpace::lock(r)来指定一个虚拟内存区域。AddrSpace::lock(r)返回一个RCursor对象，调用者使用此RCursor指定四种基本操作（即查询、映射、标记和取消映射）的任何组合，CORTENMM在指定范围内原子性地执行这些操作。
+            </p>
+          </div>
+          
+          <!-- 图3: CORTENMM架构 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图3 - CORTENMM架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: CORTENMM架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: CORTENMM系统架构图，展示单级抽象设计" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> CORTENMM架构图，展示单级抽象设计
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>单级抽象:</strong> CORTENMM消除了传统的软件级抽象（VMA树），直接操作硬件页表</li>
+                  <li><strong>页面描述符:</strong> 每个页表页面关联一个描述符，包含锁和每PTE元数据数组</li>
+                  <li><strong>元数据数组:</strong> 存储支持高级内存语义所需的最小必要状态信息</li>
+                  <li><strong>事务接口:</strong> 提供原子性操作，简化并发控制</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">核心组件:</strong>
+                    <p>系统由页表、页面描述符和事务接口组成，通过消除VMA层简化了整体架构</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">并发控制:</strong>
+                    <p>使用页面级锁定协议，直接在页表层级实现细粒度并发控制</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">状态管理:</strong>
+                    <p>通过每PTE元数据数组维护高级内存语义所需的状态信息</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">4.1 锁定协议</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg border border-blue-200 shadow-sm">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-lock mr-2"></i>CORTENMM<sub>rw</sub>
+              </h4>
+              <p class="text-gray-700 mb-4">
+                基于读写锁的简单锁定协议。线程从页表根开始遍历，找到覆盖指定范围的最低级别PT页面，获取写锁。
+              </p>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>简单易实现</li>
+                <li>性能优于Linux 15倍</li>
+                <li>适合中等并发场景</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-unlock-alt mr-2"></i>CORTENMM<sub>adv</sub>
+              </h4>
+              <p class="text-gray-700 mb-4">
+                基于互斥自旋锁和RCU的高级锁定协议。包含无锁遍历阶段和锁定阶段，提供更好的扩展性。
+              </p>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>无锁遍历阶段</li>
+                <li>使用RCU处理并发释放</li>
+                <li>适合高并发场景</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">4.5 实现细节</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-bold text-gray-700 mb-2">代码统计</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                  <li>8028行安全Rust代码</li>
+                  <li>122行不安全Rust代码</li>
+                  <li>核心事务接口：829 LOC</li>
+                  <li>CORTENMM<sub>adv</sub>：225 LOC</li>
+                  <li>CORTENMM<sub>rw</sub>：153 LOC</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h5 class="font-bold text-gray-700 mb-2">优化特性</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                  <li>每核虚拟地址分配器</li>
+                  <li>优化的TLB击落机制</li>
+                  <li>物理内存管理（伙伴系统+slab分配器）</li>
+                  <li>反向映射支持</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">5. 验证同步正确性</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-purple-200 shadow-sm">
+            <p class="mb-4">
+              作者使用Verus（一个基于SMT的Rust半自动验证器）形式化验证了CORTENMM核心部分。验证目标包括：
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <h5 class="font-bold text-purple-700 mb-2">P1: 互斥性</h5>
+                <p class="text-sm text-gray-700">
+                  两种锁定协议（CORTENMM<sub>rw</sub>和CORTENMM<sub>adv</sub>）正确序列化在重叠区域上操作的并发AddrSpace::lock(r)调用
+                </p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <h5 class="font-bold text-purple-700 mb-2">P2: 功能正确性</h5>
+                <p class="text-sm text-gray-700">
+                  RCursor模块中页表操作（query(), map(), mark(), ummap()）的功能正确性，以及页表始终保持良好形态
+                </p>
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h5 class="font-bold text-gray-700 mb-2">验证工作量</h5>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div class="text-2xl font-bold text-blue-600">5.2:1</div>
+                  <div class="text-xs text-gray-600">证明代码比</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-green-600">8</div>
+                  <div class="text-xs text-gray-600">人月工作量</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-purple-600">20s</div>
+                  <div class="text-xs text-gray-600">验证时间</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-red-600">1769</div>
+                  <div class="text-xs text-gray-600">实现代码行</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">6.1 评估设置</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-server mr-2 text-blue-500"></i>硬件环境
+              </h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>双路AMD EPYC 9965服务器</li>
+                <li>每路192核CPU（共384核）</li>
+                <li>每路512GB DRAM（共1TB）</li>
+                <li>禁用超线程和睿频加速</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-balance-scale mr-2 text-green-500"></i>对比系统
+              </h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>Linux (内核版本6.13.8)</li>
+                <li>RadixVM</li>
+                <li>NrOS</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-tasks mr-2 text-purple-500"></i>工作负载
+              </h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>5个微基准测试</li>
+                <li>PARSEC 3.0</li>
+                <li>metis, psearchy</li>
+                <li>JVM线程创建</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">6.2 单线程微基准测试</h3>
+          
+          <!-- 图13: 单线程性能对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图13 - 单线程内存操作吞吐量
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 13: 单线程内存操作吞吐量
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig13.png" alt="论文图13: 单线程内存操作吞吐量对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 单线程内存操作吞吐量对比
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>性能优势:</strong> CORTENMM在单线程场景下比Linux快1.2倍到2.3倍</li>
+                  <li><strong>操作类型:</strong> 测试包括mmap、munmap、mprotect和页面错误处理</li>
+                  <li><strong>优化效果:</strong> 消除VMA层减少了内存管理开销</li>
+                  <li><strong>设计简化:</strong> 单级抽象降低了操作复杂性</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: AMD EPYC 9965服务器</li>
+                      <li>工作负载: 内存管理操作微基准测试</li>
+                      <li>度量指标: 操作吞吐量（操作/秒）</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>mmap: 1.2倍性能提升</li>
+                      <li>munmap: 1.5倍性能提升</li>
+                      <li>mprotect: 2.3倍性能提升</li>
+                      <li>页面错误: 1.4倍性能提升</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">6.3 多线程扩展性</h3>
+          
+          <!-- 图14: 多线程扩展性 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-users mr-2"></i>技术细节：图14 - 多线程内存操作扩展性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 14: 多线程内存操作扩展性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig14.png" alt="论文图14: 多线程内存操作扩展性对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 多线程内存操作扩展性对比
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>扩展性优势:</strong> CORTENMM在多线程场景下比Linux快1.2倍到26倍</li>
+                  <li><strong>并发控制:</strong> 高级锁定协议在高并发场景下表现优异</li>
+                  <li><strong>消除争用:</strong> 单级设计避免了VMA树和页表之间的状态同步争用</li>
+                  <li><strong>锁定粒度:</strong> 页面级锁定提供更好的并发性</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 384核AMD EPYC服务器</li>
+                      <li>工作负载: 并发内存管理操作</li>
+                      <li>线程数: 1到256个并发线程</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>mmap: 最高15倍性能提升</li>
+                      <li>munmap: 最高26倍性能提升</li>
+                      <li>mprotect: 最高15倍性能提升</li>
+                      <li>页面错误: 最高1.2倍性能提升</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">6.4 实际应用性能</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h4 class="font-bold text-gray-800 mb-4">PARSEC 3.0基准测试</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-bold text-gray-700 mb-2">性能提升</h5>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">blackscholes:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-green-500 h-4 rounded-full" style="width: 95%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.95x</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">bodytrack:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-green-500 h-4 rounded-full" style="width: 85%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.85x</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">fluidanimate:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-green-500 h-4 rounded-full" style="width: 75%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.75x</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">streamcluster:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-green-500 h-4 rounded-full" style="width: 65%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.65x</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h5 class="font-bold text-gray-700 mb-2">其他应用</h5>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">metis:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-blue-500 h-4 rounded-full" style="width: 80%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.8x</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">psearchy:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-blue-500 h-4 rounded-full" style="width: 70%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.7x</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">JVM线程:</span>
+                    <div class="flex-1 bg-gray-200 rounded-full h-4 mx-2">
+                      <div class="bg-blue-500 h-4 rounded-full" style="width: 60%"></div>
+                    </div>
+                    <span class="text-sm font-medium">1.6x</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">6.5 验证开销</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div>
+                <div class="text-3xl font-bold text-blue-600">0.3%</div>
+                <div class="text-sm text-gray-600">运行时开销</div>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-green-600">1.5%</div>
+                <div class="text-sm text-gray-600">内存开销</div>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-purple-600">5.2:1</div>
+                <div class="text-sm text-gray-600">证明代码比</div>
+              </div>
+            </div>
+            <p class="mt-4 text-center text-gray-600">
+              形式化验证引入的开销极小，证明代码比合理，验证工作具有实际可行性
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者提出了CORTENMM，一个全新设计的内存管理系统，旨在同时实现高性能和同步正确性。关键洞察是大多数操作系统不再需要软件级抽象，因为主流ISA使用几乎相同的硬件MMU格式。因此，与先前设计不同，CORTENMM消除了软件级抽象以实现彻底的简化。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>主要成就
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>揭示了传统内存管理系统性能差和正确性问题的根源</li>
+                <li>提出了高效且经过形式化验证的MMU操作事务接口</li>
+                <li>设计实现了功能完整、高性能的内存管理系统</li>
+                <li>对核心并发代码进行了形式化验证</li>
+                <li>在实际应用中比Linux性能提升1.2倍到26倍</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>创新贡献
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>设计洞察:</strong> 证明软件级抽象在现代操作系统中已不再必要</li>
+                <li><strong>事务接口:</strong> 为未来工作奠定基础的高效且经过验证的接口</li>
+                <li><strong>形式化验证:</strong> 提供比传统测试更强的正确性保证</li>
+                <li><strong>实际系统:</strong> 在生产级操作系统中实现和评估</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">未来工作</h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="text-center">
+                <i class="fas fa-expand-arrows-alt text-3xl text-blue-500 mb-3"></i>
+                <h5 class="font-bold text-gray-700 mb-2">扩展性增强</h5>
+                <p class="text-sm text-gray-600">进一步优化高并发场景下的性能</p>
+              </div>
+              
+              <div class="text-center">
+                <i class="fas fa-shield-alt text-3xl text-green-500 mb-3"></i>
+                <h5 class="font-bold text-gray-700 mb-2">安全性验证</h5>
+                <p class="text-sm text-gray-600">扩展形式化验证范围，包括安全性属性</p>
+              </div>
+              
+              <div class="text-center">
+                <i class="fas fa-plug text-3xl text-purple-500 mb-3"></i>
+                <h5 class="font-bold text-gray-700 mb-2">生态系统集成</h5>
+                <p class="text-sm text-gray-600">与更多硬件平台和软件栈集成</p>
+              </div>
+            </div>
+          </div>
+          
+          <p class="mt-6">
+            CORTENMM代表了内存管理系统设计的重要进步，通过消除不必要的抽象层，实现了性能与正确性的双重提升。这项工作为未来操作系统内存管理的研究和实践提供了新的方向和基础。
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

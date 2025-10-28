@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Survey of Vibe Coding with Large Language Models</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .survey-analysis {
+        margin: 1rem 0;
+      }
+      .pdf-figure-container {
+        padding: 1rem;
+      }
+      .image-display {
+        padding: 1rem;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-purple-600 hover:bg-purple-50;
+    }
+    .nav-item.active {
+      @apply text-purple-600 bg-purple-100;
+    }
+    /* 图像交互样式 */
+    .pdf-figure-container img {
+      transition: transform 0.3s ease;
+    }
+    .pdf-figure-container img:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">引言</a>
+        <a href="#vibe-coding" class="nav-item whitespace-nowrap">Vibe Coding</a>
+        <a href="#llms-for-coding" class="nav-item whitespace-nowrap">代码LLM</a>
+        <a href="#coding-agents" class="nav-item whitespace-nowrap">编码代理</a>
+        <a href="#development-environment" class="nav-item whitespace-nowrap">开发环境</a>
+        <a href="#feedback-mechanisms" class="nav-item whitespace-nowrap">反馈机制</a>
+        <a href="#development-models" class="nav-item whitespace-nowrap">开发模型</a>
+        <a href="#practical-guide" class="nav-item whitespace-nowrap">实用指南</a>
+        <a href="#future-impact" class="nav-item whitespace-nowrap">未来影响</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          A Survey of Vibe Coding with Large Language Models
+        </h1>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Yuyao Ge, Lingrui Mei, Zenghao Duan, Tianhao Li, Yujia Zheng, Yiwei Wang, Lexin Wang, Jiayu Yao, Tianyu Liu, Yujun Cai, Baolong Bi, Fangda Guo, Jiafeng Guo, Shenghua Liu, Xueqi Cheng</div>
+                <div class="text-sm text-gray-600 mt-1">Institute of Computing Technology, Chinese Academy of Sciences; Duke University; University of California, Merced; Peking University; University of Queensland</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">发表信息</strong>
+                <div>arXiv preprint, October 15, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2510.12399v1</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">综述范围</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">1000+文献</span>
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Vibe Coding</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">LLM编码代理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-purple-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed">
+            大型语言模型（LLMs）的进步催生了从代码生成辅助到自主编码代理的范式转变，实现了一种称为"Vibe Coding"的新型开发方法，其中开发人员通过结果观察而非逐行代码理解来验证AI生成的实现。尽管具有变革潜力，但这种新兴范式的有效性仍未得到充分探索，实证证据揭示了人机协作中意外的生产力损失和基本挑战。为填补这一空白，本综述首次对基于大型语言模型的Vibe Coding进行了全面系统的回顾，为这种变革性开发方法建立了理论基础和实践框架。
+          </p>
+          
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-sitemap mr-2"></i>理论基础
+              </h4>
+              <p class="text-sm text-gray-700">通过约束马尔可夫决策过程形式化Vibe Coding</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>开发模型
+              </h4>
+              <p class="text-sm text-gray-700">提出5种不同的开发模型分类</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-road mr-2"></i>技术路线图
+              </h4>
+              <p class="text-sm text-gray-700">识别关键技术挑战和未来方向</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 引言 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-purple-500"></i>
+          引言
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            大型语言模型（LLMs）通过能够流畅理解自然语言的对话系统显著推进了人工智能的发展。早期的软件开发采用将LLMs定位为补充助手——开发人员使用自然语言提示生成代码片段，但显著的准确性限制需要在软件开发生命周期中进行手动审查和迭代调试。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-map mr-2"></i>研究领域概览
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>领域发展：从代码生成辅助到自主编码代理</li>
+              <li>核心技术：Vibe Coding范式、LLM编码代理、反馈机制</li>
+              <li>关键里程碑：GPT-4、Claude Sonnet等先进架构的出现</li>
+            </ul>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg border">
+              <h4 class="font-bold text-gray-700 mb-3">研究背景</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                  <span>LLMs在软件开发中的早期应用</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                  <span>编码代理能力的显著提升</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                  <span>Vibe Coding范式的出现</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border">
+              <h4 class="font-bold text-gray-700 mb-3">研究挑战</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start">
+                  <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-2"></i>
+                  <span>人机协作中的生产力损失</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-2"></i>
+                  <span>非结构化自然语言指令的局限性</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-2"></i>
+                  <span>系统化提示工程的需求</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Vibe Coding定义 -->
+      <section id="vibe-coding" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-purple-500"></i>
+          Vibe Coding: 编码代理管理的工程学
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">定义与形式化</h3>
+          
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 2: Vibe Coding 概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig2.png" 
+                   alt="论文图2: Vibe Coding 概述" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-project-diagram text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 2: Vibe Coding 概述</p>
+                  <p class="text-sm text-gray-500 text-center">展示开发者、编码代理和项目之间的三元协作关系</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig2.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示开发者、编码代理和软件项目之间的三元协作关系，包括迭代指令-反馈循环</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>三元动态关系：开发者-项目-编码代理</li>
+                  <li>迭代指令-反馈循环机制</li>
+                  <li>上下文感知编码和结果导向审查</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Vibe Coding Overview. A triadic collaboration among developer, coding agent, and project, where iterative instruction–feedback loops enable context-aware coding and result-oriented review.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3">形式化定义</h4>
+              <p class="text-sm text-gray-700">
+                Vibe Coding被定义为基于大型语言模型的软件开发的工程方法。其核心代表了<strong>人类开发者、软件项目和编码代理之间的动态三元关系</strong>。
+              </p>
+              <div class="mt-3 bg-white p-3 rounded border">
+                <code class="text-xs text-gray-700">
+                  𝒱 = ⟨ℋ, 𝒫, 𝒜<sub>θ</sub>⟩
+                </code>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">核心特征</h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-user-tie text-blue-500 mt-1 mr-2"></i>
+                  <span><strong>人类</strong>：从直接代码作者演变为意图表达者、上下文策展人和质量仲裁者</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-code text-blue-500 mt-1 mr-2"></i>
+                  <span><strong>项目</strong>：超越静态代码仓库，成为包含代码库、数据库和领域知识的多方面信息空间</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-robot text-blue-500 mt-1 mr-2"></i>
+                  <span><strong>编码代理</strong>：作为智能执行者，在人类意图和项目约束的双重指导下执行代码生成、修改和调试</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">为什么需要Vibe Coding</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-users mr-2"></i>团队规模能力
+              </h4>
+              <p class="text-sm text-gray-700">使个体开发者能够交付团队规模的能力，减少学习开销</p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>持续开发
+              </h4>
+              <p class="text-sm text-gray-700">平衡开发速度与代码质量，实现24/7自主迭代</p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-globe mr-2"></i>生态系统扩展
+              </h4>
+              <p class="text-sm text-gray-700">通过降低技术门槛民主化开发，扩大软件创作者生态系统</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 代码LLM -->
+      <section id="llms-for-coding" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-brain mr-3 text-purple-500"></i>
+          代码大型语言模型
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 4: 代码大型语言模型概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig4.png" 
+                   alt="论文图4: 代码大型语言模型概述" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-code text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 4: 代码大型语言模型概述</p>
+                  <p class="text-sm text-gray-500 text-center">展示代码LLM的训练生命周期，包括数据基础、预训练和后训练阶段</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig4.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示代码大型语言模型的训练生命周期，涵盖数据基础、预训练和后训练阶段</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>代码LLM的训练生命周期阶段</li>
+                  <li>核心能力：代码生成、代码理解、错误检测、代码优化</li>
+                  <li>数据基础、预训练和后训练技术</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Large Language Model for Coding: Overview of the training lifecycle encompassing Data Foundation, Pre-training, and Post-training stages, with core capabilities including Code Generation, Code Understanding, Bug Detection, and Code Optimization.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg border">
+                <h4 class="font-bold text-gray-700 mb-2">数据基础</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 预训练代码语料库：GitHub、Stack Overflow等开源平台</li>
+                  <li>• 指令和偏好数据集：CommitPack、OpenCodeInstruct等</li>
+                  <li>• 数据质量驱动复杂处理管道</li>
+                </ul>
+              </div>
+              
+              <div class="bg-gray-50 p-4 rounded-lg border">
+                <h4 class="font-bold text-gray-700 mb-2">预训练技术</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 预训练目标：自回归语言建模、掩码语言建模等</li>
+                  <li>• 持续预训练策略：在领域特定数据上额外训练</li>
+                  <li>• 结构感知目标：利用编程语言的结构特性</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg border">
+                <h4 class="font-bold text-gray-700 mb-2">后训练技术</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 监督微调：调整预训练模型参数以适应特定任务</li>
+                  <li>• 强化学习：RLHF、DPO等偏好微调方法</li>
+                  <li>• 参数高效微调：LoRA、Adapter等方法</li>
+                </ul>
+              </div>
+              
+              <div class="bg-gray-50 p-4 rounded-lg border">
+                <h4 class="font-bold text-gray-700 mb-2">代表性数据集</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• SWE-bench：项目级错误修复和编辑任务</li>
+                  <li>• Codeforces-CoR：竞争性编程问题</li>
+                  <li>• HumanEval：函数级代码生成评估</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 编码代理 -->
+      <section id="coding-agents" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-robot mr-3 text-purple-500"></i>
+          基于LLM的编码代理
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 5: 编码代理架构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig5.png" 
+                   alt="论文图5: 编码代理架构" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sitemap text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 5: 编码代理架构</p>
+                  <p class="text-sm text-gray-500 text-center">展示编码代理的核心组件，包括认知系统、记忆机制和工具集成</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig5.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示编码代理的核心组件，包括认知系统、记忆机制和工具集成</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>核心组件：认知系统、记忆机制、工具集成</li>
+                  <li>基本能力：规划、行动执行、多代理协作</li>
+                  <li>用于协调软件开发任务的架构设计</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Coding Agent Architecture: Overview of core components comprising Cognitive System, Memory Mechanism, and Tool Integration, with fundamental capabilities including Planning, Action execution, and multi-agent Collaboration for coordinated software development tasks.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="space-y-4">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2">分解与规划能力</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 任务分解策略：将复杂问题分解为可管理的子任务</li>
+                  <li>• 规划制定方法：外部模块增强、基于微调、基于搜索</li>
+                  <li>• 思维链（CoT）作为最流行的代码生成策略</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2">记忆机制</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 短期记忆：临时存储，对应上下文窗口信息</li>
+                  <li>• 长期记忆：外部存储，使用向量数据库等</li>
+                  <li>• 记忆操作：巩固、索引、更新、遗忘、检索、压缩</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2">行动执行</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 工具调用：集成外部工具，如编译器、调试器</li>
+                  <li>• 基于代码的行动实现：将代理行为统一为代码范式</li>
+                  <li>• 结构化工作流程：规划、选择、参数提取、调用、结果集成</li>
+                </ul>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2">反思与调试</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 迭代精炼：超越单次尝试的系统化改进</li>
+                  <li>• 代码验证：使用专门的批评代理进行彻底分析</li>
+                  <li>• 智能调试：自我反思、执行后调试、执行中调试</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">代理协作</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border mb-4">
+            <h4 class="font-bold text-gray-700 mb-3">协作机制</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h5 class="font-semibold text-gray-600 mb-2">通信架构</h5>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 分层架构</li>
+                  <li>• 去中心化架构</li>
+                  <li>• 集中式架构</li>
+                  <li>• 共享消息池</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-600 mb-2">基于角色的协作</h5>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 管道方法：代理顺序完成任务部分</li>
+                  <li>• 小组讨论框架：代理沟通达成协议</li>
+                  <li>• 混合组合：结合多种协作模式</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border">
+            <h4 class="font-bold text-gray-700 mb-3">框架实现</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-3 rounded border">
+                <h5 class="font-semibold text-blue-700 mb-2">MetaGPT</h5>
+                <p class="text-sm text-gray-600">通过角色特定提示和标准操作程序实现有效合作</p>
+              </div>
+              <div class="bg-white p-3 rounded border">
+                <h5 class="font-semibold text-blue-700 mb-2">ChatDev</h5>
+                <p class="text-sm text-gray-600">聊天驱动的框架，专业代理通过聊天链进行通信</p>
+              </div>
+              <div class="bg-white p-3 rounded border">
+                <h5 class="font-semibold text-blue-700 mb-2">MapCoder</h5>
+                <p class="text-sm text-gray-600">使用四个专业代理，在多个基准测试中实现最先进结果</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 开发环境 -->
+      <section id="development-environment" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-laptop-code mr-3 text-purple-500"></i>
+          编码代理的开发环境
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 6: 开发环境架构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig6.png" 
+                   alt="论文图6: 开发环境架构" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-layer-group text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 6: 开发环境架构</p>
+                  <p class="text-sm text-gray-500 text-center">展示编码代理开发环境的架构，包括隔离环境、交互环境和分布式平台</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig6.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示编码代理开发环境的架构，包括隔离环境、交互环境和分布式平台</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>开发环境架构：隔离环境、交互环境、分布式平台</li>
+                  <li>环境组件：容器化、安全隔离、云平台、交互界面</li>
+                  <li>支持技术：Docker、Kubernetes、MCP协议等</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Development Environment Architecture for Coding Agents: Isolated Environment, Interactive Environment, and Distributed Platform.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-box mr-2"></i>隔离执行环境
+              </h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>• 容器化技术：Docker、LXC/LXD</li>
+                <li>• 安全隔离机制：沙盒、gVisor</li>
+                <li>• 云执行平台：Kubernetes编排</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-desktop mr-2"></i>交互开发环境
+              </h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>• AI原生开发接口：Cursor、Copilot</li>
+                <li>• 远程开发：GitHub Codespaces</li>
+                <li>• 工具集成协议：MCP、LSP、DAP</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-network-wired mr-2"></i>分布式编排平台
+              </h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>• CI/CD流水线集成</li>
+                <li>• 云计算编排</li>
+                <li>• 多代理协作框架</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 反馈机制 -->
+      <section id="feedback-mechanisms" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-comments mr-3 text-purple-500"></i>
+          反馈机制
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 7: 反馈循环框架
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig7.png" 
+                   alt="论文图7: 反馈循环框架" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sync-alt text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 7: 反馈循环框架</p>
+                  <p class="text-sm text-gray-500 text-center">展示编码代理的反馈循环框架，包括内部反馈和外部反馈</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig7.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示编码代理的反馈循环框架，包括内部反馈和外部反馈</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>反馈循环框架：内部反馈和外部反馈</li>
+                  <li>反馈来源：环境反馈、人类反馈、自我精炼</li>
+                  <li>反馈类型：编译器反馈、执行反馈、人类反馈</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Feedback Loops Framework for Coding Agents: Internal feedback via Self-Refinement, and External feedback from Environment via Compiler Feedback and Execution Feedback, and from Human Feedback.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">编译器反馈</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-code text-purple-500 mt-1 mr-2"></i>
+                  <span>语法和类型错误反馈</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-search text-purple-500 mt-1 mr-2"></i>
+                  <span>静态分析反馈</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-play text-purple-500 mt-1 mr-2"></i>
+                  <span>运行时编译反馈</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">执行反馈</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-vial text-blue-500 mt-1 mr-2"></i>
+                  <span>单元测试执行结果</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-puzzle-piece text-blue-500 mt-1 mr-2"></i>
+                  <span>集成测试反馈</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-bug text-blue-500 mt-1 mr-2"></i>
+                  <span>运行时错误和异常处理</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">人类反馈</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-comments text-green-500 mt-1 mr-2"></i>
+                  <span>交互式需求澄清</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                  <span>代码审查反馈</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-sync-alt text-green-500 mt-1 mr-2"></i>
+                  <span>自我精炼反馈</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 开发模型 -->
+      <section id="development-models" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-project-diagram mr-3 text-purple-500"></i>
+          Vibe Coding 开发模型
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 8: 开发模型比较
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig8.png" 
+                   alt="论文图8: 开发模型比较" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-balance-scale text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 8: 开发模型比较</p>
+                  <p class="text-sm text-gray-500 text-center">展示Vibe Coding开发模型与传统软件开发模型的比较</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig8.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示Vibe Coding开发模型与传统软件开发模型的比较</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>开发模型比较：Vibe Coding模型与传统软件工程模型</li>
+                  <li>模型分类：UAM、ICCM、PDM、TDM、CEM</li>
+                  <li>对应关系：RAD、结对编程、瀑布模型、TDD</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Comparison of Vibe Coding Development Models Framework With Software Development Models.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="space-y-4">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2">无约束自动化模型 (UAM)</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 完全信任AI输出，最小化代码审查</li>
+                  <li>• 通过功能测试而非代码理解验证正确性</li>
+                  <li>• 适合：一次性原型、概念验证、个人工具</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2">迭代对话协作模型 (ICCM)</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• AI作为编程伙伴而非完全自主代理</li>
+                  <li>• 人类保持对代码质量的全面监督</li>
+                  <li>• 适合：专业开发环境、中长期项目</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2">规划驱动模型 (PDM)</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 人类先建立清晰的开发计划和设计规范</li>
+                  <li>• 应用传统软件工程的"架构优先"理念</li>
+                  <li>• 适合：复杂全栈应用、需要清晰模块边界的项目</li>
+                </ul>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2">测试驱动模型 (TDM)</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 将TDD理念应用于Vibe Coding</li>
+                  <li>• 首先定义测试和验收标准</li>
+                  <li>• 适合：核心算法实现、生产级应用</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vibe Coding 实用指南 -->
+      <section id="practical-guide" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-graduation-cap mr-3 text-purple-500"></i>
+          Vibe Coding 实用指南
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <!-- 核心策略 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-purple-50 to-blue-50 p-5 rounded-lg border border-purple-200">
+              <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center">
+                <i class="fas fa-bullseye mr-2"></i>核心策略
+              </h3>
+              <ul class="space-y-3 text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                  <span><strong>上下文工程是关键</strong> - 成功的Vibe Coding不仅依赖代理能力，更依赖系统化的上下文工程</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                  <span><strong>人类控制"什么"和"为什么"</strong> - 定义正确的问题并判断解决方案的适当性</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                  <span><strong>项目定义"在哪里"</strong> - 约束解决方案空间的边界</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                  <span><strong>代理管理"如何"</strong> - 探索技术实现路径</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-blue-50 p-5 rounded-lg border border-green-200">
+              <h3 class="text-xl font-bold text-green-700 mb-4 flex items-center">
+                <i class="fas fa-rocket mr-2"></i>开发模型选择
+              </h3>
+              <div class="space-y-3">
+                <div class="bg-white p-3 rounded border">
+                  <h4 class="font-semibold text-blue-700 mb-1">UAM - 快速原型</h4>
+                  <p class="text-sm text-gray-600">适合一次性原型、概念验证、个人工具</p>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <h4 class="font-semibold text-blue-700 mb-1">ICCM - 专业开发</h4>
+                  <p class="text-sm text-gray-600">适合需要长期维护的中大型项目</p>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <h4 class="font-semibold text-blue-700 mb-1">PDM - 复杂系统</h4>
+                  <p class="text-sm text-gray-600">适合复杂全栈应用和需要清晰模块边界的项目</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 最佳实践 -->
+          <div class="mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-star mr-2 text-yellow-500"></i>最佳实践
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <i class="fas fa-comment-alt text-blue-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-blue-700 mb-2">意图表达</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 将复杂需求转化为有效提示</li>
+                  <li>• 理解模型"思考"方式</li>
+                  <li>• 使用模块化提示构造</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-green-200 shadow-sm">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                  <i class="fas fa-sitemap text-green-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-green-700 mb-2">任务分解</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 将复杂问题分解为明确子任务</li>
+                  <li>• 采用垂直切片架构</li>
+                  <li>• 每个功能端到端实现</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+                  <i class="fas fa-shield-alt text-purple-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-purple-700 mb-2">质量监督</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 自动化测试作为质量保证</li>
+                  <li>• 静态分析和形式验证</li>
+                  <li>• 实时安全扫描</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-orange-200 shadow-sm">
+                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+                  <i class="fas fa-exchange-alt text-orange-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-orange-700 mb-2">上下文管理</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• 检索增强生成技术</li>
+                  <li>• 代码库向量索引</li>
+                  <li>• 文档加载和规则约束</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 技能要求 -->
+          <div class="mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-tools mr-2 text-gray-600"></i>开发者技能要求
+            </h3>
+            
+            <div class="bg-gray-50 p-5 rounded-lg border">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-3 text-lg">新兴技能</h4>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-start">
+                      <i class="fas fa-magic text-purple-500 mt-1 mr-3"></i>
+                      <span><strong>提示工程</strong> - 编码意图和约束的能力</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-project-diagram text-blue-500 mt-1 mr-3"></i>
+                      <span><strong>任务分解</strong> - 将复杂问题分解为AI可管理的子任务</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-search text-green-500 mt-1 mr-3"></i>
+                      <span><strong>质量监督</strong> - 自动化测试和验证技术</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-user-shield text-red-500 mt-1 mr-3"></i>
+                      <span><strong>代理治理</strong> - 访问控制和来源跟踪</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-3 text-lg">传统技能演进</h4>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-start">
+                      <i class="fas fa-archway text-purple-500 mt-1 mr-3"></i>
+                      <span><strong>架构监督</strong> - 从代码作者提升为系统架构师</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-bug text-orange-500 mt-1 mr-3"></i>
+                      <span><strong>系统级调试</strong> - 从算法调试转向行为调试</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-database text-blue-500 mt-1 mr-3"></i>
+                      <span><strong>上下文策展</strong> - 学习为代理提供正确的信息</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-comments text-green-500 mt-1 mr-3"></i>
+                      <span><strong>协作沟通</strong> - 与AI代理的有效协作</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 风险规避 -->
+          <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+            <h3 class="text-xl font-bold text-red-700 mb-4 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>风险规避策略
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-red-600 mb-2">安全风险</h4>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li class="flex items-start">
+                    <i class="fas fa-shield-alt text-red-500 mt-1 mr-2"></i>
+                    <span><strong>实时SAST扫描</strong> - 在代码生成时进行静态安全测试</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-box text-red-500 mt-1 mr-2"></i>
+                    <span><strong>沙盒动态分析</strong> - 在隔离环境中测试生成代码</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-search text-red-500 mt-1 mr-2"></i>
+                    <span><strong>AI驱动威胁建模</strong> - 分析新功能的安全影响</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-red-600 mb-2">质量风险</h4>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li class="flex items-start">
+                    <i class="fas fa-vial text-red-500 mt-1 mr-2"></i>
+                    <span><strong>测试驱动开发</strong> - 先定义测试再生成代码</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-code-branch text-red-500 mt-1 mr-2"></i>
+                    <span><strong>多代理协作验证</strong> - 使用多个代理相互验证</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-history text-red-500 mt-1 mr-2"></i>
+                    <span><strong>迭代精炼</strong> - 基于反馈的多轮改进</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 实用提示 -->
+          <div class="mt-8 bg-blue-50 p-5 rounded-lg border border-blue-200">
+            <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>实用提示
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-blue-600 mb-2">开始使用</h4>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li>• 从<strong>ICCM模型</strong>开始，保持对代码的全面监督</li>
+                  <li>• 使用<strong>CEM增强</strong>来改善大型代码库的维护</li>
+                  <li>• 为关键业务逻辑采用<strong>TDM模型</strong></li>
+                  <li>• 复杂项目结合<strong>PDM和TDM</strong></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-blue-600 mb-2">进阶技巧</h4>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li>• 建立<strong>提示库</strong>作为正式的工程工件</li>
+                  <li>• 实施<strong>弱到强监督</strong>的分层监督架构</li>
+                  <li>• 使用<strong>多代理辩论框架</strong>进行代码审查</li>
+                  <li>• 集成<strong>持续监控和自动保护措施</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 未来影响 -->
+      <section id="future-impact" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-road mr-3 text-purple-500"></i>
+          未来影响与研究方向
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">开发流程重构</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-sync-alt text-purple-500 mt-1 mr-2"></i>
+                  <span>从阶段性生命周期到持续微迭代</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-user-tie text-purple-500 mt-1 mr-2"></i>
+                  <span>开发者角色和技能重新定义</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-users text-purple-500 mt-1 mr-2"></i>
+                  <span>项目管理和协作的新挑战</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">代码可靠性与安全</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-search text-blue-500 mt-1 mr-2"></i>
+                  <span>手动审查的不足</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-shield-alt text-blue-500 mt-1 mr-2"></i>
+                  <span>集成安全与可靠性反馈循环</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-user-check text-blue-500 mt-1 mr-2"></i>
+                  <span>人在回路作为最终仲裁者</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">人因工程</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-brain text-green-500 mt-1 mr-2"></i>
+                  <span>心理模型转变：从代码逻辑到上下文工程</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-graduation-cap text-green-500 mt-1 mr-2"></i>
+                  <span>开发者技能演进</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-handshake text-green-500 mt-1 mr-2"></i>
+                  <span>团队协作与AI集成</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">关键挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-2">技术挑战</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 可扩展性：处理大型复杂项目的能力</li>
+                  <li>• 可靠性：确保代码质量和正确性</li>
+                  <li>• 效率：减少计算资源和时间消耗</li>
+                  <li>• 适应性：适应不同编程语言和框架</li>
+                </ul>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2">人机交互挑战</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 意图理解：准确理解人类开发者的需求</li>
+                  <li>• 沟通效率：减少迭代次数和沟通成本</li>
+                  <li>• 信任建立：在人类和代理之间建立可靠关系</li>
+                  <li>• 控制平衡：找到人类控制和代理自主性的平衡点</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2">安全与伦理挑战</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 代码安全：防止恶意代码生成和执行</li>
+                  <li>• 隐私保护：保护开发者和用户数据</li>
+                  <li>• 责任归属：明确代码质量和安全责任</li>
+                  <li>• 公平性：确保技术对不同群体的公平访问</li>
+                </ul>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2">社会经济挑战</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• 就业影响：对软件开发职业的影响</li>
+                  <li>• 技能转变：开发人员需要的新技能</li>
+                  <li>• 教育变革：计算机科学教育的调整</li>
+                  <li>• 产业重组：软件开发产业的转型</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-purple-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>首次对基于大型语言模型的Vibe Coding进行了全面系统的综述</li>
+              <li>通过约束马尔可夫决策过程形式化了Vibe Coding的理论基础</li>
+              <li>提出了涵盖代码LLM、编码代理、开发环境和反馈机制的综合框架</li>
+              <li>识别了关键技术挑战并提供了未来发展的路线图</li>
+            </ul>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2">范式转变</h4>
+                <p class="text-sm text-gray-700">
+                  Vibe Coding代表了软件开发的根本性转变，从传统的逐行编码演变为基于意图表达和结果验证的新范式。这种转变不仅改变了开发工作流程，还重新定义了开发者在软件开发生命周期中的角色。
+                </p>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2">未来展望</h4>
+                <p class="text-sm text-gray-700">
+                  随着技术的不断成熟，Vibe Coding有望彻底改变软件开发的本质，使个体开发者能够交付团队规模的能力，同时通过降低技术门槛民主化开发，扩大软件创作者生态系统。
+                </p>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2">研究意义</h4>
+                <p class="text-sm text-gray-700">
+                  本综述为研究人员、从业者和教育工作者提供了Vibe Coding领域的全面概述，建立了理论基础，识别了关键挑战，并指明了未来研究方向，为这一快速发展的领域奠定了坚实基础。
+                </p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2">实践价值</h4>
+                <p class="text-sm text-gray-700">
+                  对于软件开发从业者，本综述提供了选择合适工具和方法的指导，帮助他们在这个快速变化的领域中保持竞争力，并充分利用Vibe Coding带来的生产力提升。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gray-50 p-4 rounded-lg border">
+            <h4 class="font-bold text-gray-700 mb-3">致谢</h4>
+            <p class="text-sm text-gray-600">
+              作者感谢所有为本综述提供宝贵反馈的同行评审专家，以及为本研究提供支持和资源的各个机构。本综述的完成得益于对1000多篇相关文献的系统性分析和综合。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 图像交互增强
+      const images = document.querySelectorAll('.pdf-figure-container img');
+      images.forEach(img => {
+        img.addEventListener('click', function() {
+          this.classList.toggle('max-w-full');
+          this.classList.toggle('max-w-none');
+          this.classList.toggle('cursor-zoom-out');
+        });
+        
+        img.style.cursor = 'zoom-in';
+      });
+    });
+  </script>
+</body>
+</html>
