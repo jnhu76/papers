@@ -3,7 +3,7 @@
   "title": "Pruning in Snowflake: Working Smarter, Not Harder",
   "authors": ["Andreas Zimmerer", "Damien Dam", "Jan Kossmann", "Juliane Waack", "Ismail Oukid", "Andreas Kipf"],
   "year": 2025,
-  "conference": "SIGMOD-Companion",
+  "conference": "SIGMOD",
   "category": "数据库系统",
   "keywords": ["数据仓库", "数据跳过", "分区剪枝", "top-k检索", "LIMIT剪枝", "连接剪枝", "分析查询处理"],
   "abstract": "Modern cloud-based data analytics systems must efficiently process petabytes of data residing on cloud storage. A key optimization technique in state-of-the-art systems like Snowflake is partition pruning--skipping chunks of data that do not contain relevant information for computing query results.\n\nWhile partition pruning based on query predicates is a well-established technique, we present new pruning techniques that extend the scope of partition pruning to LIMT, top-k, and JOIN operations, significantly expanding the opportunities for pruning across diverse query types. We detail the implementation of each method and examine their impact on real-world workloads.\n\nOur analysis of Snowflake's production workloads reveals that real-world analytical queries exhibit much higher selectivity than commonly assumed, yielding effective partition pruning and highlighting the need for more realistic benchmarks. We show that we can harness high selectivity by utilizing min/max metadata available in modern data analytics systems and data lake formats like Apache Iceberg, reducing the number of processed micro-partitions by 99.4% across the Snowflake data platform."
