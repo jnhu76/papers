@@ -62,6 +62,10 @@
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 100;
         }
         
         #backToTop:hover {
@@ -213,6 +217,11 @@
                 right: 10px;
             }
             
+            #backToTop {
+                bottom: 80px;
+                right: 10px;
+            }
+            
             .ai-notice, .contact-notice {
                 font-size: 11px;
                 padding: 6px 10px;
@@ -317,7 +326,7 @@
     </div>
 
     <!-- 返回顶部按钮 -->
-    <button id="backToTop" class="fixed bottom-8 right-8 text-blue-600 p-4 rounded-full shadow-lg opacity-0 z-10">
+    <button id="backToTop" class="fixed text-blue-600 p-4 rounded-full shadow-lg opacity-0 z-10">
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
 
