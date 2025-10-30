@@ -122,6 +122,60 @@
             }
         }
         
+        /* AI数据标识样式 */
+        .ai-data-notice {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 14px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .ai-data-notice i {
+            margin-right: 6px;
+            color: #60a5fa;
+        }
+
+        /* 联系标识样式 */
+    .contact-notice {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        background: rgba(59, 130, 246, 0.9);
+        color: white;
+        padding: 8px 16px;
+        font-size: 14px;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        border-top-left-radius: 8px;
+    }
+
+    .contact-notice a {
+        color: white;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .contact-notice:hover {
+        background: rgba(59, 130, 246, 1);
+    }
+
+    /* 移动端优化 */
+    @media (max-width: 768px) {
+        .contact-notice {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+    }
+        
         /* 移动端优化 */
         @media (max-width: 768px) {
             .nav-container {
@@ -151,6 +205,11 @@
             .paper-meta {
                 flex-wrap: wrap;
                 gap: 0.5rem;
+            }
+            
+            .ai-data-notice {
+                font-size: 12px;
+                padding: 6px 12px;
             }
         }
     </style>
@@ -255,6 +314,16 @@
     <button id="backToTop" class="fixed bottom-8 right-8 text-blue-600 p-4 rounded-full shadow-lg opacity-0 z-10">
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
+
+    <!-- AI数据生成标识 -->
+    <div class="ai-data-notice">
+        <i class="fas fa-robot"></i>网站数据由AI生成，仅供参考
+    </div>
+
+    <!-- 联系标识 -->
+    <div class="contact-notice">
+            <i class="fas fa-envelope"></i>问题反馈请联系 me#hoooo.org
+    </div>
 
     <script>
         // 全局变量

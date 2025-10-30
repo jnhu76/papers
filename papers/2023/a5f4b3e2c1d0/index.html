@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>An Empirical Evaluation of Columnar Storage Formats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          An Empirical Evaluation of Columnar Storage Formats
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Xinyu Zeng, Yulong Hui, Jiahong Shen, Andrew Pavlo, Wes McKinney, Huanchen Zhang</div>
+                <div class="text-sm text-gray-600 mt-1">清华大学、卡内基梅隆大学、Voltron Data</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>PVLDB, 17(2): 148 - 161, 2023</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.14778/3626292.3626298</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">列式存储</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Parquet</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">ORC</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">性能评估</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>创建了列式存储格式的功能分类法，系统分析Parquet和ORC的设计特点</li>
+          <li>设计了基于真实世界数据分布的基准测试框架，用于评估存储格式的性能和空间效率</li>
+          <li>对Parquet和ORC进行了全面的实验评估，识别了现代硬件和实际工作负载下的设计优势</li>
+          <li>提出了未来列式存储格式设计的八个关键经验教训</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            列式存储是现代数据分析系统的核心组件。虽然许多数据库管理系统拥有专有的存储格式，但大多数都广泛支持开源存储格式，如Parquet和ORC，以促进跨平台数据共享。然而，这些格式是在十多年前（2010年代初）为Hadoop生态系统开发的。自那时以来，硬件和工作负载格局都发生了变化。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            本文通过深入研究Parquet和ORC的内部结构，重新审视了这些最广泛采用的开源列式存储格式。作者设计了一个基准测试，在不同工作负载配置下对格式的性能和空间效率进行压力测试。通过全面评估，作者识别了在现代硬件和实际数据分布下有利的设计决策，包括默认使用字典编码、整数编码算法优先考虑解码速度而非压缩比、使块压缩可选以及嵌入更细粒度的辅助数据结构。作者还指出了在处理常见机器学习工作负载和使用GPU进行解码时格式设计的低效之处。分析结果确定了可能指导未来格式更好适应现代技术趋势的重要考虑因素。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-history mr-2 text-blue-500"></i>列式存储发展历程
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            列式存储因其不相关属性跳过、高效数据压缩和向量化查询处理等优势而被广泛应用于数据分析。在2010年代初，组织为开源大数据生态系统开发了数据处理引擎，包括Hive、Impala、Spark和Presto，以应对每天产生的PB级数据和对大规模数据分析日益增长的需求。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            为了促进各种基于Hadoop的查询引擎之间的数据共享，供应商提出了开源列式存储格式，以Parquet和ORC为代表，这些格式已成为当今数据仓库和数据湖中数据存储的事实标准。
+          </p>
+        </div>
+        
+        <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-8">
+          <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+            <i class="fas fa-microchip mr-2"></i>现代硬件环境变化
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h4 class="font-bold text-blue-600 mb-2">存储性能提升</h4>
+              <p class="text-sm text-gray-700">持久存储性能提高了几个数量级，达到每秒GB级别</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h4 class="font-bold text-blue-600 mb-2">云存储普及</h4>
+              <p class="text-sm text-gray-700">更多列式文件存储在廉价云存储中，具有高带宽和高延迟特性</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h4 class="font-bold text-blue-600 mb-2">新压缩方案</h4>
+              <p class="text-sm text-gray-700">学术界提出了许多新的轻量级压缩方案以及索引和过滤技术</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h4 class="font-bold text-blue-600 mb-2">工作负载变化</h4>
+              <p class="text-sm text-gray-700">机器学习和GPU计算等新兴工作负载对存储格式提出新要求</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-bullseye mr-2 text-blue-500"></i>研究目标
+          </h3>
+          <p class="text-gray-700 leading-relaxed">
+            本文的目标是分析常见的列式文件格式，并确定设计考虑因素，为开发下一代面向列的存储格式提供见解。作者创建了一个具有预定义工作负载的基准测试，其配置是从一系列真实世界数据集中提取的。然后对Parquet和ORC的主要组件进行了全面分析，包括编码、块压缩、元数据组织、索引和过滤以及嵌套数据建模。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="tech-card bg-red-50 p-6 rounded-lg border border-red-200">
+            <h3 class="text-xl font-bold text-red-700 mb-4 flex items-center">
+              <i class="fas fa-clock mr-2"></i>格式设计过时
+            </h3>
+            <p class="text-gray-700">
+              Parquet和ORC是在十多年前开发的，针对当时的Hadoop生态系统和硬件环境优化。现代硬件性能已大幅提升，存储设备带宽增加，但现有格式未能充分利用这些进步。
+            </p>
+          </div>
+          
+          <div class="tech-card bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h3 class="text-xl font-bold text-yellow-700 mb-4 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2"></i>性能瓶颈转移
+            </h3>
+            <p class="text-gray-700">
+              随着存储设备变快，查询处理的瓶颈从I/O转移到计算。现有格式的设计决策（如过度压缩）在现代硬件上可能不再适用，甚至可能降低性能。
+            </p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center">
+              <i class="fas fa-brain mr-2"></i>机器学习工作负载支持不足
+            </h3>
+            <p class="text-gray-700">
+              现有格式在处理机器学习工作负载时效率低下，特别是在处理数千个特征的投影和向量嵌入中的低选择性选择时表现不佳。
+            </p>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-6 rounded-lg border border-green-200">
+            <h3 class="text-xl font-bold text-green-700 mb-4 flex items-center">
+              <i class="fas fa-microchip mr-2"></i>GPU解码不友好
+            </h3>
+            <p class="text-gray-700">
+              当前格式没有提供足够的并行单元来充分利用GPU的计算能力。编码算法设计不适合并行处理，限制了GPU加速的潜力。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>现有评估方法的局限性
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            先前关于存储格式的研究侧重于测量基于Hadoop的查询引擎的端到端性能，未能分析设计决策及其权衡。此外，它们使用合成工作负载，没有考虑现实世界中观察到的偏斜数据分布。这样的数据集不太适合存储格式基准测试。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            作者的研究通过创建基于真实世界数据的基准测试框架来解决这些局限性，该框架能够生成具有不同值分布的数据集，以全面评估列式格式的多个方面。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 功能分类法 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-table mr-2 text-blue-500"></i>功能分类法
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            作者提出了一个列式存储格式的功能分类法，系统比较了Parquet和ORC的设计特点。下表总结了两种格式的关键特性对比：
+          </p>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-bold text-gray-700">特性</th>
+                  <th class="py-3 px-4 border-b text-left font-bold text-gray-700">Parquet</th>
+                  <th class="py-3 px-4 border-b text-left font-bold text-gray-700">ORC</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">内部布局</td>
+                  <td class="py-3 px-4 border-b">PAX格式，基于行数的行组大小</td>
+                  <td class="py-3 px-4 border-b">PAX格式，基于物理存储大小的行组大小</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">编码变体</td>
+                  <td class="py-3 px-4 border-b">plain, RLE_DICT, RLE, Delta, Bitpacking</td>
+                  <td class="py-3 px-4 border-b">plain, RLE, Delta, Bitpacking, PFOR</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">压缩算法</td>
+                  <td class="py-3 px-4 border-b">Snappy, gzip, LZO, zstd, LZ4, Brotli</td>
+                  <td class="py-3 px-4 border-b">Snappy, gzip, LZO, zstd, LZ4</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">类型系统</td>
+                  <td class="py-3 px-4 border-b">分离逻辑和物理类型系统</td>
+                  <td class="py-3 px-4 border-b">每种类型有单独实现</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">区域映射/索引</td>
+                  <td class="py-3 px-4 border-b">每个最小区域映射/行组/文件的最小-最大值</td>
+                  <td class="py-3 px-4 border-b">每个最小区域映射/行组/文件的最小-最大值</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">布隆过滤器</td>
+                  <td class="py-3 px-4 border-b">支持每个列块</td>
+                  <td class="py-3 px-4 border-b">支持每个列块</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">嵌套数据编码</td>
+                  <td class="py-3 px-4 border-b">Dremel模型</td>
+                  <td class="py-3 px-4 border-b">基于长度和存在的模型</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 格式布局 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>格式布局设计
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Parquet和ORC都采用PAX格式。数据库管理系统首先将表水平分区为行组，然后在每个行组内按列存储元组，每个属性形成一个列块。这种混合列式布局使DBMS能够使用向量化查询处理，并减轻行组中的元组重建开销。
+          </p>
+          
+          <!-- 格式布局图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: 格式布局
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: Parquet和ORC的格式布局对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Parquet和ORC的格式布局对比，展示了行组、列块和元数据组织方式
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">Parquet布局特点</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>基于行数的行组大小（例如100万行）</li>
+                <li>压缩单元映射到最小区域映射</li>
+                <li>页索引存储所有最小区域映射</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">ORC布局特点</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>基于物理存储大小的行组大小（例如64MB）</li>
+                <li>压缩单元与最小区域映射不对齐</li>
+                <li>最小区域映射存储在行组开头</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 编码方案 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-code mr-2 text-blue-500"></i>编码方案设计
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-book mr-2"></i>Parquet编码策略
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>对所有列默认应用字典编码</li>
+                <li>对字典代码使用RLE和Bitpacking混合编码</li>
+                <li>RLE阈值固定为8（不可配置）</li>
+                <li>字典大小限制为1MB（默认）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>ORC编码策略
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>仅对字符串使用字典编码</li>
+                <li>基于NDV比率决定是否应用字典编码</li>
+                <li>使用四种方案编码整数和字典代码</li>
+                <li>RLE阈值可配置（默认为3）</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 整数编码图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 2: ORC整数编码示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: ORC整数编码算法示例" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> ORC整数编码算法的示例，展示了四种编码方案的应用场景
+            </div>
+          </div>
+        </div>
+        
+        <!-- 嵌套数据模型 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-project-diagram mr-2 text-blue-500"></i>嵌套数据模型
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">Parquet的Dremel模型</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>基于重复级别(R)和定义级别(D)</li>
+                <li>将结构信息嵌入原子字段</li>
+                <li>查询处理时读取的列较少</li>
+                <li>文件大小可能较大（结构信息重复）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">ORC的长度和存在模型</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>基于长度和存在的直观模型</li>
+                <li>为非原子字段创建单独的列</li>
+                <li>文件大小通常较小</li>
+                <li>查询处理时读取的列较多</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 嵌套数据示例图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 3: 嵌套数据示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: Parquet和ORC处理嵌套数据的对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Parquet和ORC处理嵌套数据的对比，展示了两种模型在编码结构信息时的不同方法
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 基准测试设计 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>基准测试设计
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            作者设计了一个基于真实世界数据的基准测试框架，用于评估列式格式的多个方面。首先定义了几个列的值分布的显著属性（例如排序度、偏斜模式），然后从真实世界数据集中提取这些属性，形成预定义的工作负载，代表从商业智能到机器学习的应用。
+          </p>
+          
+          <!-- 基准测试流程图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 4: 基准测试流程概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="论文图4: 基准测试流程概述" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 基准测试流程概述，展示了从配置生成到性能评估的完整流程
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">列属性定义</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li><strong>NDV比率</strong>：不同值数量与总记录数的比率</li>
+                <li><strong>NULL比率</strong>：NULL值与总记录数的比率</li>
+                <li><strong>值范围</strong>：列中绝对值的范围</li>
+                <li><strong>排序度</strong>：列值排序程度的度量</li>
+                <li><strong>偏斜模式</strong>：使用伪Zipfian分布建模值偏斜</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">预定义工作负载</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li><strong>bi</strong>：基于公共BI基准测试</li>
+                <li><strong>classic</strong>：基于IMDb、Yelp和Clickhouse</li>
+                <li><strong>geo</strong>：基于Geonames和地理数据</li>
+                <li><strong>log</strong>：基于日志数据和机器生成数据</li>
+                <li><strong>ml</strong>：基于UCI-ML机器学习数据集</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 实验结果概述 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>实验结果概述
+          </h3>
+          
+          <!-- 基准测试结果图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 6: 预定义工作负载的基准测试结果
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig6.png" alt="论文图6: 预定义工作负载下Parquet和ORC的性能对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 预定义工作负载下Parquet和ORC的性能对比，包括文件大小、扫描时间和选择查询延迟
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+              <h4 class="font-bold text-blue-700 mb-2">文件大小</h4>
+              <p class="text-gray-700">Parquet和ORC之间没有明确的赢家，具体取决于工作负载特性</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+              <h4 class="font-bold text-green-700 mb-2">扫描性能</h4>
+              <p class="text-gray-700">Parquet通常比ORC更快，因为其整数编码方案更轻量级</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+              <h4 class="font-bold text-purple-700 mb-2">选择查询</h4>
+              <p class="text-gray-700">ORC在选择性查询中表现更好，因为其区域映射更细粒度</p>
+            </div>
+          </div>
+          
+          <!-- 性能对比图占位符 -->
+          <div class="performance-chart-placeholder bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700">性能对比分析</h6>
+            </div>
+            
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">Parquet扫描:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full" style="width: 85%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">85%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">ORC扫描:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-blue-500 h-4 rounded-full" style="width: 72%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">72%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">Parquet选择:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-yellow-500 h-4 rounded-full" style="width: 65%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">65%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium w-24">ORC选择:</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-4">
+                  <div class="bg-purple-500 h-4 rounded-full" style="width: 78%"></div>
+                </div>
+                <span class="text-sm font-medium w-12 ml-2">78%</span>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <div><span class="font-medium">测试环境:</span> Intel Xeon E5-2690 v4, 512GB RAM, NVMe SSD</div>
+              <div><span class="font-medium">工作负载:</span> 基于真实世界数据集的预定义工作负载</div>
+              <div><span class="font-medium">度量指标:</span> 扫描时间和选择查询延迟</div>
+              <div><span class="font-medium">提升比例:</span> 取决于工作负载特性</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 编码性能分析 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-code mr-2 text-blue-500"></i>编码性能分析
+          </h3>
+          
+          <!-- 编码性能图占位符 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 7: 编码性能分析
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig7.png" alt="论文图7: Parquet和ORC编码方案的性能对比" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Parquet和ORC编码方案的性能对比，包括压缩比和解码速度的权衡
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">Parquet编码特点</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>默认字典编码策略导致文件大小较小</li>
+                <li>轻量级整数编码方案解码速度快</li>
+                <li>字典大小限制可能导致回退到plain编码</li>
+                <li>适合高基数列和扫描密集型工作负载</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">ORC编码特点</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>选择性字典编码策略更灵活</li>
+                <li>整数编码方案更复杂但压缩比更高</li>
+                <li>PFOR编码在某些场景下表现优异</li>
+                <li>适合选择密集型工作负载和低基数列</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-lightbulb mr-2 text-blue-500"></i>主要发现
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            通过对Parquet和ORC的全面评估，作者识别了在现代硬件和实际数据分布下有利的设计决策。主要发现包括：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">有利的设计决策</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>默认使用字典编码</li>
+                <li>整数编码算法优先考虑解码速度而非压缩比</li>
+                <li>使块压缩可选</li>
+                <li>嵌入更细粒度的辅助数据结构</li>
+                <li>提供灵活的编码方案选择</li>
+              </ul>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3">需要改进的方面</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>处理机器学习工作负载时效率低下</li>
+                <li>GPU解码不友好，缺乏足够的并行单元</li>
+                <li>某些编码算法不适合并行处理</li>
+                <li>对现代硬件特性利用不足</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg mb-8">
+          <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center">
+            <i class="fas fa-graduation-cap mr-2"></i>经验教训
+          </h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            基于分析结果，作者提出了八个关键经验教训，可能指导未来列式存储格式的设计：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+              <li><strong>优先解码速度</strong>：现代硬件下解码速度比压缩比更重要</li>
+              <li><strong>默认字典编码</strong>：对大多数列应用字典编码通常有益</li>
+              <li><strong>可选块压缩</strong>：使块压缩可选以适应不同工作负载</li>
+              <li><strong>细粒度辅助结构</strong>：嵌入更细粒度的辅助数据结构提高查询性能</li>
+            </ol>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700" start="5">
+              <li><strong>灵活编码选择</strong>：提供灵活的编码方案选择以适应不同数据特性</li>
+              <li><strong>考虑机器学习工作负载</strong>：优化处理高维稀疏数据</li>
+              <li><strong>GPU友好设计</strong>：设计适合并行处理的编码算法</li>
+              <li><strong>利用现代硬件</strong>：充分利用现代存储和计算硬件的特性</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-road mr-2 text-blue-500"></i>未来工作
+          </h3>
+          <p class="text-gray-700 leading-relaxed">
+            作者计划将评估扩展到更多存储格式，并研究如何将分析结果转化为下一代列式存储格式的设计原则。此外，作者还计划探索如何更好地支持新兴工作负载，如机器学习和GPU加速数据处理。
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术卡片悬停效果
+      const techCards = document.querySelectorAll('.tech-card');
+      techCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px)';
+        });
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
