@@ -122,59 +122,60 @@
             }
         }
         
-        /* AI数据标识样式 */
-        .ai-data-notice {
+        /* 底部标识容器 */
+        .footer-notices {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        /* AI数据标识 */
+        .ai-notice {
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            text-align: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-        
-        .ai-data-notice i {
-            margin-right: 6px;
-            color: #60a5fa;
-        }
-
-        /* 联系标识样式 */
-    .contact-notice {
-        position: fixed;
-        bottom: 0;
-        right: 0;
-        background: rgba(59, 130, 246, 0.9);
-        color: white;
-        padding: 8px 16px;
-        font-size: 14px;
-        z-index: 100;
-        backdrop-filter: blur(10px);
-        border-top-left-radius: 8px;
-    }
-
-    .contact-notice a {
-        color: white;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .contact-notice:hover {
-        background: rgba(59, 130, 246, 1);
-    }
-
-    /* 移动端优化 */
-    @media (max-width: 768px) {
-        .contact-notice {
+            padding: 8px 12px;
             font-size: 12px;
-            padding: 6px 12px;
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-    }
+
+        /* 联系标识 */
+        .contact-notice {
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .contact-notice a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .contact-notice:hover {
+            background: rgba(59, 130, 246, 1);
+        }
+
+        .ai-notice:hover, .contact-notice:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
         
         /* 移动端优化 */
         @media (max-width: 768px) {
@@ -207,9 +208,14 @@
                 gap: 0.5rem;
             }
             
-            .ai-data-notice {
-                font-size: 12px;
-                padding: 6px 12px;
+            .footer-notices {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .ai-notice, .contact-notice {
+                font-size: 11px;
+                padding: 6px 10px;
             }
         }
     </style>
@@ -315,14 +321,18 @@
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
 
-    <!-- AI数据生成标识 -->
-    <div class="ai-data-notice">
-        <i class="fas fa-robot"></i>网站数据由AI生成，仅供参考
-    </div>
-
-    <!-- 联系标识 -->
-    <div class="contact-notice">
-            <i class="fas fa-envelope"></i>问题反馈请联系 me#hoooo.org
+    <!-- 底部标识容器 -->
+    <div class="footer-notices">
+        <!-- AI数据标识 -->
+        <div class="ai-notice">
+            <i class="fas fa-robot"></i>AI生成数据
+        </div>
+        <!-- 联系标识 -->
+        <div class="contact-notice">
+            <a href="mailto:me@hoooo.org">
+                <i class="fas fa-envelope"></i>问题反馈
+            </a>
+        </div>
     </div>
 
     <script>
