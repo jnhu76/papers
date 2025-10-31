@@ -58,12 +58,15 @@ jobs:
         # 复制 sw.js 文件
         cp sw.js deploy/ 2>/dev/null || true        
         
-        # 复制整个papers目录（只包含HTML和必要的静态资源）
+        # 复制整个papers目录的内容到deploy根目录
         if [ -d "papers" ]; then
-          mkdir -p deploy/papers
-          # 使用find命令复制papers目录下的所有HTML文件和必要的子目录结构
-          find papers -type f \( -name "*.html" -o -name "*.css" -o -name "*.js" -o -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" \) \
-            -exec cp --parents {} deploy/ \;
+          # 使用rsync将papers目录下的所有内容复制到deploy目录
+          # -r: 递归复制
+          # --ignore-existing: 忽略已存在的文件（避免覆盖index.html等）
+          rsync -r papers/ deploy/ --ignore-existing
+          
+          # 或者使用cp命令的替代方案
+          # cp -r papers/* deploy/ 2>/dev/null || true
         fi
         
         # 创建CNAME文件（如果有自定义域名）
