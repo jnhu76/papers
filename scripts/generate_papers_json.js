@@ -40,7 +40,7 @@ function generatePapersJson() {
 
       // 计算HTML文件路径
       const relativePath = path.relative('./papers', path.dirname(filePath));
-      paperData.htmlFile = `papers/${relativePath}/index.html`;
+      paperData.htmlFile = `${relativePath}/index.html`;
 
       // 确保所有必需字段都存在
       if (!paperData.id) {
