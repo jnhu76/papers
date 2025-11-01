@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PALF: Replicated Write-Ahead Logging for Distributed Databases</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          PALF: Replicated Write-Ahead Logging for Distributed Databases
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Fusheng Han, Hao Liu, Bin Chen, Debin Jia, Jianfeng Zhou, Xuwang Teng, Chuanhui Yang, Huafeng Xi, Wei Tian, Shuning Tao, Sen Wang, Quanqing Xu, Zhenkun Yang</div>
+                <div class="text-sm text-gray-600 mt-1">OceanBase, Ant Group</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>PVLDB, 17(12): 3745 - 3758, 2024</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.14778/3685800.3685803</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分布式数据库</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Paxos协议</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">写前日志</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">高可用性</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>提出PALF作为OceanBase的复制写前日志系统，具有高可用性、优异性能和类文件接口</li>
+          <li>将数据库特定需求抽象为PALF原语，如显式复制结果和变更序列号</li>
+          <li>提出了一种将日志从一个Paxos组同步到其他组的新方法，支持物理备用数据库等功能</li>
+          <li>通过系统优化构建高性能共识协议，在闭环客户端和数据库工作负载下均表现出色</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">分布式数据库因其可扩展性、可用性和一致性保证近年来得到广泛研究和开发。写前日志（WAL）系统是数据库中最关键的组件之一。设计一个复制日志系统作为支持ACID事务的分布式数据库基础仍然是一个重要问题。</p>
+          <p class="mb-4">本文提出了PALF，一个基于Paxos的仅追加日志文件系统，以解决这些挑战。PALF的基本思想是将日志系统与整个数据库协同设计，以支持数据库特定功能，并将这些功能抽象为PALF原语，以支持其他分布式系统。</p>
+          <p class="mb-4">许多数据库功能，包括事务处理、数据库恢复和物理备用数据库，都已基于PALF原语构建。评估表明，PALF大大优于知名共识协议实现，完全胜任分布式数据库工作负载。PALF已作为OceanBase 4.0数据库的组件部署，并与其一起开源。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-database mr-2"></i>OceanBase数据库
+            </h4>
+            <p class="text-sm text-gray-700">OceanBase是一个基于无共享架构构建的分布式关系数据库系统。其主要设计目标包括与传统RDBMS的兼容性、可扩展性和容错性。</p>
+          </div>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-redo mr-2"></i>重新设计的架构
+            </h4>
+            <p class="text-sm text-gray-700">OceanBase 4.0版本重新设计了内部架构，引入了Stream组件，将事务和日志的基本单元从单个分区转变为一组分区，减少了复制组的数量。</p>
+          </div>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">写前日志（WAL）系统最初是为了在故障后将数据库恢复到先前状态而引入的。除了这个初始目的外，分布式数据库逐渐出现了更多需求。日志系统应能够将日志复制到多个副本以实现持久性和容错性。</p>
+          
+          <p class="mb-4">为了保持多个数据库副本的一致状态，共识协议已被广泛用于在分布式数据库中复制日志。大多数这些数据库被抽象为复制状态机（RSM）以与共识协议集成。</p>
+          
+          <p class="mb-4">RSM模型对于修改小数据集的操作（例如，在键值存储中设置键值）运行良好。然而，它可能不适合涉及大量数据的操作，例如分布式数据库中的事务。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
+          <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+              <i class="fas fa-crown mr-2"></i>Leader选举
+            </h4>
+            <p class="text-sm text-gray-700">在实际部署中，数据库leader通常与日志系统leader位于同一位置以减少延迟。选举日志系统leader时应考虑数据库的要求。</p>
+          </div>
+          
+          <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+              <i class="fas fa-question-circle mr-2"></i>不确定的复制结果
+            </h4>
+            <p class="text-sm text-gray-700">在WAL模型中，事务是否应提交或中止取决于其提交记录是否已持久化。如果日志系统由于异常返回不正确结果，数据可能变得不一致。</p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fas fa-sync-alt mr-2"></i>数据变更同步
+            </h4>
+            <p class="text-sm text-gray-700">日志是数据库，物理日志同步是将数据变更从数据库导出到下游系统的最常见方法之一。在分布式数据库中，日志复制带来了挑战。</p>
+          </div>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">在WAL模型中，数据库使用本地文件系统接口写入日志，日志记录和应用操作的顺序可以与RSM模型相反。写入直接应用于数据库的存储引擎（内存状态机），然后生成重做日志（操作）并刷新。</p>
+          
+          <p class="mb-4">然而，设计这样一个提供类似本地文件系统保证的复制日志系统以支持WAL模型仍然面临以下挑战：</p>
+          
+          <ul class="list-disc list-inside mb-4 space-y-2">
+            <li><strong>Leader选举</strong>：数据库leader的位置影响几乎所有功能，如故障恢复、维护操作和应用程序偏好。</li>
+            <li><strong>不确定的复制结果</strong>：如果由于网络故障导致领导权转移，前leader可能不清楚已追加的日志条目是否已提交。</li>
+            <li><strong>数据变更同步</strong>：将数据变更记录的物理日志从主数据库同步到备用数据库是一个重要功能。</li>
+            <li><strong>性能</strong>：对于许多日志复制系统，单个复制组的吞吐量是有限的。</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 复制WAL模型 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-copy mr-2 text-blue-500"></i>复制WAL模型
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图1 - 复制写前日志模型
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 复制写前日志模型
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 复制写前日志模型架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在OceanBase数据库中，复制日志系统被抽象为一个仅追加日志文件，事务引擎与PALF交互的方式类似于与本地文件交互。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>直接内存修改:</strong> 事务直接修改内存存储引擎中的数据，大大扩展了事务大小的上限</li>
+                  <li><strong>日志生成:</strong> 然后生成日志记录并追加到PALF</li>
+                  <li><strong>日志复制:</strong> PALF负责将leader执行的修改复制到followers</li>
+                  <li><strong>结果通知:</strong> 如果日志已被PALF提交，leader将通知事务引擎结果</li>
+                  <li><strong>重放修改:</strong> followers将重放leader已执行的修改</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <p class="text-gray-700 mb-4">在OceanBase数据库中，复制日志系统被抽象为一个仅追加日志文件，事务引擎与PALF交互的方式类似于与本地文件交互。</p>
+        </div>
+        
+        <!-- PALF架构 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>PALF架构
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图2 - PALF架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: PALF架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: PALF系统架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> PALF是一个由多个称为PALF组的复制组组成的复制日志系统。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>三层架构:</strong> PALF由接口层、PALF副本层和PALF运行时环境组成</li>
+                  <li><strong>日志序列号:</strong> 日志序列器为每个记录分配单调递增的日志序列号（LSN）</li>
+                  <li><strong>Paxos协议:</strong> 记录被封装为日志条目，并通过Paxos协议按LSN顺序复制到其他PALF副本</li>
+                  <li><strong>独立选举:</strong> 与一些将leader选举和日志复制绑定在一起的Paxos变体不同，PALF中的leader候选者由独立选举模块选举</li>
+                  <li><strong>运行时环境:</strong> 在每个服务器上，激活一个称为PALFEnv的PALF运行时环境</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <p class="text-gray-700 mb-4">PALF是一个由多个称为PALF组的复制组组成的复制日志系统。在每个PALF组中，多个PALF副本放置在不同的服务器上以实现容错。</p>
+        </div>
+        
+        <!-- 共识协议实现 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-handshake mr-2 text-blue-500"></i>共识协议实现
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-user-check mr-2"></i>Leader选举
+              </h4>
+              <p class="text-sm text-gray-700">PALF将leader选举与共识协议解耦，以支持与数据库相关的选举优先级。用户可以灵活指定副本被选为leader的优先级。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>角色转换
+              </h4>
+              <p class="text-sm text-gray-700">在任何给定时间，每个副本处于四种角色之一：leader、follower、candidate或pending follower。角色转换确保系统状态的正确性。</p>
+            </div>
+          </div>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图4 - PALF副本的角色转换
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: PALF副本的角色转换
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: PALF副本角色转换状态图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在任何给定时间，每个副本处于四种角色之一：leader、follower、candidate或pending follower。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>初始状态:</strong> 副本启动时的角色初始化为follower</li>
+                  <li><strong>候选者选举:</strong> 每个副本定期轮询选举算法，检查候选者是否是自己</li>
+                  <li><strong>日志重新确认:</strong> 如果follower发现自身已成为候选者，它会切换到candidate角色并执行日志重新确认</li>
+                  <li><strong>pending follower:</strong> 如果leader发现候选者不再是自身或收到来自新leader的消息，它将撤销其领导权并切换到pending follower</li>
+                  <li><strong>状态转换:</strong> 在所有pending日志的状态明确后，副本将切换到follower</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <!-- 性能优化 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>性能优化
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center text-sm md:text-base">
+                <i class="fas fa-stream mr-2"></i>流水线复制
+              </h4>
+              <p class="text-xs text-gray-700">通过利用现代多核处理器并发处理和复制日志，将多个日志的共识相关状态缓存在内存滑动窗口中。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center text-sm md:text-base">
+                <i class="fas fa-object-group mr-2"></i>自适应组复制
+              </h4>
+              <p class="text-xs text-gray-700">在低并发下定期冻结日志，在高并发下根据I/O工作器反馈冻结日志，平衡延迟和吞吐量。</p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center text-sm md:text-base">
+                <i class="fas fa-unlock mr-2"></i>无锁写入路径
+              </h4>
+              <p class="text-xs text-gray-700">设计了无锁写入路径以避免线程间的争用，包括无锁日志序列器和非竞争性组缓冲区。</p>
+            </div>
+          </div>
+          
+          <p class="text-gray-700">PALF通过系统优化设计以最大化性能，包括流水线复制、自适应组复制和无锁写入路径等技术。</p>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 整体性能 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>整体性能
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图9 - 不同客户端和日志大小的性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: 不同客户端和日志大小的性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: 不同客户端数量和日志大小下的性能对比图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> PALF与etcd-raft和braft在不同客户端数量和日志大小下的性能对比。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>吞吐量对比:</strong> PALF随着客户端数量的增加大大扩展吞吐量，处理478K append请求/秒（1500客户端）和1480K请求/秒（8000客户端）</li>
+                  <li><strong>加速比:</strong> PALF的加速比为5.98（客户端从500增加到8000），而etcd-raft和braft分别为1.386和1.8</li>
+                  <li><strong>性能优势:</strong> PALF可以充分利用现代多核硬件，归功于无锁写入路径和组缓冲区优化</li>
+                  <li><strong>I/O带宽:</strong> etcd-raft在小型日志大小下实现了与braft和PALF相当的I/O带宽</li>
+                  <li><strong>写入放大:</strong> 当日志大小小于128字节时，PALF中每个日志的实际I/O大小大于braft中的每个日志</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 三台商用服务器，32核2.5GHz Intel Xeon CPU，256 GB内存，四块SSD磁盘</li>
+                      <li>网络环境: 10 Gigabit Ethernet，0.2 ms平均延迟</li>
+                      <li>工作负载: 闭环客户端模型，客户端与leader位于同一位置</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能提升: PALF吞吐量比基准系统高5.98倍</li>
+                      <li>资源消耗: 充分利用多核硬件，最小化锁争用开销</li>
+                      <li>扩展性: 在高并发下表现优异，支持大规模工作负载</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <p class="text-gray-700 mb-4">PALF随着客户端数量的增加大大扩展吞吐量，处理478K append请求/秒（1500客户端）和1480K请求/秒（8000客户端）。这些吞吐量数字远高于基准系统。</p>
+          
+          <p class="text-gray-700">PALF的加速比为5.98（客户端从500增加到8000），而etcd-raft和braft的加速比分别为1.386和1.8。这意味着PALF可以充分利用现代多核硬件。</p>
+        </div>
+        
+        <!-- 自适应组复制评估 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-object-group mr-2 text-blue-500"></i>自适应组复制评估
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图10 - 日志聚合评估
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 10: 日志聚合评估
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig10.png" alt="论文图10: 自适应组复制性能评估图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 自适应组复制在不同并发级别下的效果评估。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>低并发场景:</strong> 在低并发级别下，自适应组复制与固定时间窗口方法表现相似</li>
+                  <li><strong>高并发场景:</strong> 在高并发级别下，自适应组复制优于固定时间窗口方法</li>
+                  <li><strong>延迟优化:</strong> 自适应组复制在低并发下实现了低延迟，在高并发下实现了高吞吐量</li>
+                  <li><strong>吞吐量提升:</strong> 在1000客户端下，自适应组复制的吞吐量比固定时间窗口方法高约10%</li>
+                  <li><strong>平衡策略:</strong> 自适应组复制通过平衡延迟和吞吐量，实现了更好的整体性能</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 三台商用服务器，32核2.5GHz Intel Xeon CPU，256 GB内存</li>
+                      <li>网络环境: 10 Gigabit Ethernet，0.2 ms平均延迟</li>
+                      <li>工作负载: 不同并发级别的客户端请求，日志大小为1KB</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能提升: 自适应组复制在高并发下比固定时间窗口方法高约10%</li>
+                      <li>延迟优化: 在低并发下保持低延迟，在高并发下保持高吞吐量</li>
+                      <li>平衡策略: 成功平衡了延迟和吞吐量之间的权衡</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <p class="text-gray-700">自适应组复制在低并发级别下与固定时间窗口方法表现相似，但在高并发级别下优于固定时间窗口方法。自适应组复制在低并发下实现了低延迟，在高并发下实现了高吞吐量。</p>
+        </div>
+        
+        <!-- 数据库工作负载评估 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-database mr-2 text-blue-500"></i>数据库工作负载评估
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图11 - 数据库工作负载下的性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 11: 数据库工作负载下的性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig11.png" alt="论文图11: 数据库工作负载下的性能对比图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在数据库工作负载下，PALF与braft的性能对比。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>TPC-C基准测试:</strong> 使用TPC-C基准测试评估PALF在真实数据库工作负载下的性能</li>
+                  <li><strong>性能优势:</strong> 在TPC-C基准测试中，PALF的性能比braft高约40%</li>
+                  <li><strong>事务处理:</strong> PALF能够更好地处理数据库事务工作负载，特别是涉及大量数据的事务</li>
+                  <li><strong>系统稳定性:</strong> PALF在长时间运行下保持稳定的性能表现</li>
+                  <li><strong>资源利用:</strong> PALF更有效地利用系统资源，减少不必要的开销</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 三台商用服务器，32核2.5GHz Intel Xeon CPU，256 GB内存</li>
+                      <li>数据库系统: OceanBase 4.0数据库</li>
+                      <li>工作负载: TPC-C基准测试，模拟在线事务处理工作负载</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能提升: PALF在TPC-C基准测试中比braft高约40%</li>
+                      <li>事务处理: 更好地处理涉及大量数据的事务</li>
+                      <li>系统稳定性: 长时间运行下保持稳定性能</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <p class="text-gray-700">在数据库工作负载下，PALF表现出优异的性能。在TPC-C基准测试中，PALF的性能比braft高约40%。这表明PALF能够更好地处理数据库事务工作负载，特别是涉及大量数据的事务。</p>
+        </div>
+        
+        <!-- 故障恢复评估 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-heartbeat mr-2 text-blue-500"></i>故障恢复评估
+          </h3>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h5 class="font-semibold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>故障恢复测试
+            </h5>
+            <p class="text-sm text-gray-700">在故障恢复测试中，PALF表现出快速的故障检测和恢复能力。当leader发生故障时，系统能够在几秒钟内选举出新的leader并恢复正常操作。</p>
+          </div>
+          
+          <p class="text-gray-700">PALF的故障恢复机制确保了系统的高可用性。通过解耦leader选举和共识协议，PALF能够根据数据库需求灵活选择新的leader，同时保持数据一致性。</p>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本文提出了PALF，一个基于Paxos的仅追加日志文件系统，专为分布式数据库设计。PALF通过将数据库特定需求抽象为PALF原语，支持了包括事务处理、数据库恢复和物理备用数据库在内的多种功能。</p>
+          
+          <p class="mb-4">PALF的关键创新包括：</p>
+          
+          <ul class="list-disc list-inside mb-4 space-y-2">
+            <li><strong>类文件接口</strong>：提供类似本地文件系统的接口，简化了与数据库事务引擎的集成</li>
+            <li><strong>显式复制结果</strong>：确保日志复制结果的确定性，避免数据不一致</li>
+            <li><strong>变更序列号</strong>：支持物理日志同步，实现数据库间的数据同步</li>
+            <li><strong>高性能共识协议</strong>：通过流水线复制、自适应组复制和无锁写入路径等技术优化性能</li>
+          </ul>
+          
+          <p class="mb-4">评估结果表明，PALF在闭环客户端和数据库工作负载下均表现出优异的性能。与知名共识协议实现相比，PALF在吞吐量和扩展性方面具有显著优势。</p>
+          
+          <p class="mb-4">PALF已作为OceanBase 4.0数据库的组件部署，并与其一起开源。作者相信PALF的设计和实现经验可以为其他分布式系统的开发提供有价值的参考。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-6">
+            <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来工作
+            </h5>
+            <p class="text-sm text-gray-700">未来的工作方向包括进一步优化PALF的性能，特别是在大规模部署下的表现。此外，作者计划探索PALF在其他分布式系统中的应用，以及支持更多数据库特定功能。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

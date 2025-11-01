@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding完全指南：从新手到高手的核心策略</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            line-height: 1.7;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .strategy-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .strategy-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .model-selector {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .model-selector.active {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .step-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-4xl">
+        <!-- 标题区域 -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Vibe Coding完全指南</h1>
+            <p class="text-xl text-white/90 max-w-2xl mx-auto">从新手到高手的核心策略与开发模型选择</p>
+            <div class="w-24 h-1 bg-white/70 rounded-full mx-auto mt-6"></div>
+        </header>
+
+        <!-- 介绍部分 -->
+        <section class="content-card rounded-2xl shadow-xl p-8 mb-8 fade-in">
+            <div class="flex items-start mb-6">
+                <div class="step-indicator bg-purple-100 text-purple-700">!</div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-3">什么是Vibe Coding？</h2>
+                    <p class="text-gray-700 mb-4">
+                        Vibe Coding是一种全新的软件开发方法，您不再需要逐行编写代码，而是通过自然语言与AI编码代理交流，
+                        通过观察结果来验证AI生成的实现，而不是逐行理解代码。
+                    </p>
+                    <p class="text-gray-700">
+                        想象一下：您不再是一个"打字员"，而是一个"导演"，告诉AI演员您想要什么，然后观察他们的表演是否符合您的期望。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心策略部分 -->
+        <section class="content-card rounded-2xl shadow-xl p-8 mb-8 fade-in">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">四大核心策略</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 策略1 -->
+                <div class="strategy-card bg-white p-6 rounded-xl border border-purple-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-comments text-purple-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-purple-700">上下文工程</h3>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        <strong>成功的关键不是AI有多强大，而是您如何为AI提供正确的上下文。</strong>
+                    </p>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-purple-700 mb-2">如何做：</h4>
+                        <ul class="text-gray-700 text-sm space-y-2">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                <span>提供项目背景：告诉AI您的项目是做什么的</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                <span>分享代码片段：展示现有的代码结构和风格</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                <span>明确技术栈：说明使用的框架、库和工具</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 策略2 -->
+                <div class="strategy-card bg-white p-6 rounded-xl border border-blue-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-user-tie text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-blue-700">控制"什么"和"为什么"</h3>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        <strong>您负责定义问题和判断解决方案，AI负责实现。</strong>
+                    </p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-700 mb-2">如何做：</h4>
+                        <ul class="text-gray-700 text-sm space-y-2">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                <span>清晰描述需求：用简单语言说明您想要什么</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                <span>解释业务逻辑：说明为什么需要这个功能</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                <span>设定验收标准：明确什么样的结果算成功</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 策略3 -->
+                <div class="strategy-card bg-white p-6 rounded-xl border border-green-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-code text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-green-700">定义"在哪里"</h3>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        <strong>项目约束解决方案的边界，确保AI在正确的范围内工作。</strong>
+                    </p>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-700 mb-2">如何做：</h4>
+                        <ul class="text-gray-700 text-sm space-y-2">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                <span>明确技术限制：说明不能使用哪些技术</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                <span>设定性能要求：定义响应时间、资源使用等</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                <span>遵循代码规范：确保生成的代码符合团队标准</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 策略4 -->
+                <div class="strategy-card bg-white p-6 rounded-xl border border-yellow-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-robot text-yellow-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-yellow-700">管理"如何"</h3>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        <strong>AI探索技术实现路径，您负责指导和纠正方向。</strong>
+                    </p>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-yellow-700 mb-2">如何做：</h4>
+                        <ul class="text-gray-700 text-sm space-y-2">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                <span>提供技术指导：建议使用特定的算法或模式</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                <span>审查实现方案：评估AI提出的解决方案</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                <span>纠正错误方向：当AI走偏时及时拉回正轨</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 开发模型选择指南 -->
+        <section class="content-card rounded-2xl shadow-xl p-8 mb-8 fade-in">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">如何选择开发模型</h2>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+                <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>选择模型的关键问题
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-semibold text-blue-600 mb-2">考虑项目因素：</h4>
+                        <ul class="text-gray-700 text-sm space-y-1">
+                            <li>• 项目复杂度如何？</li>
+                            <li>• 是否需要长期维护？</li>
+                            <li>• 对代码质量要求高吗？</li>
+                            <li>• 是否有严格的安全要求？</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-blue-600 mb-2">考虑个人因素：</h4>
+                        <ul class="text-gray-700 text-sm space-y-1">
+                            <li>• 您的技术经验水平？</li>
+                            <li>• 您有多少时间投入审查？</li>
+                            <li>• 您对AI输出的信任程度？</li>
+                            <li>• 您希望学习还是快速完成？</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 模型选择器 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8" id="modelSelector">
+                <div class="model-selector bg-white p-4 rounded-xl border border-purple-300 text-center" data-model="uam">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-bolt text-purple-600 text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-purple-700">UAM</h4>
+                    <p class="text-xs text-gray-600 mt-1">无约束自动化</p>
+                </div>
+                
+                <div class="model-selector bg-white p-4 rounded-xl border border-blue-300 text-center" data-model="iccm">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-comments text-blue-600 text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-blue-700">ICCM</h4>
+                    <p class="text-xs text-gray-600 mt-1">迭代对话协作</p>
+                </div>
+                
+                <div class="model-selector bg-white p-4 rounded-xl border border-green-300 text-center" data-model="pdm">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-project-diagram text-green-600 text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-green-700">PDM</h4>
+                    <p class="text-xs text-gray-600 mt-1">规划驱动</p>
+                </div>
+                
+                <div class="model-selector bg-white p-4 rounded-xl border border-yellow-300 text-center" data-model="tdm">
+                    <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-vial text-yellow-600 text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-yellow-700">TDM</h4>
+                    <p class="text-xs text-gray-600 mt-1">测试驱动</p>
+                </div>
+                
+                <div class="model-selector bg-white p-4 rounded-xl border border-indigo-300 text-center" data-model="cem">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-layer-group text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-indigo-700">CEM</h4>
+                    <p class="text-xs text-gray-600 mt-1">上下文增强</p>
+                </div>
+            </div>
+            
+            <!-- 模型详情 -->
+            <div id="modelDetails">
+                <!-- UAM -->
+                <div class="model-detail bg-white p-6 rounded-xl border border-purple-200 hidden" id="uam-detail">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-bolt text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-purple-700">无约束自动化模型 (UAM)</h3>
+                            <p class="text-gray-600">完全信任AI，快速原型开发</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">工作方式：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                    <span>您提供简单需求，AI自主完成所有工作</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                    <span>通过功能测试验证结果，不逐行审查代码</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-purple-500 mt-1 mr-2"></i>
+                                    <span>AI可以自主分解任务和多次迭代</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">适用场景：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-rocket text-purple-500 mt-1 mr-2"></i>
+                                    <span>一次性原型和概念验证</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-tools text-purple-500 mt-1 mr-2"></i>
+                                    <span>个人工具和小型实用程序</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-clock text-purple-500 mt-1 mr-2"></i>
+                                    <span>时间紧迫的探索性项目</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-purple-50 rounded-lg">
+                        <h4 class="font-semibold text-purple-700 mb-2">新手建议：</h4>
+                        <p class="text-gray-700 text-sm">
+                            作为初学者，可以从UAM开始体验Vibe Coding的基本流程，但要注意这可能会产生难以维护的代码。
+                            建议仅用于学习和小型实验项目。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- ICCM -->
+                <div class="model-detail bg-white p-6 rounded-xl border border-blue-200 hidden" id="iccm-detail">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-comments text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-blue-700">迭代对话协作模型 (ICCM)</h3>
+                            <p class="text-gray-600">AI作为编程伙伴，持续对话协作</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">工作方式：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                    <span>AI生成 → 您审查理解 → 测试验证 → 接受决定</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                    <span>您保持对代码质量的全面监督和控制</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-blue-500 mt-1 mr-2"></i>
+                                    <span>通过多轮对话实现持续改进</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">适用场景：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-briefcase text-blue-500 mt-1 mr-2"></i>
+                                    <span>专业开发环境和团队项目</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-home text-blue-500 mt-1 mr-2"></i>
+                                    <span>需要长期维护的中大型项目</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-users text-blue-500 mt-1 mr-2"></i>
+                                    <span>团队协作和代码审查重要的场景</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <h4 class="font-semibold text-blue-700 mb-2">新手建议：</h4>
+                        <p class="text-gray-700 text-sm">
+                            ICCM是大多数初学者的理想选择。它让您保持控制权，同时享受AI辅助的高效率。
+                            通过审查AI生成的代码，您还可以学习新的编程技巧和模式。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- PDM -->
+                <div class="model-detail bg-white p-6 rounded-xl border border-green-200 hidden" id="pdm-detail">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-project-diagram text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-green-700">规划驱动模型 (PDM)</h3>
+                            <p class="text-gray-600">先规划后实现，架构优先</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">工作方式：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                    <span>您先创建详细的技术规范和设计文档</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                    <span>AI按照"蓝图"逐步实现各个模块</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                                    <span>确保方向正确，避免反复试错</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">适用场景：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-puzzle-piece text-green-500 mt-1 mr-2"></i>
+                                    <span>复杂的全栈应用程序</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-sitemap text-green-500 mt-1 mr-2"></i>
+                                    <span>需要清晰模块边界的项目</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-building text-green-500 mt-1 mr-2"></i>
+                                    <span>企业级系统和大型软件</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-green-50 rounded-lg">
+                        <h4 class="font-semibold text-green-700 mb-2">新手建议：</h4>
+                        <p class="text-gray-700 text-sm">
+                            PDM需要较强的系统设计能力，适合有一定经验的开发者。
+                            作为初学者，可以尝试为小型项目创建简单规划，学习如何将大问题分解为小模块。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- TDM -->
+                <div class="model-detail bg-white p-6 rounded-xl border border-yellow-200 hidden" id="tdm-detail">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-vial text-yellow-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-yellow-700">测试驱动模型 (TDM)</h3>
+                            <p class="text-gray-600">先测试后实现，质量保证</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">工作方式：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                    <span>您先编写测试用例定义成功标准</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                    <span>AI生成通过测试的代码实现</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-yellow-500 mt-1 mr-2"></i>
+                                    <span>遵循经典的红-绿-重构循环</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">适用场景：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-calculator text-yellow-500 mt-1 mr-2"></i>
+                                    <span>核心算法和逻辑实现</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-industry text-yellow-500 mt-1 mr-2"></i>
+                                    <span>生产级应用程序</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-heart text-yellow-500 mt-1 mr-2"></i>
+                                    <span>关键业务逻辑和长期维护的代码</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-yellow-50 rounded-lg">
+                        <h4 class="font-semibold text-yellow-700 mb-2">新手建议：</h4>
+                        <p class="text-gray-700 text-sm">
+                            TDM是学习编写高质量代码的好方法。即使您是测试新手，也可以从简单的断言开始。
+                            尝试为一个小功能编写测试，然后让AI实现它，观察测试如何指导开发过程。
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- CEM -->
+                <div class="model-detail bg-white p-6 rounded-xl border border-indigo-200 hidden" id="cem-detail">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-layer-group text-indigo-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-indigo-700">上下文增强模型 (CEM)</h3>
+                            <p class="text-gray-600">增强理解，提升一致性</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">工作方式：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-indigo-500 mt-1 mr-2"></i>
+                                    <span>不是独立模型，而是对其他模型的增强</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-indigo-500 mt-1 mr-2"></i>
+                                    <span>自动检索项目中的相关代码和文档</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-indigo-500 mt-1 mr-2"></i>
+                                    <span>确保生成的代码符合项目规范</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">适用场景：</h4>
+                            <ul class="text-gray-700 text-sm space-y-2">
+                                <li class="flex items-start">
+                                    <i class="fas fa-database text-indigo-500 mt-1 mr-2"></i>
+                                    <span>大型代码库的维护和扩展</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-code-branch text-indigo-500 mt-1 mr-2"></i>
+                                    <span>跨文件修改和重构</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-sync text-indigo-500 mt-1 mr-2"></i>
+                                    <span>需要与现有代码保持一致的项目</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-indigo-50 rounded-lg">
+                        <h4 class="font-semibold text-indigo-700 mb-2">新手建议：</h4>
+                        <p class="text-gray-700 text-sm">
+                            CEM是提升Vibe Coding效果的重要工具。即使您使用其他模型，也应该尽量提供充分的上下文。
+                            学习如何有效地组织和提供项目信息，这将显著提高AI生成代码的质量。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实践建议 -->
+        <section class="content-card rounded-2xl shadow-xl p-8 fade-in">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">给新手的实践建议</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                        <i class="fas fa-play-circle text-green-500 mr-2"></i>开始实践
+                    </h3>
+                    <ul class="text-gray-700 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-arrow-right text-green-500 mt-1 mr-2"></i>
+                            <span>从<strong>ICCM模型</strong>开始，保持对代码的控制</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-arrow-right text-green-500 mt-1 mr-2"></i>
+                            <span>选择一个小型个人项目作为起点</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-arrow-right text-green-500 mt-1 mr-2"></i>
+                            <span>练习清晰表达需求和提供上下文</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-arrow-right text-green-500 mt-1 mr-2"></i>
+                            <span>学习审查AI生成的代码并理解其逻辑</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>避免常见错误
+                    </h3>
+                    <ul class="text-gray-700 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-times text-red-500 mt-1 mr-2"></i>
+                            <span>不要过度信任AI - 始终保持审查</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-times text-red-500 mt-1 mr-2"></i>
+                            <span>避免模糊的需求描述</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-times text-red-500 mt-1 mr-2"></i>
+                            <span>不要忽视测试和代码质量</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-times text-red-500 mt-1 mr-2"></i>
+                            <span>避免在关键项目中使用不熟悉的模型</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-8 bg-gradient-to-r from-purple-500 to-blue-500 p-6 rounded-2xl text-white text-center">
+                <h3 class="text-2xl font-bold mb-3">准备好开始您的Vibe Coding之旅了吗？</h3>
+                <p class="mb-4 opacity-90">记住：成功的Vibe Coding是人与AI的协作，而不是替代</p>
+                <div class="flex justify-center space-x-4">
+                    <div class="bg-white/20 px-4 py-2 rounded-lg">保持学习心态</div>
+                    <div class="bg-white/20 px-4 py-2 rounded-lg">实践出真知</div>
+                    <div class="bg-white/20 px-4 py-2 rounded-lg">循序渐进</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 模型选择交互
+        document.addEventListener('DOMContentLoaded', function() {
+            const modelSelectors = document.querySelectorAll('.model-selector');
+            const modelDetails = document.querySelectorAll('.model-detail');
+            
+            // 默认显示ICCM（最适合初学者）
+            document.querySelector('.model-selector[data-model="iccm"]').classList.add('active');
+            document.getElementById('iccm-detail').classList.remove('hidden');
+            
+            modelSelectors.forEach(selector => {
+                selector.addEventListener('click', function() {
+                    const model = this.getAttribute('data-model');
+                    
+                    // 更新选择器状态
+                    modelSelectors.forEach(s => s.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 更新详情显示
+                    modelDetails.forEach(detail => detail.classList.add('hidden'));
+                    document.getElementById(`${model}-detail`).classList.remove('hidden');
+                });
+            });
+            
+            // 添加滚动动画
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('section').forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

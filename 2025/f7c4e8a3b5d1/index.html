@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Defeating Nondeterminism in LLM Inference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      @apply bg-gray-800 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background" class="nav-item whitespace-nowrap">背景与问题</a>
+        <a href="#root-cause" class="nav-item whitespace-nowrap">根本原因分析</a>
+        <a href="#solution" class="nav-item whitespace-nowrap">解决方案</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">实验评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Defeating Nondeterminism in LLM Inference
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Horace He</div>
+                <div class="text-sm text-gray-600 mt-1">Thinking Machines Lab</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>Sep 10, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">原文网址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">LLM推理</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">非确定性</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">批量不变性</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">浮点运算</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>揭示了LLM推理非确定性的真正根源：批量不变性缺失，而非传统认为的浮点非结合性</li>
+          <li>提出了实现批量不变性内核的系统性方法，覆盖RMSNorm、矩阵乘法和注意力机制</li>
+          <li>在vLLM上实现了确定性推理，显著提高了结果的可重现性</li>
+          <li>展示了确定性推理在强化学习等应用中的实际价值</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            可重现性是科学进步的基石，但在大型语言模型(LLM)中获得可重现的结果却异常困难。即使将温度设置为0（贪婪采样），LLM API在实践中仍然不是确定性的。
+          </p>
+          <p class="mb-4">
+            传统观点将非确定性归因于浮点非结合性和并发执行，但作者通过系统分析发现这并非完整解释。论文揭示了LLM推理非确定性的真正根源：内核缺乏批量不变性。
+          </p>
+          <p>
+            作者提出了一套实现批量不变性内核的方法，在vLLM上实现了确定性推理，显著提高了结果的可重现性，为科学研究、强化学习等需要确定性结果的应用场景提供了可靠基础。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与问题 -->
+      <section id="background" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与问题
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">LLM推理中的非确定性问题</h3>
+          <p class="mb-4">
+            在LLM推理中，即使将温度设置为0，相同的输入也可能产生不同的输出。这种非确定性不仅存在于云端API服务中，即使在使用vLLM或SGLang等开源推理库在自己的硬件上运行推理时也会出现。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>问题严重性
+            </h4>
+            <p class="text-gray-700">
+              这种非确定性对科学研究、强化学习、生产环境调试等需要可重现结果的场景构成了严重挑战。
+            </p>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">传统解释及其局限性</h3>
+          <p class="mb-4">
+            普遍认为GPU中浮点运算的非结合性与并发执行共同导致了非确定性。这种"并发+浮点"假说认为，并行线程的完成顺序会影响累加顺序，从而导致非确定性结果。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3">关键反证</h5>
+            <div class="code-block mb-3">
+              A = torch.randn(2048, 2048, device='cuda', dtype=torch.bfloat16)<br>
+              B = torch.randn(2048, 2048, device='cuda', dtype=torch.bfloat16)<br>
+              ref = torch.mm(A, B)<br>
+              for _ in range(1000):<br>
+              &nbsp;&nbsp;assert (torch.mm(A, B) - ref).abs().max().item() == 0
+            </div>
+            <p class="text-sm text-gray-700">
+              在GPU上重复运行相同的矩阵乘法总是会产生位级相等的结果，这表明问题比传统观点更为复杂。
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-microchip mr-2"></i>传统观点
+              </h4>
+              <p class="text-sm text-gray-700">浮点非结合性 + 并发执行 = 非确定性</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-lightbulb mr-2"></i>作者发现
+              </h4>
+              <p class="text-sm text-gray-700">批量不变性缺失是真正根源</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 根本原因分析 -->
+      <section id="root-cause" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-search mr-3 text-blue-500"></i>
+          根本原因分析
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">浮点非结合性：数值差异的基础</h3>
+          <p class="mb-4">
+            浮点数的非结合性是数值差异的根本原因。由于浮点数使用动态精度表示，当相加的数字具有不同指数时，信息会丢失：
+          </p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <div class="font-mono text-sm mb-2">示例：1230 + 23.4 = 1253.4</div>
+            <div class="text-sm text-gray-600">
+              但使用3位精度的浮点数表示时，23.4被有效地舍入为20.0，结果变为1250而非1253.4。
+            </div>
+          </div>
+          
+          <!-- 图1技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-calculator mr-2"></i>技术细节：浮点数精度损失机制
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    浮点数精度损失示意图
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">原理示意图</span>
+                </div>
+                
+                <!-- 原理示意图 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="flex items-center space-x-4">
+                      <div class="bg-white p-3 rounded shadow">
+                        <div class="text-sm font-mono">1230 = 1.23×10³</div>
+                      </div>
+                      <div class="text-2xl">+</div>
+                      <div class="bg-white p-3 rounded shadow">
+                        <div class="text-sm font-mono">23.4 = 2.34×10¹</div>
+                      </div>
+                      <div class="text-2xl">=</div>
+                      <div class="bg-white p-3 rounded shadow">
+                        <div class="text-sm font-mono">1253.4 = 1.2534×10³</div>
+                      </div>
+                    </div>
+                    <div class="text-red-500 text-lg">↓ 3位精度限制</div>
+                    <div class="bg-white p-3 rounded shadow border-2 border-red-300">
+                      <div class="text-sm font-mono">1250 = 1.25×10³</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 技术解释 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>技术解释:</strong> 浮点数相加时，较小数值的有效数字可能因精度限制而被截断，导致不同累加顺序产生不同结果。
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">批量不变性缺失：真正的根本原因</h3>
+          <p class="mb-4">
+            作者发现真正的根本原因是内核缺乏批量不变性。虽然单个内核是运行到运行确定性的，但它们不是批量不变的：
+          </p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-sitemap text-3xl text-blue-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700">批量不变性缺失的影响机制</h6>
+            </div>
+            
+            <!-- 影响机制可视化 -->
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <div class="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</div>
+                <div>
+                  <strong class="text-blue-700">服务器负载变化</strong>
+                  <p class="text-sm text-gray-600 mt-1">用户请求时服务器负载不确定，影响批量大小</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</div>
+                <div>
+                  <strong class="text-green-700">内核策略调整</strong>
+                  <p class="text-sm text-gray-600 mt-1">不同批量大小触发不同的并行化策略</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-purple-100 text-purple-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</div>
+                <div>
+                  <strong class="text-purple-700">数值结果变化</strong>
+                  <p class="text-sm text-gray-600 mt-1">不同策略导致不同的浮点累加顺序，产生不同结果</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            当用户向推理端点发出查询时，服务器的负载从用户角度来看是"非确定性的"。负载决定了内核运行的批量大小，而批量大小变化会导致内核选择不同的计算策略，从而改变了每个请求的最终结果。
+          </p>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-bug mr-2"></i>关键洞察
+            </h4>
+            <p class="text-gray-700">
+              将内核对批量大小不变量与批量大小的非确定性变化相结合，产生了非确定性系统。这种非确定性并非GPU特有，在CPU或TPU上服务的LLM推理端点也会存在。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 解决方案 -->
+      <section id="solution" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          解决方案
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            为了实现LLM推理中的确定性，作者提出了实现批量不变性内核的方法。这需要对Transformer实现中的三个涉及归约的操作进行改造：RMSNorm、矩阵乘法和注意力机制。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">批量不变性RMSNorm</h3>
+          <p class="mb-4">
+            RMSNorm的标准并行化策略是将每个批次元素分配给一个核心。当批次大小减小时，为了保持性能，内核可能会切换到分割归约策略，这会破坏批量不变性。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h5 class="font-semibold text-red-700 mb-2">问题策略</h5>
+              <p class="text-sm text-gray-700">小批量时切换到分割归约，破坏批量不变性</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-2">解决方案</h5>
+              <p class="text-sm text-gray-700">始终使用具有足够并行性的归约策略</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">批量不变性矩阵乘法</h3>
+          <p class="mb-4">
+            矩阵乘法可以视为点操作后跟归约。标准并行化策略是将输出分块为瓦片，保持每个归约在一个核心内。
+          </p>
+          
+          <!-- 矩阵乘法技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-th mr-2"></i>技术细节：矩阵乘法并行策略
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 策略对比 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                  <h5 class="font-semibold text-blue-700 mb-3">数据并行策略</h5>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center">
+                      <i class="fas fa-check text-green-500 mr-2"></i>
+                      <span>保持批量不变性</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-check text-green-500 mr-2"></i>
+                      <span>每个归约在单个核心内</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-times text-red-500 mr-2"></i>
+                      <span>小批量时并行性不足</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bg-orange-50 p-4 rounded-lg">
+                  <h5 class="font-semibold text-orange-700 mb-3">Split-K策略</h5>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center">
+                      <i class="fas fa-times text-red-500 mr-2"></i>
+                      <span>破坏批量不变性</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-check text-green-500 mr-2"></i>
+                      <span>小批量时保持高性能</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-check text-green-500 mr-2"></i>
+                      <span>更好的核心利用率</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 解决方案 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-lightbulb mr-2"></i>解决方案
+                </h5>
+                <p class="text-sm text-gray-700">
+                  编译一个内核配置并将其用于所有形状，确保批量不变性。虽然会损失一些性能，但在LLM推理中通常不是灾难性的，特别是在模型维度通常较大的情况下。
+                </p>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">批量不变性注意力机制</h3>
+          <p class="mb-4">
+            注意力机制引入了额外的复杂性，因为它包含两个矩阵乘法，并且必须处理各种影响序列处理方式的推理优化。
+          </p>
+          
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-6">
+            <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-brain mr-2"></i>注意力机制的特殊挑战
+            </h5>
+            <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+              <li>需要同时处理特征维度和序列维度的归约</li>
+              <li>必须应对各种推理优化（分块预填充、前缀缓存等）</li>
+              <li>在解码阶段查询长度很小，需要Split-KV策略来饱和GPU</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-arrows-alt-h mr-2"></i>固定大小Split-KV策略
+            </h5>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">传统策略:</span>
+                <span class="text-sm bg-red-100 text-red-800 px-2 py-1 rounded">固定分割数量</span>
+              </div>
+              <div class="flex items-center justify-center text-gray-500">
+                <i class="fas fa-arrow-down mx-4"></i>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">新策略:</span>
+                <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">固定分割大小</span>
+              </div>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">
+              通过固定每个分割的大小而不是分割的数量，可以保证无论处理多少token，总是执行相同的归约顺序，从而实现批量不变性。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 实验评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-600"></i>
+          实验评估
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">完成结果的非确定性分析</h3>
+          <p class="mb-4">
+            作者使用Qwen/Qwen3-235B-A22B-Instruct模型，在温度0下对提示"Tell me about Richard Feynman"采样1000个完成结果，每个生成1000个token。
+          </p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h6 class="font-semibold text-gray-700">完成结果多样性对比</h6>
+              <div class="flex space-x-2">
+                <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">非确定性</span>
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">确定性</span>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>非确定性设置</span>
+                  <span>80种独特完成结果</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-red-500 h-4 rounded-full" style="width: 80%"></div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>批量不变性设置</span>
+                  <span>1种独特完成结果</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full" style="width: 1%"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <div><span class="font-medium">测试模型:</span> Qwen3-235B</div>
+              <div><span class="font-medium">采样设置:</span> 温度=0</div>
+              <div><span class="font-medium">样本数量:</span> 1000个</div>
+              <div><span class="font-medium">生成长度:</span> 1000 token/个</div>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            令人惊讶的是，在非确定性设置下生成了80种独特的完成结果，其中最常见的出现了78次。完成结果在前102个token实际上是相同的，第一个不同的完成结果出现在第103个token。
+          </p>
+          
+          <p class="mb-4">
+            当启用批量不变性内核时，所有1000个完成结果都是相同的。这是从采样器中数学上期望的结果，但没有批量不变性内核就无法实现确定性结果。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">性能评估</h3>
+          <p class="mb-4">
+            作者设置了一个运行Qwen-3-8B的GPU API服务器，请求1000个序列，输出长度在90到110之间。
+          </p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">配置</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间(秒)</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">相对性能</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">vLLM默认</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">26</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">100%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">未优化的确定性vLLM</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">55</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">47%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">+改进的注意力内核</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">42</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">62%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            大部分性能损失来自vLLM中的FlexAttention集成尚未经过大量优化。尽管如此，性能并不是灾难性的，证明了方法的可行性。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">强化学习应用验证</h3>
+          <p class="mb-4">
+            训练和推理之间的不同数值隐式地将同策略RL变为异策略RL。确定性推理使作者能够修改训练堆栈，获得采样和训练之间的位级相同结果，实现真正的同策略RL。
+          </p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-robot text-3xl text-blue-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700">RL训练结果分析</h6>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">无重要性加权:</span>
+                <span class="text-sm bg-red-100 text-red-800 px-2 py-1 rounded">奖励崩溃</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">有重要性加权:</span>
+                <span class="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">训练平稳</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">真正同策略RL:</span>
+                <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">KL散度=0</span>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600">
+              <strong>关键发现:</strong> 当运行"真正同策略RL"时，KL散度保持为0的平坦线，表明训练策略和采样策略之间没有分歧。
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者系统性地分析并解决了LLM推理中的非确定性问题，识别了批量不变性缺失这一根本原因，而非传统认为的浮点非结合性。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>技术贡献
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>揭示了批量不变性缺失是LLM推理非确定性的真正根源</li>
+                <li>提出了实现批量不变性内核的系统性方法</li>
+                <li>在vLLM上实现了确定性推理并验证了有效性</li>
+                <li>开源了批量不变性操作库</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-cube mr-2"></i>实际影响
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>为科学研究提供可重现的实验结果</li>
+                <li>实现真正的同策略强化学习</li>
+                <li>改善生产环境的调试和验证</li>
+                <li>促进模型间的公平比较</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            这项工作拒绝了"系统已经是概率性的，再多一点非确定性也没什么"的失败主义态度，展示了通过深入理解系统根本原因，即使是最棘手的非确定性问题也可以得到解决。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-eye mr-2"></i>研究启示
+            </h4>
+            <p class="text-gray-700">
+              这项工作强调了深入理解系统底层机制的重要性，而不是仅仅接受表面现象。通过剖析抽象层次，作者不仅解决了具体的技术问题，还为社区提供了理解和解决系统非确定性的方法论。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1005 @@
+{
+  "time": 1762014531671,
+  "papers": [
+    {
+      "id": "a3f8c9d4b5e2",
+      "title": "The Reality Gap in Robotics: Challenges, Solutions, and Best Practices",
+      "authors": [
+        "Elie Aljalbout",
+        "Jiaxu Xing",
+        "Angel Romero",
+        "Iretiayo Akinola",
+        "Caelan Reed Garrett",
+        "Eric Heiden",
+        "Abhishek Gupta",
+        "Tucker Hermans",
+        "Yashraj Narang",
+        "Dieter Fox",
+        "Davide Scaramuzza",
+        "Fabio Ramos"
+      ],
+      "year": 2026,
+      "conference": "Arxiv",
+      "category": "机器人学",
+      "keywords": [
+        "仿真",
+        "机器人学习",
+        "sim-to-real transfer",
+        "reality gap",
+        "sim-to-real",
+        "domain randomization",
+        "强化学习"
+      ],
+      "abstract": "Machine learning has facilitated significant advancements across various robotics domains, including navigation, locomotion, and manipulation. Many such achievements have been driven by the extensive use of simulation as a critical tool for training and testing robotic systems prior to their deployment in real-world environments. However, simulations consist of abstractions and approximations that inevitably introduce discrepancies between simulated and real environments, known as the reality gap. These discrepancies significantly hinder the successful transfer of systems from simulation to the real world. Closing this gap remains one of the most pressing challenges in robotics. Recent advances in sim-to-real transfer have demonstrated promising results across various platforms, including locomotion, navigation, and manipulation. By leveraging techniques such as domain randomization, real-to-sim transfer, state and action abstractions, and sim-real co-training, many works have overcome the reality gap. However, challenges persist, and a deeper understanding of the reality gap’s root causes and solutions is necessary. In this survey, we present a comprehensive overview of the sim-to-real landscape, highlighting the causes, solutions, and evaluation metrics for the reality gap and sim-to-real transfer.",
+      "htmlFile": "2026/a3f8c9d4b5e2/index.html"
+    },
+    {
+      "id": "6a1e9f9c8c4b",
+      "title": "AEOLIA: A Fast and Secure Userspace Interrupt-Based Storage Stack",
+      "authors": [
+        "Chuandong Li",
+        "Ran Yi",
+        "Zonghao Zhang",
+        "Jing Liu",
+        "Changwoo Min",
+        "Jie Zhang",
+        "Yingwei Luo",
+        "Xiaolin Wang",
+        "Zhenlin Wang",
+        "Diyu Zhou"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统与存储系统",
+      "keywords": [
+        "用户中断",
+        "用户空间文件系统",
+        "用户空间NVMe驱动",
+        "高性能存储",
+        "调度"
+      ],
+      "abstract": "Polling-based userspace storage stacks achieve great I/O performance. However, they cannot efficiently and securely share disks and CPUs among multiple tasks. In contrast, interrupt-based kernel stacks inherently suffer from subpar I/O performance but achieve advantages in resource sharing.\n\nWe present AEOLIA, a novel storage stack that achieves great I/O performance while offering efficient and secure resource sharing. AEOLIA is an interrupt-based userspace storage stack, representing a new point in the design space previously considered unfeasible. Our main observation is that, contrary to conventional wisdom, polling offers only marginal disk performance improvements over interrupts. AEOLIA exploits user interrupt, an emerging hardware feature commonly used for userspace IPIs, in a novel way to deliver storage interrupts directly to userspace, thereby achieving high I/O performance with direct access. AEOLIA leverages the hardware intra-process isolation features and sched_ext, an eBPF-based userspace scheduling framework, to efficiently and securely share CPUs and disks among multiple tasks, challenging the common belief that these are inherent disadvantages of userspace storage stacks. The above design enables AEOLIA to realize AsofS, a high-performance library file system that securely and directly accesses disks. Our evaluation shows that AEOLIA outperforms Linux by 2x and AsofS outperforms ext4 by up to 19.1x, respectively.",
+      "htmlFile": "2025/6a1e9f9c8c4b/index.html"
+    },
+    {
+      "id": "9a9e5f1a8c1c",
+      "title": "cache_ext: Customizing the Page Cache with eBPF",
+      "authors": [
+        "Tal Zussman",
+        "Andrew Cheng",
+        "Ioannis Zarkadas",
+        "Jeremy Carin",
+        "Hubertus Franke",
+        "Jonas Pfefferle",
+        "Asaf Cidon"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统",
+      "keywords": [
+        "操作系统",
+        "eBPF",
+        "页缓存",
+        "缓存策略",
+        "内存管理",
+        "Linux内核",
+        "驱逐算法"
+      ],
+      "abstract": "The OS page cache is central to the performance of many applications, by reducing excessive accesses to storage. However, its one-size-fits-all eviction policy performs poorly in many workloads. While the systems community has experimented with a plethora of new and adaptive eviction policies in non-OS settings (e.g., key-value stores, CDNs), it is very difficult to implement such policies in the page cache, due to the complexity of modifying kernel code. To address these shortcomings, we design a flexible eBPF-based framework for the Linux page cache, called cache_ext, that allows developers to customize the page cache without modifying the kernel. cache_ext enables applications to customize the page cache policy for their specific needs, while also ensuring that different applications' policies do not interfere with each other and preserving the page cache's ability to share memory across different processes. We demonstrate the flexibility of cache_ext's interface by using it to implement eight different policies, including sophisticated eviction algorithms. Our evaluation shows that it is indeed beneficial for applications to customize the page cache to match their workloads' unique properties, and that they can achieve up to 70% higher throughput and 58% lower tail latency.",
+      "htmlFile": "2025/9a9e5f1a8c1c/index.html"
+    },
+    {
+      "id": "9b5b6d5f3a8b",
+      "title": "Unlocking the Potential of CXL for Disaggregated Memory in Cloud-Native Databases",
+      "authors": [
+        "Xinjun Yang",
+        "Gerry Fan",
+        "Yuhui Wang",
+        "Yingqiang Zhang",
+        "Hao Chen*",
+        "Bo Wang",
+        "Weupu Hu",
+        "Feifei Li",
+        "Jing Fang",
+        "Jim Kao",
+        "Yang Kong",
+        "Tao Huang",
+        "Jianping Jiang"
+      ],
+      "year": 2025,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "Compute Express Link (CXL)",
+        "云原生数据库",
+        "内存解耦",
+        "内存池化",
+        "缓存一致性",
+        "即时恢复",
+        "数据共享"
+      ],
+      "abstract": "Memory disaggregation has become a major trend in cloud-native databases. However, most existing memory disaggregation solutions suffer from read/write amplification, limited bandwidth, inefficient recovery, and challenges in data sharing. Fortunately, the emerging CXL technology introduces new opportunities for memory disaggregation design in cloud-native databases.\nTo overcome these challenges, we leverage the CXL switch to design _PolarCXLMem_, a CXL-switch-based disaggregated memory system for cloud-native databases. To the best of our knowledge, _PolarCXLMem_ is the first CXL-switch-based disaggregated memory system. Building on _PolarCXLMem_, we propose a novel instant recovery scheme, _PolarRecv_, which enables instant recovery and fast buffer pool warm-up after a crash. To further support _PolarCXLMem_ in multi-primary databases, we design a new cache coherency protocol that facilitates data sharing between database nodes based on _PolarCXLMem_. Finally, we evaluate _PolarCXLMem_ with PolarDB, a widely deployed cloud-native database, under various workloads. This is the first study, to our knowledge, that investigates the performance of CXL-based disaggregated memory in a commercially deployed cloud-native database. Our evaluation shows that _PolarCXLMem_ can improve throughput by up to 2.1x in pooling scenarios and 1.55x in sharing scenarios compared to RDMA-based systems.",
+      "htmlFile": "2025/9b5b6d5f3a8b/index.html"
+    },
+    {
+      "id": "9b5f5c6c8c2f",
+      "title": "Scalable Address Spaces using Concurrent Interval Skiplist",
+      "authors": [
+        "Kim, Tae Woo",
+        "Kwon, Youngjin",
+        "Kang, Jeehoon"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统",
+      "keywords": [
+        "操作系统",
+        "地址空间",
+        "可扩展性",
+        "并发数据结构",
+        "内存管理",
+        "并行操作",
+        "区间跳表"
+      ],
+      "abstract": "A kernel's address space design can significantly bottleneck multi-threaded applications, as address space operations such as mmap() and mumap() are serialized by coarse-grained locks like Linux's mmap_lock. Such locks have long been known as one of the most intractable contention points in memory management. While prior works have attempted to address this issue, they either fail to sufficiently parallelize operations or are impractical for real-world kernels. We present the first scalable and practical address space design that parallelizes critical operations. We identify key scalability bottlenecks—many of which extend beyond address spaces—and address them with targeted solutions. At its core is the concurrent interval skiplist, a new data structure that integrates mapping and locking for parallel interval operations. We implement our design on Linux 6.8 and evaluate it on a dual-socket 48-core machine. Our results show a significant throughput improvement of 13.1× for an mmap() microbenchmark, 4.49× for LevelDB, 3.19× for the Apache web server, 1.47× for Metis MapReduce, and 1.27× for Psearchy text indexing.",
+      "htmlFile": "2025/9b5f5c6c8c2f/index.html"
+    },
+    {
+      "id": "a0f5b5c7c7c9",
+      "title": "Pruning in Snowflake: Working Smarter, Not Harder",
+      "authors": [
+        "Andreas Zimmerer",
+        "Damien Dam",
+        "Jan Kossmann",
+        "Juliane Waack",
+        "Ismail Oukid",
+        "Andreas Kipf"
+      ],
+      "year": 2025,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "数据仓库",
+        "数据跳过",
+        "分区剪枝",
+        "top-k检索",
+        "LIMIT剪枝",
+        "连接剪枝",
+        "分析查询处理"
+      ],
+      "abstract": "Modern cloud-based data analytics systems must efficiently process petabytes of data residing on cloud storage. A key optimization technique in state-of-the-art systems like Snowflake is partition pruning--skipping chunks of data that do not contain relevant information for computing query results.\n\nWhile partition pruning based on query predicates is a well-established technique, we present new pruning techniques that extend the scope of partition pruning to LIMT, top-k, and JOIN operations, significantly expanding the opportunities for pruning across diverse query types. We detail the implementation of each method and examine their impact on real-world workloads.\n\nOur analysis of Snowflake's production workloads reveals that real-world analytical queries exhibit much higher selectivity than commonly assumed, yielding effective partition pruning and highlighting the need for more realistic benchmarks. We show that we can harness high selectivity by utilizing min/max metadata available in modern data analytics systems and data lake formats like Apache Iceberg, reducing the number of processed micro-partitions by 99.4% across the Snowflake data platform.",
+      "htmlFile": "2025/a0f5b5c7c7c9/index.html"
+    },
+    {
+      "id": "a8d6f8c4f2e3",
+      "title": "Tiered Memory Management Beyond Hotness",
+      "authors": [
+        "Jinshu Liu",
+        "Hamid Hadian",
+        "Hanchen Xu",
+        "Huaicheng Li"
+      ],
+      "year": 2025,
+      "conference": "OSDI",
+      "category": "操作系统与内存管理",
+      "keywords": [
+        "分层内存",
+        "内存管理",
+        "Amortized Offcore Latency (AOL)",
+        "Memory-Level Parallelism (MLP)",
+        "CXL内存",
+        "页面迁移",
+        "性能优化"
+      ],
+      "abstract": "Tiered memory systems often rely on access frequency (\"hotness\") to guide data placement. However, hot data is not always performance-critical, limiting the effectiveness of hotness-based policies. We introduce amortized offcore latency (AOL), a novel metric that precisely captures the true performance impact of memory accesses by accounting for memory access latency and memory-level parallelism (MLP). Leveraging AOL, we present two powerful tiering mechanisms: Soar, a profile-guided allocation policy that places objects based on their performance contribution, and Atro, a lightweight page migration regulation policy to eliminate unnecessary migrations. Soar and Atro outperform four state-of-the-art tiering designs across a diverse set of workloads by up to 12.4×, while underperforming in a few cases by no more than 3%.",
+      "htmlFile": "2025/a8d6f8c4f2e3/index.html"
+    },
+    {
+      "id": "b2d3d9d6e9b9",
+      "title": "Rethinking The Compaction Policies in LSM-trees",
+      "authors": [
+        "Hengrui Wang",
+        "Jiansheng Qiu",
+        "Fangzhou Yuan",
+        "Huanchen Zhang"
+      ],
+      "year": 2025,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "LSM-tree",
+        "Compaction Policy",
+        "Query Throughput",
+        "Dynamic Programming",
+        "EcoTune",
+        "Key-Value Store",
+        "SSD"
+      ],
+      "abstract": "Log-structured merge-trees (LSM-trees) are widely used to construct key-value stores. They periodically compact overlapping sorted runs to reduce the read amplification. Prior research on compaction policies has focused on the trade-off between write amplification (WA) and read amplification (RA). In this paper, we propose to treat the compaction operation in LSM-trees as a computational and I/O-bandwidth investment for improving the system’s future query throughput, and thus rethink the compaction policy designs. A typical LSM-tree application handles a steady but moderate write stream and prioritizes resources for top-level flushes of small sorted runs to avoid data loss due to write stalls. The goal of the compaction policy, therefore, is to maintain an optimal number of sorted runs to maximize average query throughput. Because compaction and read operations compete for the CPU and I/O resources from the same pool, we must perform a joint optimization to determine the appropriate timing and aggressiveness of the compaction. We introduce a three-level model of an LSM-tree and propose EcoTune, an algorithm based on dynamic programming to find the optimal compaction policy according to workload characterizations. Our evaluation on RocksDB shows that EcoTune improves the average query throughput by 1.5x to 3x over the leveling policy and by up to 1.8x over the lazy-leveling policy on workloads with range/point query ratios.",
+      "htmlFile": "2025/b2d3d9d6e9b9/index.html"
+    },
+    {
+      "id": "b4a1c8b4a1c8",
+      "title": "How to Copy Memory? Coordinated Asynchronous Copy as a First-Class OS Service",
+      "authors": [
+        "Jingkai He",
+        "Yunpeng Dong",
+        "Dong Du",
+        "Mo Zou",
+        "Zhitai Yu",
+        "Yuxin Ren",
+        "Ning Jia",
+        "Yubin Xia",
+        "Haibo Chen"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统",
+      "keywords": [
+        "内存复制",
+        "异步复制",
+        "操作系统服务",
+        "操作系统",
+        "内存管理",
+        "性能优化",
+        "硬件加速"
+      ],
+      "abstract": "In modern systems, memory copy remains a critical performance bottleneck across various scenarios, playing a pervasive role in system-wide execution such as syscalls, IPC, and user-mode applications. Numerous efforts have aimed at optimizing copy performance, including zero-copy with page remapping and hardware-accelerated copy. However, they typically target specific use cases, such as Linux zero-copy send() for messages of ≥10KB. This paper argues for copy as a first-class OS service, offering three key benefits: (1) with the asynchronous copy abstraction provided by the service, applications can overlap their execution with copy; (2) the service can effectively utilize hardware capabilities to enhance copy performance; (3) the service's global view of copies further enables holistic optimization. To this end, we introduce Copier, a new OS service of coordinated asynchronous copy, to serve both user-mode applications and OS services. We build Copier-Linux to demonstrate Copier's ability to improve performance for diverse use cases, including Redis, Protobuf, network stack, proxy, etc. Evaluations show that Copier achieves up to a 1.8× speedup for real-world applications like Redis and a 1.6× improvement over zIO, the state-of-the-art in optimizing copy efficiency. To further facilitate adoption, we develop a toolchain to ease the use of Copier. We also integrate Copier into a commercial smartphone OS (HarmonyOS 5.0), achieving promising results.",
+      "htmlFile": "2025/b4a1c8b4a1c8/index.html"
+    },
+    {
+      "id": "b5c8a1d4f7e2",
+      "title": "Prove It to the Kernel: Precise Extension Analysis via Proof-Guided Abstraction Refinement",
+      "authors": [
+        "Sun, Hao",
+        "Su, Zhendong"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统与系统软件",
+      "keywords": [
+        "eBPF验证",
+        "抽象解释",
+        "证明引导的抽象精化",
+        "内核扩展",
+        "静态分析",
+        "形式化证明",
+        "SMT求解"
+      ],
+      "abstract": "Modern OS kernels, such as Linux, employ the eBPF subsystem to enable user space to extend kernel functionality. To ensure safety, an in-kernel verifier statically analyzes these extensions; however, its imprecise analysis frequently results in the erroneous rejection of safe extensions, exposing a critical tension between the precision and computational complexity of the verifier that limits kernel extensibility.\n\nWe propose a proof-guided abstraction refinement technique that significantly enhances the verifier's precision while preserving low kernel space complexity. Rather than incorporating sophisticated analysis (e.g., via new abstract domains) directly into the verifier, our key insight is to decouple the complex reasoning to user space while bridging the gap through formal proofs. Upon encountering uncertainties, the verifier initiates an abstraction refinement procedure rather than rejecting the extension. As the refinement involves nontrivial reasoning, the verifier simply delineates the task and delegates it to user space. A formal proof is produced externally, which the verifier subsequently checks in linear time before adopting the refined abstraction. Consequently, our approach achieves high precision via user space reasoning while confining kernel space operations to an efficient proof check. Evaluation results show that our technique enables the verifier to accept 403 out of 512 real-world eBPF programs that were previously rejected erroneously, paving the way for more reliable and flexible kernel extensions.",
+      "htmlFile": "2025/b5c8a1d4f7e2/index.html"
+    },
+    {
+      "id": "b6d2a9e2b8b1",
+      "title": "Principles and Methodologies for Serial Performance Optimization",
+      "authors": [
+        "Sujin Park",
+        "Mingyu Guan",
+        "Xiang Cheng",
+        "Taesoo Kim"
+      ],
+      "year": 2025,
+      "conference": "OSDI",
+      "category": "计算机系统",
+      "keywords": [
+        "性能优化",
+        "串行执行",
+        "系统优化",
+        "方法论",
+        "SysGPT",
+        "缓存",
+        "批处理"
+      ],
+      "abstract": "Throughout the history of computer science, optimizing existing systems to achieve higher performance has been a longstanding aspiration. While the primary emphasis of this endeavor lies in reducing latency and increasing throughput, these two are closely intertwined, and answering the *how* question has remained a challenge, often relying on intuition and experience.\n\nThis paper introduces a systematic approach to optimizing sequential tasks, which are fundamental for overall performance. We define three principles—task removal, replacement, and reordering—and distill them into eight actionable methodologies: batching, caching, precomputing, deferring, relaxation, contextualization, hardware specialization, and layering. Our review of OSDI and SOSP papers over the past decade shows that these techniques, when taken together, comprehensively account for the observed sequential optimization strategies.\n\nTo illustrate the framework’s practical value, we present two case studies: one on file and storage systems, and another analyzing kernel synchronization to uncover missed optimization opportunities. Furthermore, we introduce SysGPT, a fine-tuned GPT model trained on curated literature analysis, which offer context-aware performance suggestions. SysGPT’s outputs are more specific and feasible than GPT-4’s, aligning with core strategies from recent research without direct exposure, demonstrating its utility as an optimization assistant.",
+      "htmlFile": "2025/b6d2a9e2b8b1/index.html"
+    },
+    {
+      "id": "c2c5f4d5e6f7",
+      "title": "A Survey of Vibe Coding with Large Language Models",
+      "authors": [
+        "Yuyao Ge",
+        "Lingrui Mei",
+        "Zenghao Duan",
+        "Tianhao Li",
+        "Yujia Zheng",
+        "Yiwei Wang",
+        "Lexin Wang",
+        "Jiayu Yao",
+        "Tianyu Liu",
+        "Yujun Cai",
+        "Baolong Bi",
+        "Fangda Guo",
+        "Jiafeng Guo",
+        "Shenghua Liu",
+        "Xueqi Cheng"
+      ],
+      "year": 2025,
+      "conference": "arXiv",
+      "category": "软件工程",
+      "keywords": [
+        "Vibe Coding",
+        "Coding Agent",
+        "Large Language Models",
+        "AI辅助开发",
+        "软件工程",
+        "LLM",
+        "智能体系统"
+      ],
+      "abstract": "The advancement of large language models (LLMs) has catalyzed a paradigm shift from code generation assistance to autonomous coding agents, enabling a novel development methodology termed \"Vibe Coding\" where developers validate AI-generated implementations through outcome observation rather than line-by-line code comprehension. Despite its transformative potential, the effectiveness of this emergent paradigm remains under-explored, with empirical evidence revealing unexpected productivity losses and fundamental challenges in human-AI collaboration. To address this gap, this survey provides the first comprehensive and systematic review of Vibe Coding with large language models, establishing both theoretical foundations and practical frameworks for this transformative development approach. Drawing from systematic analysis of over 1000 research papers, we survey the entire vibe coding ecosystem, examining critical infrastructure components including LLMs for coding, LLM-based coding agent, development environment of coding agent, and feedback mechanisms. We first introduce Vibe Coding as a formal discipline by formalizing it through a Constrained Markov Decision Process that captures the dynamic triadic relationship among human developers, software projects, and coding agents. Building upon this theoretical foundation, we then synthesize existing practices into five distinct development models: Unconstrained Automation, Iterative Conversational Collaboration, Planning-Driven, Test-Driven, and Context-Enhanced Models, thus providing the first comprehensive taxonomy in this domain. Critically, our analysis reveals that successful Vibe Coding depends not merely on agent capabilities but on systematic context engineering, well-established development environments, and human-agent collaborative development models. Based on these findings, we identify key challenges spanning technical infrastructure optimization, security mechanisms, and human-centered design considerations. Ultimately, this survey serves as both a conceptual foundation for AI-augmented software engineering and a technical roadmap for researchers and practitioners navigating this rapidly evolving field.",
+      "htmlFile": "2025/c2c5f4d5e6f7/index.html"
+    },
+    {
+      "id": "c5b0a8d4b8b4",
+      "title": "CORTENMM: Efficient Memory Management with Strong Correctness Guarantees",
+      "authors": [
+        "Junyang Zhang",
+        "Xiangcan Xu",
+        "Yonghao Zou",
+        "Zhe Tang",
+        "Xinyi Wan",
+        "Kang Hu",
+        "Siyuan Wang",
+        "Wenbo Xu",
+        "Di Wang",
+        "Hao Chen",
+        "Lin Huang",
+        "Shoumeng Yan",
+        "Yuval Tamir",
+        "Yingwei Luo",
+        "Xiaolin Wang",
+        "Huashan Yu",
+        "Zhenlin Wang",
+        "Hongliang Tian",
+        "Diyu Zhou"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统",
+      "keywords": [
+        "Memory Management",
+        "Virtual Memory",
+        "Concurrency",
+        "Formal Verification",
+        "Scalability"
+      ],
+      "abstract": "Modern memory management systems suffer from poor performance and subtle concurrency bugs, slowing down applications while introducing security vulnerabilities. We observe that both issues stem from the conventional design of memory management systems with two levels of abstraction: a software-level abstraction (e.g., VMA trees in Linux) and a hardware-level abstraction (typically, page tables). This design increases portability but requires correctly and efficiently synchronizing two drastically different and complex data structures, which is generally challenging.\nWe present CORTENMM, a memory management system with a clean-slate design to achieve both high performance and synchronization correctness. Our key insight is that most OSes no longer need the software-level abstraction, since mainstream ISAs use nearly identical hardware MMU formats. Therefore, departing from prior designs, CORTENMM eliminates the software-level abstraction to achieve sweeping simplicity. Exploiting this simplicity, CORTENMM proposes a transactional interface with scalable locking protocols to program the MMU, achieving high performance by avoiding the extra contention in the software-level abstraction. The one-level design further enables us to formally verify the correctness of concurrent code operating on the MMU (correctness of basic operations and locking protocols), thereby offering strong correctness guarantees. Our evaluation shows that the formally verified CORTENMM outperforms Linux by 1.2\\(\\times\\) to 26\\(\\times\\) on real-world applications.",
+      "htmlFile": "2025/c5b0a8d4b8b4/index.html"
+    },
+    {
+      "id": "d3a2e7b4f5c1",
+      "title": "DeepAgent: A General Reasoning Agent with Scalable Toolsets",
+      "authors": [
+        "Xiaoxi Li",
+        "Wenxiang Jiao",
+        "Jiarui Jin",
+        "Guanting Dong",
+        "Jiajie Jin",
+        "Yinuo Wang",
+        "Hao Wang",
+        "Yutao Zhu",
+        "Ji-Rong Wen",
+        "Yuan Lu",
+        "Zhicheng Dou"
+      ],
+      "year": 2025,
+      "conference": "arXiv",
+      "category": "人工智能",
+      "keywords": [
+        "推理智能体",
+        "工具使用",
+        "记忆机制",
+        "强化学习",
+        "大规模工具集",
+        "自主思考",
+        "ToolPO"
+      ],
+      "abstract": "Large reasoning models have demonstrated strong problem-solving abilities, yet real-world tasks often require external tools and long-horizon interactions. Existing agent frameworks typically follow predefined workflows, which limit autonomous and global task completion. In this paper, we introduce **DeepAgent**, an end-to-end deep reasoning agent that performs autonomous thinking, tool discovery, and action execution within a single, coherent reasoning process. To address the challenges of long-horizon interactions, particularly the context length explosion from multiple tool calls and the accumulation of interaction history, we introduce an autonomous memory folding mechanism that compresses past interactions into structured episodic, working, and tool memories, reducing error accumulation while preserving critical information. To teach general-purpose tool use efficiently and stably, we develop an end-to-end reinforcement learning strategy, namely ToolPO, that leverages LLM-simulated APIs and applies tool-call advantage attribution to assign fine-grained credit to the tool invocation tokens. Extensive experiments on eight benchmarks, including general tool-use tasks (ToolBench, API-Bank, TMDB, Spotify, Tool-Hop) and downstream applications (ALFWorld, WebShop, GAIA, HLE), demonstrate that DeepAgent consistently outperforms baselines across both labeled-tool and open-set tool retrieval scenarios. This work takes a step toward more general and capable agents for real-world applications. The code and demo are available at https://github.com/RUC-NLPIR/DeepAgent.",
+      "htmlFile": "2025/d3a2e7b4f5c1/index.html"
+    },
+    {
+      "id": "d6c7a1b3e9f2",
+      "title": "DeepSeek-OCR: Contexts Optical Compression",
+      "authors": [
+        "Haoran Wei",
+        "Yaofeng Sun",
+        "Yukun Li"
+      ],
+      "year": 2025,
+      "conference": "arXiv",
+      "category": "计算机视觉",
+      "keywords": [
+        "OCR",
+        "视觉语言模型",
+        "上下文压缩",
+        "DeepEncoder",
+        "多模态学习"
+      ],
+      "abstract": "We present DeepSeek-OCR as an initial investigation into the feasibility of compressing long contexts via optical 2D mapping. DeepSeek-OCR consists of two components: DeepEncoder and DeepSeek3B-MoE-A570M as the decoder. Specifically, DeepEncoder serves as the core engine, designed to maintain low activations under high-resolution input while achieving high compression ratios to ensure an optimal and manageable number of vision tokens. Experiments show that when the number of text tokens is within 10 times that of vision tokens(i.e., a compression ratio< 10×), the model can achieve decoding(OCR) precision of 97%. Even at a compression ratio of 20×, the OCR accuracy still remains at about 60%. This shows considerable promise for research areas such as historical long-context compression and memory forgetting mechanisms in LLMs. Beyond this, DeepSeek-OCR also demonstrates high practical value. On OmniDocBench, it surpasses GOT-OCR2.0(256 tokens/page) using only 100 vision tokens, and outperforms MinerU2.0(6000+ tokens per page on average) while utilizing fewer than 800 vision tokens. In production, DeepSeek-OCR can generate training data for LLMs/VLMs at a scale of 200k+ pages per day(a single A100-40G). Codes and model weights are publicly accessible at http://github.com/deepseek-ai/DeepSeek-OCR.",
+      "htmlFile": "2025/d6c7a1b3e9f2/index.html"
+    },
+    {
+      "id": "d6d3c8e8f2d2",
+      "title": "Mantle: Efficient Hierarchical Metadata Management for Cloud Object Storage Services",
+      "authors": [
+        "Li, Jiahao",
+        "Cao, Biao",
+        "Jian, Jielong",
+        "Li, Cheng",
+        "Han, Sen",
+        "Wang, Yiduo",
+        "Wu, Yufei",
+        "Chen, Kang",
+        "Yin, Zhihui",
+        "Chen, Qiushi",
+        "Xiong, Jiwei",
+        "Zhao, Jie",
+        "Liu, Fengyuan",
+        "Xing, Yan",
+        "Duan, Liguo",
+        "Yu, Miao",
+        "Zheng, Ran",
+        "Wu, Feng",
+        "Meng, Xianjun"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "分布式系统",
+      "keywords": [
+        "元数据管理",
+        "云对象存储",
+        "层次结构",
+        "路径解析",
+        "目录更新",
+        "可扩展性",
+        "性能优化"
+      ],
+      "abstract": "Cloud Object Storage Services (COSSs) are the primary storage backend in the cloud, supporting large-scale analytics and ML workloads that frequently access deep object paths and update metadata concurrently. However, current COSS architectures incur costly multi-round lookups and high directory contention, delaying job execution. Prior optimizations, largely designed for distributed file systems (with least adoption in clouds), do not apply due to COSS-specific constraints like stateless proxies and limited APIs. Mantle is a new COSS metadata service for modern cloud workloads. It adopts a two-layer architecture: a scalable, sharded database (TafDB) shared across namespaces and a per-namespace, single-server IndexMode consolidating lightweight directory metadata. With a fine-grained division of metadata and responsibility, Mantle supports up to 10 billion objects or directories in a single namespace and achieves 1.8 million lookups per second through scalable execution of single-RPC lookups on IndexMode. It also delivers up to 58K directory updates per second under high contention by integrating out-of-place delta updates in TafDB and offloading loop detection for cross-directory renames to IndexMode, both effectively eliminating coordination bottlenecks. Compared to the metadata services of Teetonic, InfiniFS and LocoFS, Mantle reduces metadata latency by 6.6-99.1% and improves throughput by 0.07-115.00%. With data access enabled, it shortens job completion times by 63.3-93.3% for interactive Spark analytics and 38.5-47.7% for AI-driven audio preprocessing tasks. Mantle has been deployed on Baidu Object Storage (BOS) for over 2 years, a service offered by Baidu Canghai Storage.",
+      "htmlFile": "2025/d6d3c8e8f2d2/index.html"
+    },
+    {
+      "id": "d9c4a2e3b5f1",
+      "title": "Moirai: Optimizing Placement of Data and Compute in Hybrid Clouds",
+      "authors": [
+        "Qiu, Ziyue",
+        "Park, Hojin",
+        "Zhao, Jing",
+        "Wang, Yukai",
+        "Balyan, Arnav",
+        "Singh, Gurmeet",
+        "Zhang, Yangjun",
+        "Song, Suqiang (Jack)",
+        "Ganger, Gregory R.",
+        "Amvrosiadis, George"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "分布式系统与云计算",
+      "keywords": [
+        "混合云",
+        "成本优化",
+        "数据布局",
+        "作业调度",
+        "网络开销",
+        "数据复制",
+        "作业路由"
+      ],
+      "abstract": "The deployment of large-scale data analytics between on-premise and cloud sites, i.e., hybrid clouds, requires careful partitioning of both data and computation to avoid massive networking costs. We present Moirai, a cost-optimization framework that analyzes job accesses and data dependencies and optimizes the placement of both in hybrid clouds. Moirai informs the job scheduler of data location and access predictions, so it can determine where jobs should be executed to minimize data transfer costs. Our optimizer achieves scalability and cost efficiency by exploiting recurring jobs to identify data dependencies and job access characteristics and reduces the search space by excluding data not accessed recently. We validate Moirai using 4-month traces that span 66.7M queries accessing 13.3EB from Presto and Spark clusters deployed at Uber, a multi-national transportation company leveraging large-scale data analytics for its operations. Moirai reduces hybrid cloud deployment costs by over 97% relative to the state-of-the-art partitioning approach from Alibaba and other public approaches. The savings come from 95–99.5% reduction in cloud egress, up to 99% reduction in replication, and 89–98% reduction in on-premises network infrastructure requirements. We also describe concrete steps being taken towards deploying Moirai in production.",
+      "htmlFile": "2025/d9c4a2e3b5f1/index.html"
+    },
+    {
+      "id": "e0c3c6d8e9c0",
+      "title": "An Expressive, Efficient Attention Architecture",
+      "authors": [
+        "Yu Zhang",
+        "Junjie Yan",
+        "Zongyu Lin",
+        "Zhejun Jiang",
+        "Xingcheng Yao",
+        "Weixiao Huang",
+        "Jiaxi Hu",
+        "Bohong Yin",
+        "Fanqing Meng",
+        "Jiacheng You",
+        "Chengyin Liu",
+        "Chu Wei",
+        "Xin Men",
+        "Zhengtao Wang",
+        "Songlin Yang",
+        "Chao Hong",
+        "Zhiyuan Li",
+        "Yutian Chen",
+        "Wentao Li",
+        "Guanduo Chen",
+        "Enzhe Lu",
+        "Yucheng Wang",
+        "Weizhou Liu",
+        "Huabin Zheng",
+        "Yanru Chen",
+        "Feng Wang",
+        "Weixin Xu",
+        "Yibo Liu",
+        "Longhui Yu",
+        "Mengnan Dong",
+        "Yejie Wang",
+        "Zheng Zhang",
+        "Yu Fan",
+        "Siyuan Pan",
+        "Longguang Zhong",
+        "Wenhao Wu",
+        "Enming Yuan",
+        "Yuhao Wu",
+        "Dehao Zhang",
+        "Longyu Guan",
+        "Yizhi Zhang",
+        "Jiawen Tao",
+        "T.Y. Liu",
+        "Guohong Fu",
+        "Haiming Wang",
+        "Xinran Xu",
+        "Shengjun Fang",
+        "Yuzhi Wang",
+        "Weiran He",
+        "Guokun Lai",
+        "Shaowei Liu",
+        "Yuxin Wu",
+        "Yiwei Li",
+        "Xinyu Zhou",
+        "Jianlin Su",
+        "Zhilin Yang",
+        "Jiezhong Qiu",
+        "Yulun Du",
+        "Bo Pang"
+      ],
+      "year": 2025,
+      "conference": "arXiv",
+      "category": "自然语言处理",
+      "keywords": [
+        "线性注意力",
+        "Kimi Delta Attention",
+        "混合架构",
+        "长上下文",
+        "高效推理",
+        "Delta Rule",
+        "硬件效率"
+      ],
+      "abstract": "We introduce Kimi Linear, a hybrid linear attention architecture that, for the first time, outperforms full attention under fair comparisons across various scenarios--including short-context, long-context, and reinforcement learning (RL) scaling regimes. At its core lies Kimi Delta Attention (KDA), an expressive linear attention module that extends Gated DeltaNet with a finer-grained gating mechanism, enabling more effective use of limited finite-state RNN memory. Our bespoke chunkwise algorithm achieves high hardware efficiency through a specialized variant of the _Diagonal-Plus-Low-Rank_ (DPLR) transition matrices, which substantially reduces computation compared to the general DPLR formulation while remaining more consistent with the classical delta rule.\nWe pretrain a Kimi Linear model with 3B activated parameters and 48B total parameters, based on a layerwise hybrid of KDA and Multi-Head Latent Attention (MLA). Our experiments show that with an identical training recipe, Kimi Linear outperforms full MLA with a sizeable margin across all evaluated tasks, while reducing KV cache usage by up to 75% and achieving up to 6x decoding throughput for a 1M context. These results demonstrate that Kimi Linear can be a drop-in replacement for full attention architectures with superior performance and efficiency, including tasks with longer input and output lengths.\nTo support further research, we open-source the KDA kernel and vLLM implementations 1, and release the pre-trained and instruction-tuned model checkpoints. 2",
+      "htmlFile": "2025/e0c3c6d8e9c0/index.html"
+    },
+    {
+      "id": "e9c6b3a8f4d2",
+      "title": "TickTock: Verified Isolation in a Production Embedded OS",
+      "authors": [
+        "Rindisbacher, Vivien",
+        "Johnson, Evan",
+        "Pannuto, Pat",
+        "Savage, Stefan"
+      ],
+      "year": 2025,
+      "conference": "SOSP",
+      "category": "操作系统安全",
+      "keywords": [
+        "验证",
+        "进程隔离",
+        "内核安全",
+        "嵌入式系统",
+        "安全系统",
+        "精化类型",
+        "形式化验证"
+      ],
+      "abstract": "We present a case study formally verifying process isolation in the Tock production microcontroller OS kernel. Tock combines hardware memory protection units and language-level techniques—by writing the kernel in Rust—to enforce isolation between user and kernel code. Our effort to verify Tock’s process abstraction unearthed multiple, subtle bugs that broke isolation—many allowing malicious applications to compromise the whole OS. We describe this effort and TickTock, our fork of the Tock operating system kernel that eliminates isolation bugs by construction. TickTock uses Flux, an SMT-based Rust verifier, to formally specify and verify process isolation for all ARMy7-M platforms Tock supports and for three RISC-V 32-bit platforms. Our verification-guided design and implementation led to a new, granular process abstraction that is simpler than Tock’s, has formal security guarantees (that are verified in half a minute), and outperforms Tock on certain critical code paths.",
+      "htmlFile": "2025/e9c6b3a8f4d2/index.html"
+    },
+    {
+      "id": "f7c4e8a3b5d1",
+      "title": "Defeating Nondeterminism in LLM Inference",
+      "authors": [
+        "Horace He"
+      ],
+      "year": 2025,
+      "conference": "Blog",
+      "category": "自然语言处理",
+      "keywords": [
+        "LLM推理",
+        "非确定性",
+        "批量不变性",
+        "浮点非结合性",
+        "可重现性"
+      ],
+      "abstract": "Reproducibility is a bedrock of scientific progress. However, it’s remarkably difficult to get reproducible results out of large language models. For example, you might observe that asking ChatGPT the same question multiple times provides different results. This by itself is not surprising, since getting a result from a language model involves \"sampling\", a process that converts the language model's output into a probability distribution and probabilistically selects a token. What might be more surprising is that even when we adjust the temperature down to 0 (thus making the sampling theoretically deterministic), LLM APIs are still not deterministic in practice. Even when running inference on your own hardware with an OSS inference library like vLLM or SGLang, sampling still isn't deterministic. In this post, we will explain why the \"concurrency + floating point\" hypothesis misses the mark, unmask the true culprit behind LLM inference nondeterminism, and explain how to defeat nondeterminism and obtain truly reproducible results in LLM inference.",
+      "htmlFile": "2025/f7c4e8a3b5d1/index.html"
+    },
+    {
+      "id": "f8e4b3a9c2d1",
+      "title": "FalconFS: Distributed File System for Large-Scale Deep Learning Pipeline",
+      "authors": [
+        "Jingwei Xu",
+        "Junbin Kang",
+        "Mingkai Dong",
+        "Mingyu Liu",
+        "Lu Zhang",
+        "Shaohong Guo",
+        "Ziyan Qiu",
+        "Mingzhen You",
+        "Ziyi Tian",
+        "Anqi Yu",
+        "Tianhong Ding",
+        "Xinwei Hu",
+        "Haibo Chen"
+      ],
+      "year": 2025,
+      "conference": "arXiv",
+      "category": "分布式系统",
+      "keywords": [
+        "分布式文件系统",
+        "深度学习",
+        "元数据管理",
+        "无状态客户端",
+        "高性能存储"
+      ],
+      "abstract": "Client-side metadata caching has long been considered an effective method for accelerating metadata operations in distributed file systems(DFSs). However, we have found thatclient-side state(e.g., caching) is not only ineffective but alsoconsumes valuable memory resources in the deep learning pipelines. We thus propose FalconFS, a DFS optimized for deep learning pipelines with the stateless-client architecture.Specifically, instead of performing client-side path resolution and caching, FalconFS efficiently resolves paths on the serverside using hybrid metadata indexing and lazy namespace replication. FalconFS also boosts server concurrency with concurrent request merging and provides easy deployment with VFS shortcut. Evaluations against CephFS and Lustreshow that FalconFS achievesup to 5.72× throughput for smallfile read/write and up to 12.81× throughput for deep learn-ing model training. FalconFS has been running in Huawei autonomous driving system’s production environment with10,000 NPUs for one year.",
+      "htmlFile": "2025/f8e4b3a9c2d1/index.html"
+    },
+    {
+      "id": "1c9e9d7f0f5d",
+      "title": "Exploiting Undefined Behavior in C/C++ Programs for Optimization: A Study on the Performance Impact",
+      "authors": [
+        "LUCIAN POPESCU",
+        "NUNO P. LOPES"
+      ],
+      "year": 2024,
+      "conference": "PLDI",
+      "category": "编译优化",
+      "keywords": [
+        "Undefined Behavior",
+        "Compiler Optimizations",
+        "C",
+        "C++",
+        "LLVM",
+        "性能分析",
+        "代码安全"
+      ],
+      "abstract": "The C and C++ languages define hundreds of cases as having undefined behavior (UB). These include, for example, corner cases where different CPU architectures disagree on the semantics of an instruction and the language does not want to force a specific implementation (e.g., shift by a value larger than the bitwidth). Another class of UB involves errors that the language chooses not to detect because it would be too expensive or impractical, such as dereferencing out-of-bounds pointers.\n\nAlthough there is a common belief within the compiler community that UB enables certain optimizations that would not be possible otherwise, no rigorous large-scale studies have been conducted on this subject. At the same time, there is growing interest in eliminating UB from programming languages to improve security.\n\nIn this paper, we present the first comprehensive study that examines the performance impact of exploiting UB in C and C++ applications across multiple CPU architectures. Using LLVM, a compiler known for its extensive use of UB for optimizations, we demonstrate that, for the benchmarks and UB categories that we evaluated, the end-to-end performance gains are minimal. Moreover, when performance regresses, it can often be recovered through small improvements to optimization algorithms or by using link-time optimizations.",
+      "htmlFile": "2024/1c9e9d7f0f5d/index.html"
+    },
+    {
+      "id": "a4a3b2b3c4d5",
+      "title": "LLMs Can Get \"Brain Rot\"!",
+      "authors": [
+        "Shuo Xing",
+        "Junyuan Hong",
+        "Yifan Wang",
+        "Runjin Chen",
+        "Zhenyu Zhang",
+        "Ananth Grama",
+        "Zhengzhong Tu",
+        "Zhangyang Wang"
+      ],
+      "year": 2024,
+      "conference": "arXiv",
+      "category": "自然语言处理",
+      "keywords": [
+        "大语言模型",
+        "数据质量",
+        "认知衰退",
+        "持续预训练",
+        "安全性",
+        "推理能力",
+        "思维跳跃"
+      ],
+      "abstract": "We propose and test the LLM Brain Rot Hypothesis: continual exposure to junk web text induces lasting cognitive decline in large language models (LLMs). To causally isolate data quality, we run controlled experiments on real Twitter/X corpora, constructing junk and reversely controlled datasets via two orthogonal operationalizations: M1 (engagement degree) and M2 (semantic quality), with matched token scale and training operations across conditions. Contrary to the control group, continual pre-training of 4 LLMs on the junk dataset causes non-trivial declines (Hedges' g>0.3) on reasoning, long-context understanding, safety, and inflating \"dark traits\" (e.g., psychopathy, narcissism). The gradual mixtures of junk and control datasets also yield dose-response cognition decay: for example, under M1, ARC-Challenge with Chain Of Thoughts drops 74.9 to 57.2 and RULER-CWE 84.4 to 52.3 as junk ratio rises from 0% to 100%.\n\nError forensics reveal several key insights. First, we identify thought-skipping as the primary lesion: models increasingly truncate or skip reasoning chains, explaining most of the error growth. Second, partial but incomplete healing is observed: scaling instruction tuning and clean data pre-training improve the declined cognition yet cannot restore baseline capability, suggesting persistent representational drift rather than format mismatch. Finally, we discover that the popularity, a non-semantic metric, of a tweet is a better indicator of the Brain Rot effect than the length in M1. Together, the results provide significant, multi-perspective evidence that data quality is a causal driver of LLM capability decay, reframing curation for continual pretraining as a training-time safety problem and motivating routine \"cognitive health checks\" for deployed LLMs.",
+      "htmlFile": "2024/a4a3b2b3c4d5/index.html"
+    },
+    {
+      "id": "b8f0e0b7e6a4",
+      "title": "LavaStore: ByteDance’s Purpose-built, High-performance, Cost-effective Local Storage Engine for Cloud Services",
+      "authors": [
+        "Hao Wang",
+        "Jiaxin Ou",
+        "Ming Zhao",
+        "Sheng Qiu",
+        "Yizheng Jiao",
+        "Yi Wang",
+        "Qizhong Mao",
+        "Zhengyu Yang",
+        "Yang Liu",
+        "Jianshun Zhang",
+        "Jianyang Hu",
+        "Jingwei Zhang",
+        "Jinrui Liu",
+        "Jiaqiang Chen",
+        "Yong Shen",
+        "Lixun Cao",
+        "Heng Zhang",
+        "Hongde Li",
+        "Ming Li",
+        "Yue Ma",
+        "Lei Zhang",
+        "Jian Liu",
+        "Guanghui Zhang",
+        "Fei Liu",
+        "Jianjun Chen"
+      ],
+      "year": 2024,
+      "conference": "PVLDB",
+      "category": "数据库系统",
+      "keywords": [
+        "键值存储",
+        "LSM-tree",
+        "RocksDB",
+        "KV分离",
+        "垃圾回收",
+        "写性能优化",
+        "LavaStore"
+      ],
+      "abstract": "Persistent key-value (KV) stores are widely used by cloud services at ByteDance as local storage engines, and RocksDB used to be the _de facto_ implementation since it can be tailored to a variety of workloads and requirements. In this paper, we provide key insights into local storage engine usage at ByteDance, explain why the combination of highly write-intensive workloads and stringent requirements on cost efficiency and point lookup tail latency may pose challenges to a general-purpose local storage engine such as RocksDB, and present the design and implementation of _LavaStore_, a high-performance cost-effective local storage engine purpose-built to address these challenges.\n\nLavaStore achieves its design goals by selectively customizing a few components of a RocksDB-based, general-purpose local storage engine, including a distinct KV separation design that decouples garbage collection from compaction, a specialized engine type for the commonly recurring Write-Ahead-Logging workload, and a customized user-space append-only filesystem. LavaStore has been deployed to production with hundreds of thousands of running instances, storing more than 100 PB of data and serving billions of requests per second, bringing significant performance improvements and cost reductions to customers over their original local storage engines. For example, a ByteDance proprietary distributed OLTP database service has experienced a reduction in average write and read latency by 61% and 16%, respectively, and a ByteDance proprietary caching service has gained an 87% increase in write throughput with no more than 6% space overhead.",
+      "htmlFile": "2024/b8f0e0b7e6a4/index.html"
+    },
+    {
+      "id": "c7a0c6a5c9d4",
+      "title": "PALF: Replicated Write-Ahead Logging for Distributed Databases",
+      "authors": [
+        "Fusheng Han",
+        "Hao Liu",
+        "Bin Chen",
+        "Debin Jia",
+        "Jianfeng Zhou",
+        "Xuwang Teng",
+        "Chuanhui Yang",
+        "Huafeng Xi",
+        "Wei Tian",
+        "Shuning Tao",
+        "Sen Wang",
+        "Quanqing Xu",
+        "Zhenkun Yang"
+      ],
+      "year": 2024,
+      "conference": "PVLDB",
+      "category": "分布式数据库",
+      "keywords": [
+        "PALF",
+        "复制日志",
+        "分布式数据库",
+        "Paxos协议",
+        "OceanBase",
+        "WAL",
+        "共识算法"
+      ],
+      "abstract": "Distributed databases have been widely researched and developed in recent years due to their scalability, availability, and consistency guarantees. The write-ahead logging (WAL) system is one of the most vital components in a database. It is still a non-trivial problem to design a replicated logging system as the foundation of a distributed database with the power of ACID transactions. This paper proposes PALF, a Paxos-backed Append-only Log File System, to address these challenges. The basic idea behind PALF is to co-design the logging system with the entire database for supporting database-specific functions and to abstract the functions as PALF primitives to power other distributed systems. Many database functions, including transaction processing, database restore, and physical standby databases, have been built based on PALF primitives. Evaluation shows that PALF greatly outperforms well-known implementations of consensus protocols and is fully competent for distributed database workloads. PALF has been deployed as a component of the OceanBase 4.0 database and has been made open-source along with it.",
+      "htmlFile": "2024/c7a0c6a5c9d4/index.html"
+    },
+    {
+      "id": "f6e0b9d8c4a7",
+      "title": "Incremental Bidirectional Typing via Order Maintenance",
+      "authors": [
+        "Thomas J. Porter",
+        "Marisa Kirisame",
+        "Ivan Wei",
+        "Pavel Panchekha",
+        "Cyrus Omar"
+      ],
+      "year": 2024,
+      "conference": "POPL",
+      "category": "编程语言",
+      "keywords": [
+        "增量类型检查",
+        "双向类型系统",
+        "实时编程环境",
+        "顺序维护数据结构",
+        "标记λ演算",
+        "错误定位",
+        "程序编辑"
+      ],
+      "abstract": "Live programming environments provide various semantic services, including type checking and evaluation, continuously as the user is editing the program. The live paradigm promises to improve the developer experience, but liveness is an implementation challenge particularly when working with large programs. This paper specifies and efficiently implements a system the is able to incrementally update type information for a live program in response to fine-grained program edits. This information includes type error marks and information about the expected and actual type on every expression. The system is specified type-theoretically as a small-step dynamics that propagates updates through the marked and annotated program. Most updates flow according to a base bidirectional type system. Additional pointers are maintained to connect bound variables to their binding locations, with type updates traversing these pointers directly. Order maintenance data structures are employed to efficiently maintain these pointers and to prioritize the order of update propagation. We prove this system is equivalent to naive reanalysis in the Agda theorem prover, along with other important metatheoretic properties. We then provide an efficient OCaml implementation, detailing a number of impactful optimizations. We evaluate this implementation’s performance with a large stress-test and find that it is able to achieve dramatic speed-ups of 275.96× compared to from-scratch reanalysis.",
+      "htmlFile": "2024/f6e0b9d8c4a7/index.html"
+    },
+    {
+      "id": "f8c5b9d6d9b8",
+      "title": "Fire-Flyer AI-HPC: A Cost-Effective Software-Hardware Co-Design for Deep Learning",
+      "authors": [
+        "Wei An",
+        "Xiao Bi",
+        "Guanting Chen",
+        "Shanhuang Chen",
+        "Chengqi Deng",
+        "Honghui Ding",
+        "Kai Dong",
+        "Qiushi Du",
+        "Wenjun Gao",
+        "Kang Guan",
+        "Jianzhong Guo",
+        "Yongqiang Guo",
+        "Zhe Fu",
+        "Ying He",
+        "Panpan Huang",
+        "Jiashi Li",
+        "Wenfeng Liang",
+        "Xiaodong Liu",
+        "Xin Liu",
+        "Yiyuan Liu",
+        "Yuxuan Liu",
+        "Shanghao Lu",
+        "Xuan Lu",
+        "Xiaotao Nie",
+        "Tian Pei",
+        "Junjie Qiu",
+        "Hui Qu",
+        "Zehui Ren",
+        "Zhangli Sha",
+        "Xuecheng Su",
+        "Xiaowen Sun",
+        "Yixuan Tan",
+        "Minghui Tang",
+        "Shiyu Wang",
+        "Yaohui Wang",
+        "Yongji Wang",
+        "Ziwei Xie",
+        "Yiliang Xiong",
+        "Yanhong Xu",
+        "Shengfeng Ye",
+        "Shuiping Yu",
+        "Yukun Zha",
+        "Liyue Zhang*",
+        "Haowei Zhang",
+        "Mingchuan Zhang",
+        "Wentao Zhang",
+        "Yichao Zhang",
+        "Chenggang Zhao",
+        "Yao Zhao",
+        "Shangyan Zhou",
+        "Shunfeng Zhou",
+        "Yuheng Zou"
+      ],
+      "year": 2024,
+      "conference": "arXiv",
+      "category": "高性能计算",
+      "keywords": [
+        "高性能计算",
+        "深度学习",
+        "大语言模型",
+        "AI Infra"
+      ],
+      "abstract": "The rapid progress in Deep Learning (DL) and Large Language Models (LLMs) has exponentially increased demands of computational power and bandwidth. This, combined with the high costs of faster computing chips and interconnects, has significantly inflated High Performance Computing (HPC) construction costs. To address these challenges, we introduce the Fire-Flyer AI-HPC architecture, a synergistic hardware-software co-design framework and its best practices. For DL training, we deployed the Fire-Flyer 2 with 10,000 PCIe A100 GPUs, achieved performance approximating the DGX-A100 while reducing costs by half and energy consumption by 40%. We specifically engineered IFFReduce to accelerate allreduce communication and implemented numerous measures to keep our Computation-Storage Integrated Network congestion-free. Through our software stack, including HaiScale, 3FS, and HAI-Platform, we achieved substantial scalability by overlapping computation and communication. Our system-oriented experience from DL training provides valuable insights to drive future advancements in AI-HPC.",
+      "htmlFile": "2024/f8c5b9d6d9b8/index.html"
+    },
+    {
+      "id": "a5f4b3e2c1d0",
+      "title": "An Empirical Evaluation of Columnar Storage Formats",
+      "authors": [
+        "Xinyu Zeng",
+        "Yulong Hui",
+        "Jiahong Shen",
+        "Andrew Pavlo",
+        "Wes McKinney",
+        "Huanchen Zhang"
+      ],
+      "year": 2023,
+      "conference": "PVLDB",
+      "category": "数据库系统",
+      "keywords": [
+        "列式存储",
+        "Parquet",
+        "ORC",
+        "性能评估",
+        "数据压缩",
+        "机器学习工作负载",
+        "GPU解码"
+      ],
+      "abstract": "Columnar storage is a core component of a modern data analytics system. Although many database management systems (DBMSs) have proprietary storage formats, most provide extensive support to open-source storage formats such as Parquet and ORC to facilitate cross-platform data sharing. But these formats were developed over a decade ago, in the early 2010s, for the Hadoop ecosystem. Since then, both the hardware and workload landscapes have changed.\nIn this paper, we revisit the most widely adopted open-source columnar storage formats (Parquet and ORC) with a deep dive into their internals. We designed a benchmark to stress-test the formats’ performance and space efficiency under different workload configurations. From our comprehensive evaluation of Parquet and ORC, we identify design decisions advantageous with modern hardware and real-world data distributions. These include using dictionary encoding by default, favoring decoding speed over compression ratio for integer encoding algorithms, making block compression optional, and embedding finer-grained auxiliary data structures. We also point out the inefficiencies in the format designs when handling common machine learning workloads and using GPUs for decoding. Our analysis identified important considerations that may guide future formats to better fit modern technology trends.",
+      "htmlFile": "2023/a5f4b3e2c1d0/index.html"
+    },
+    {
+      "id": "b5c5e3c6b0a5",
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "authors": [
+        "Joon Sung Park",
+        "Joseph C. O'Brien",
+        "Carrie J. Cai",
+        "Meredith Ringel Morris",
+        "Percy Liang",
+        "Michael S. Bernstein"
+      ],
+      "year": 2023,
+      "conference": "UIST",
+      "category": "人机交互",
+      "keywords": [
+        "生成式智能体",
+        "人类行为模拟",
+        "大型语言模型",
+        "记忆架构",
+        "社会模拟",
+        "人机交互",
+        "可信代理"
+      ],
+      "abstract": "Believable proxies of human behavior can empower interactive applications ranging from immersive environments to rehearsal spaces for interpersonal communication to prototyping tools. In this paper, we introduce generative agents: computational software agents that simulate believable human behavior. Generative agents wake up, cook breakfast, and head to work; artists paint, while authors write; they form opinions, notice each other, and initiate conversations; they remember and reflect on days past as they plan the next day. To enable generative agents, we describe an architecture that extends a large language model to store a complete record of the agent’s experiences using natural language, synthesize those memories over time into higher-level reflections, and retrieve them dynamically to plan behavior. We instantiate generative agents to populate an interactive sandbox environment inspired by The Sims, where end users can interact with a small town of twenty-five agents using natural language. In an evaluation, these generative agents produce believable individual and emergent social behaviors. For example, starting with only a single user-specified notion that one agent wants to throw a Valentine’s Day party, the agents autonomously spread invitations to the party over the next two\ndays, make new acquaintances, ask each other out on dates to the party, and coordinate to show up for the party together at the right time. We demonstrate through ablation that the components of our agent architecture--observation, planning, and reflection--each contribute critically to the believability of agent behavior. By fusing large language models with computational interactive agents, this work introduces architectural and interaction patterns for enabling believable simulations of human behavior.",
+      "htmlFile": "2023/b5c5e3c6b0a5/index.html"
+    },
+    {
+      "id": "b9c5f8b8b9e3",
+      "title": "B-Trees Are Back: Engineering Fast and Pageable Node Layouts",
+      "authors": [
+        "Marcus Muller",
+        "Lawrence Benson",
+        "Viktor Leis"
+      ],
+      "year": 2023,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "B-Tree",
+        "索引结构",
+        "内存数据库",
+        "存储引擎"
+      ],
+      "abstract": "Large main memory capacity and even larger data sets have motivated hybrid storage systems, which serve most transactions from memory, but can seamlessly transition to flash storage. In such systems, the data structure of choice is usually a B-Tree with pageable nodes. Most academic B-Tree work considers only fixed size records, making them unsuitable for most practical applications. Given the prevalence of B-Trees, surprisingly few available implementations and benchmarks of optimized B-Trees cover variable-sized records. In this paper, we describe an efficient B-Tree implementation supporting variable-sized records containing six known node layout optimizations. We evaluate each optimization to guide future implementations, and propose an optimized adaptive layout that can even compete with pure in-memory structures for many workloads. Our results show that well-engineered B-Trees can efficiently handle both in-memory and out-of-memory workloads.",
+      "htmlFile": "2023/b9c5f8b8b9e3/index.html"
+    },
+    {
+      "id": "c5a9d1b4c3a2",
+      "title": "Virtual-Memory Assisted Buffer Management",
+      "authors": [
+        "Viktor Leis",
+        "Adnan Alhomssi",
+        "Tobias Ziegler",
+        "Yannick Loeck",
+        "Christian Dietrich"
+      ],
+      "year": 2023,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "数据库管理系统",
+        "操作系统",
+        "缓存",
+        "缓冲区管理",
+        "虚拟内存"
+      ],
+      "abstract": "Most database management systems cache pages from storage in a main memory buffer pool. To do this, they either rely on a hash table that translates page identifiers into pointers, or on pointer swizzling which avoids this translation. In this work, we propose _vmcache_, a buffer manager design that instead uses hardware-supported virtual memory to translate page identifiers to virtual memory addresses. In contrast to existing mmap-based approaches, the DBMS retains control over page faulting and eviction. Our design is portable across modern operating systems, supports arbitrary graph data, enables variable-sized pages, and is easy to implement. One downside of relying on virtual memory is that with fast storage devices the existing operating system primitives for manipulating the page table can become a performance bottleneck. As a second contribution, we therefore propose _exmap_, which implements scalable page table manipulation on Linux. Together, vmcache and exmap provide flexible, efficient, and scalable buffer management on multi-core CPUs and fast storage devices.",
+      "htmlFile": "2023/c5a9d1b4c3a2/index.html"
+    },
+    {
+      "id": "b3c6e4e7c5a5",
+      "title": "Umbra: A Disk-Based System with In-Memory Performance",
+      "authors": [
+        "Thomas Neumann",
+        "Michael Freitag"
+      ],
+      "year": 2020,
+      "conference": "CIDR",
+      "category": "数据库系统",
+      "keywords": [
+        "数据库系统",
+        "缓冲管理",
+        "可变大小页",
+        "SSD",
+        "查询执行",
+        "内存性能",
+        "磁盘存储"
+      ],
+      "abstract": "The increases in main-memory sizes over the last decade have made pure in-memory database systems feasible, and in-memory systems offer unprecedented performance. However, DRAM is still relatively expensive, and the growth of main-memory sizes has slowed down. In contrast, the prices for SSDs have fallen substantially in the last years, and their read bandwidth has increased to gigabytes per second. This makes it attractive to combine a large in-memory buffer with fast SSDs as storage devices, combining the excellent performance for the in-memory working set with the scalability of a disk-based system.\nIn this paper we present the Umbra system, an evolution of the pure in-memory HyPer system towards a disk-based, or rather SSD-based, system. We show that by introducing a novel low-overhead buffer manager with variable-size pages we can achieve comparable performance to an in-memory database system for the cached working set, while handling accesses to uncached data gracefully. We discuss the changes and techniques that were necessary to handle the out-of-memory case gracefully and with low overhead, offering insights into the design of a memory optimized disk-based system.",
+      "htmlFile": "2020/b3c6e4e7c5a5/index.html"
+    },
+    {
+      "id": "9a5c4f0e9b5c",
+      "title": "Dynamic File Allocation in Disk Arrays",
+      "authors": [
+        "Gerhard Weikum",
+        "Peter Zabback",
+        "Peter Scheuermann"
+      ],
+      "year": 1991,
+      "conference": "SIGMOD",
+      "category": "数据库系统",
+      "keywords": [
+        "磁盘阵列",
+        "动态文件分配",
+        "负载均衡",
+        "数据布局",
+        "去集群",
+        "部分重组",
+        "I/O性能"
+      ],
+      "abstract": "Large arrays of small disks are being considered as a promising approach to high performance I/O architectures. In this paper we deal with the problem of data placement in such a disk array. The prevalent approach is to decluster large files across a number of disks so as to minimize the access time to a file and balance the I/O load across the disks. The data placement problem entails determining the number of disks and the set of disks across which a file is declustered. Unlike previous work, this paper does not assume that all files are allocated at the same time but rather considers dynamic file creations. This makes the placement problem considerably harder because each placement decision has to take into account the current allocation state and the access frequencies of the disks and the existing files. As a result, file creation may involve partial reorganization on one or more disks. The paper proposes heuristic algorithms for the placement of dynamically created files. The algorithms provide a good compromise between maximizing I/O performance of the disk array and minimizing the work invested in partial reorganizations. The paper presents preliminary performance results of various alternative algorithms under a synthetic workload.",
+      "htmlFile": "1991/9a5c4f0e9b5c/index.html"
+    }
+  ]
+}
