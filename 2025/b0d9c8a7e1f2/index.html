@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLMs Get Lost In Multi-Turn Conversation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .performance-bar {
+      transition: width 0.8s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          LLMs Get Lost In Multi-Turn Conversation
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Philippe Laban, Hiroaki Hayashi, Yingbo Zhou, Jennifer Neville</div>
+                <div class="text-sm text-gray-600 mt-1">Microsoft Research & Salesforce Research</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv:2505.06120v1, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2505.06120v1</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Large Language Models</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Multi-Turn Conversation</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Underspecification</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Reliability</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>首次系统性地评估了LLM在多轮对话中的性能表现，发现平均性能下降39%</li>
+          <li>提出了"分片指令"方法，将单轮指令转换为多轮对话的评估基准</li>
+          <li>将性能下降分解为能力损失和可靠性下降两个维度</li>
+          <li>发现LLM在对话中容易"迷路"且难以恢复的现象</li>
+          <li>验证了降低温度等常用方法在多轮对话中效果有限</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            大型语言模型(LLMs)作为对话接口，具有通过多轮对话交流帮助用户定义、探索和细化需求的潜力。尽管对话日志分析已确认用户指令中的不完整性频繁发生，但LLM评估主要关注单轮、完全指定的指令设置。
+          </p>
+          <p class="mb-4">
+            本研究通过大规模模拟实验比较LLM在单轮和多轮设置中的性能。实验证实，所有测试的顶级开源和闭源LLM在多轮对话中的表现均显著低于单轮设置，在六个生成任务中平均下降39%。
+          </p>
+          <p class="mb-4">
+            通过对200,000+模拟对话的分析，将性能下降分解为两个组成部分：轻微的能力损失和显著的可靠性下降。研究发现，LLM经常在早期轮次做出假设并过早尝试生成最终解决方案，且过度依赖这些方案。简而言之，<strong>当LLM在对话中走错方向时，它们会迷路且无法恢复</strong>。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            当前的大型语言模型(如ChatGPT、Gemini、Claude)作为对话接口，使用户能够通过多轮对话与LLM交互。这种交互不仅能在用户知道需求时提供帮助，还能在用户不清楚需求时，通过轮次交互进一步澄清需求。
+          </p>
+          <p class="mb-4">
+            尽管对LLM对话日志的研究已确认用户指令中的不完整性普遍存在，但LLM系统通常在单轮、完全指定的设置中进行评估。虽然越来越多的研究提出以多轮方式评估LLM，但大多数先前工作将对话视为<em>片段式</em>的：对话轮次可能相互关联，但对话可以有效地分解为可以独立评估的子任务数组。
+          </p>
+          <p class="mb-4">
+            作者认为片段式任务偏离了人类对话中普遍存在的情况：不完整性。本研究通过为多轮不完整对话创建模拟环境来弥补这一差距。
+          </p>
+        </div>
+        
+        <!-- 技术细节：图1 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：图1 - 对话中LLM性能下降概览
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: 对话中LLM性能下降概览
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: 对话中LLM性能下降概览" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 本研究模拟了六个生成任务的单轮和多轮对话。测试的15个LLM在多轮设置中表现差得多(-35%)，这可以通过轻微的能力损失和大的可靠性损失来解释。能力定义为最佳情况对话模拟中的性能，不可靠性定义为最佳和最差情况性能之间的差距。简而言之，我们发现LLM在多轮不完整对话中会迷路。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>性能下降量化:</strong> 通过大规模模拟实验量化了LLM在多轮对话中的性能下降</li>
+                <li><strong>多维度分析:</strong> 将性能下降分解为能力损失和可靠性下降两个维度</li>
+                <li><strong>跨模型一致性:</strong> 所有测试的LLM都表现出相似的多轮对话性能下降模式</li>
+                <li><strong>任务多样性:</strong> 涵盖了编程和自然语言生成等多种任务类型</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            本研究识别了LLM在多轮不完整对话中面临的几个关键挑战：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-assistive-listening-systems mr-2"></i>过早假设
+              </h4>
+              <p class="text-sm text-gray-700">LLM在对话早期基于不完整信息做出假设，导致后续对话偏离正确方向</p>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-forward mr-2"></i>过早解决方案
+              </h4>
+              <p class="text-sm text-gray-700">LLM过早尝试提出最终解决方案，而不是通过对话澄清需求</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-history mr-2"></i>过度依赖历史
+              </h4>
+              <p class="text-sm text-gray-700">LLM过度依赖先前(可能错误的)回答尝试，难以纠正错误</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-comment-alt mr-2"></i>冗长回答
+              </h4>
+              <p class="text-sm text-gray-700">LLM生成过于冗长的回答，引入额外假设，分散对用户话语的注意力</p>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            这些挑战导致LLM在多轮对话中容易"迷路"，即一旦在对话早期做出错误假设或生成错误回答，后续对话难以纠正这些错误，最终导致性能显著下降。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">分片指令方法</h3>
+          <p class="mb-4">
+            为了评估LLM在多轮不完整对话中的性能，作者开发了一个模拟环境，重新利用单轮基准测试中的现有任务。该方法包括两个主要步骤：
+          </p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">分片过程：从完全指定指令到分片指令</h4>
+            <p class="mb-3">将原始完全指定的指令转换为<em>分片指令</em>，即一组较小的指令，共同提供与原始指令相同的信息。</p>
+            
+            <!-- 技术细节：图2 -->
+            <details class="technical-details bg-white rounded-lg p-4 mb-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-image mr-2 text-blue-500"></i>图2: 完全指定指令与分片指令对比
+              </summary>
+              
+              <div class="mt-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-white p-4 rounded border border-gray-200">
+                    <h5 class="font-semibold text-gray-700 mb-2">完全指定指令(原始)</h5>
+                    <div class="text-sm bg-gray-100 p-3 rounded">
+                      <p>Jay is making snowballs to prepare for a snowball fight with his sister. He can build 20 snowballs in an hour, but 2 melt every 15 minutes. How long will it take before he has 60 snowballs?</p>
+                    </div>
+                  </div>
+                  <div class="bg-white p-4 rounded border border-gray-200">
+                    <h5 class="font-semibold text-gray-700 mb-2">分片指令(基于原始)</h5>
+                    <div class="text-sm bg-gray-100 p-3 rounded space-y-2">
+                      <div><strong>分片1:</strong> How long before Jay's ready for the snowball fight?</div>
+                      <div><strong>分片2:</strong> He's preparing for a snowball fight with his sister.</div>
+                      <div><strong>分片3:</strong> He can make 20 snowballs per hour.</div>
+                      <div><strong>分片4:</strong> He's trying to get to 60 total.</div>
+                      <div><strong>分片5:</strong> The problem is that 2 melt every 15 minutes.</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bg-blue-50 p-3 rounded border border-blue-200 text-sm">
+                  <strong>技术要点:</strong> 分片指令将原始指令的信息内容明确划分到多个分片中，确保每个分片引入原始指令的单个元素，同时保持信息的完整性。
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">分片对话模拟</h3>
+          <p class="mb-4">
+            分片对话模拟过程涉及三个参与方：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg text-center">
+              <i class="fas fa-robot text-blue-500 text-3xl mb-3"></i>
+              <h4 class="font-bold text-blue-700">被评估助手</h4>
+              <p class="text-sm text-gray-700 mt-2">正在评估的LLM，在模拟中生成自由文本响应</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg text-center">
+              <i class="fas fa-user text-green-500 text-3xl mb-3"></i>
+              <h4 class="font-bold text-green-700">用户模拟器</h4>
+              <p class="text-sm text-gray-700 mt-2">由LLM模拟，负责在对话轮次中揭示分片</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg text-center">
+              <i class="fas fa-cogs text-purple-500 text-3xl mb-3"></i>
+              <h4 class="font-bold text-purple-700">系统</h4>
+              <p class="text-sm text-gray-700 mt-2">分类和评估助手响应的系统组件</p>
+            </div>
+          </div>
+          
+          <!-- 技术细节：图3 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图3 - 分片对话模拟流程图
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 分片对话模拟流程图
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 分片对话模拟流程图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 分片对话模拟图。模拟的主题以红色突出显示。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>模拟流程:</strong> 展示了分片对话模拟的完整流程，包括用户模拟器、助手响应生成和系统评估</li>
+                  <li><strong>关键组件:</strong> 包括策略分类器、答案提取器和任务评估器等关键组件</li>
+                  <li><strong>终止条件:</strong> 对话在助手回答正确或没有更多分片可揭示时结束</li>
+                  <li><strong>评估机制:</strong> 系统对助手的回答尝试进行分类和评估，确保评估的准确性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">任务选择</h3>
+          <p class="mb-4">
+            研究选择了六个生成任务，涵盖编程和非编程用例：
+          </p>
+          
+          <!-- 技术细节：图5 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图5 - 六个分片任务概览
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: 六个分片任务概览
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: 六个分片任务概览" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 实验中包含的六个分片任务。我们特意包含了涉及生成编程和自然语言的任务。对于每个任务，展示了说明性的完全指定指令及其分片对应物。我们基于高质量数据集(指令来源)对90-120条指令进行了分片，重新利用现有评估。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>任务说明：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base text-gray-700">
+                  <div>
+                    <strong class="text-blue-700">代码任务:</strong>
+                    <p>助手必须帮助用户用Python编程语言编写函数。原始指令来自HumanEval和LiveCodeBench数据集。</p>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">数据库任务:</strong>
+                    <p>助手提供SQL数据库的模式和自然语言用户查询，必须生成从数据库检索请求信息的SQL查询。</p>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">动作任务:</strong>
+                    <p>助手提供一组API模式和使用API的用户指令，必须生成匹配用户请求的程序化API命令。</p>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">数学任务:</strong>
+                    <p>助手提供基础数学文字问题，必须执行一系列使用基本算术运算的计算以达到数值答案。</p>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">数据到文本任务:</strong>
+                    <p>助手提供表格数据和几个相关元数据元素，必须生成描述基础数据的标题(自然语言句子)。</p>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">摘要任务:</strong>
+                    <p>助手接收约二十个文档的语料库和用户查询，必须生成带有引用的摘要，基于文档解决查询。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验规模与参数</h3>
+          <p class="mb-4">
+            主要模拟实验利用了六个任务中分片的全部指令(总共600条指令)，并在三种类型中模拟对话：FULL、CONCAT和SHARDED。实验涉及15个LLM，对每个模型和模拟类型对运行N=10次模拟，总共超过200,000次模拟对话。
+          </p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">评估指标</h4>
+            <p class="mb-3">基于从指令运行N次模拟获得的分数集S={S_i}_{i=1}^N，定义了三个指标：</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-4 rounded border border-gray-200">
+                <h5 class="font-bold text-blue-700 mb-2">平均性能(\(\overline{P}\))</h5>
+                <p class="text-sm">\(\overline{P}=\sum_{i=1}^{N}S_i/N\)</p>
+                <p class="text-xs text-gray-600 mt-2">给定模拟类型中模型在指令上平均分数的无偏估计</p>
+              </div>
+              <div class="bg-white p-4 rounded border border-gray-200">
+                <h5 class="font-bold text-green-700 mb-2">能力(\(A^{90}\))</h5>
+                <p class="text-sm">\(A^{90}={\rm percentile}_{90}(S)\)</p>
+                <p class="text-xs text-gray-600 mt-2">模型在给定指令上第90百分位分数的估计，最佳情况度量</p>
+              </div>
+              <div class="bg-white p-4 rounded border border-gray-200">
+                <h5 class="font-bold text-red-700 mb-2">不可靠性(\(U_{10}^{90}\))</h5>
+                <p class="text-sm">\(U_{10}^{90}={\rm percentile}_{90}(S)-{\rm percentile}_{10}(S)\)</p>
+                <p class="text-xs text-gray-600 mt-2">第90和第10百分位估计之间的百分位范围估计，测量由于LLM随机性导致的响应质量下降水平</p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">主要实验结果</h3>
+          
+          <!-- 技术细节：表1 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2 text-blue-500"></i>表1: LLM在六个任务上的平均性能(\(\overline{P}\))
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原表 1: LLM在六个任务上的平均性能(\(\overline{P}\))
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 原表占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/table1.png" alt="论文表1: LLM在六个任务上的平均性能" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原表图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原表图注:</strong> LLM在六个任务(代码、数据库、动作、数据到文本、数学和摘要)上的平均性能(\(\overline{P}\))。对于每个任务，在三种设置中模拟对话：FULL、Concat和Sharded。模型按任务平均Full分数升序排序。背景颜色表示与Full设置相比的下降水平。最后两列平均了Concat和Sharded与Full相比在六个任务上的性能下降百分比。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>关键发现：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>普遍性能下降:</strong> 每个模型在每个任务上比较FULL和SHARDED性能时都看到其性能下降，平均下降39%</li>
+                  <li><strong>模型无关性:</strong> 性能更好的模型(Claude 3.7 Sonnet, Gemini 2.5, GPT-4.1)与较小模型(Llama3.1-8B-Instruct, Phi-4)同样在对话中迷路</li>
+                  <li><strong>额外测试时间计算无效:</strong> 包含在实验中的两个推理模型(o3, Deepseek-R1)以与非推理模型类似的方式恶化</li>
+                  <li><strong>任务特异性:</strong> 模型的多轮能力在不同领域不是均匀的，验证了在各种任务上基准测试模型以调查模型能力的重要性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">能力与可靠性分析</h3>
+          <p class="mb-4">
+            结果进一步分析了能力与可靠性之间的关系：
+          </p>
+          
+          <!-- 技术细节：图6 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2 text-blue-500"></i>技术细节：图6 - 能力与可靠性分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: 能力与可靠性分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: 能力与可靠性分析" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (a)当叠加在箱线图可视化上时，能力和不可靠性概念的视觉介绍，(b)基于对15个LLM的实验模拟的可靠性结果，(c)渐进分片实验的结果总结，指令在逐渐更大的分片集中分片(从1到8个分片)。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>关键发现：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>单轮设置:</strong> 在单轮设置中，更有能力的模型往往更可靠</li>
+                  <li><strong>多轮设置:</strong> 在分片设置中，模型能力在完整和分片设置之间以不显著的方式下降，平均下降16%。另一方面，不可靠性飙升，平均增加112%(超过翻倍)</li>
+                  <li><strong>可靠性问题:</strong> 在测试的所有模型中，多轮不完整设置都表现出非常高的不可靠性，对于固定指令，最佳和最差模拟运行之间的性能平均下降50个百分点</li>
+                  <li><strong>细化定义:</strong> 这细化了<em>对话中迷路</em>现象的定义：当比较单轮和多轮设置时，发现大的性能下降(\(\overline{P}\))在很大程度上是由于模型不可靠性(U)增加，而不是能力(A)损失</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">渐进分片实验</h3>
+          <p class="mb-4">
+            为了探索分片粒度与对话中迷路现象之间的关系，作者进行了渐进分片实验：
+          </p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200 mb-6">
+            <h5 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>实验发现
+            </h5>
+            <p class="text-gray-700">
+              渐进分片实验表明，<strong>任何涉及不完整性并发生在两轮或更多轮中的对话都会导致模型在对话中迷路</strong>。对于用户，指定信息的粒度不会主要影响可靠性：一次性提供所有信息(1分片)是提高可靠性的唯一有效方法。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            本研究对LLM的单轮和多轮对话进行了大规模模拟，发现在固定任务集上，LLM性能在多轮不完整设置中显著下降。LLM在对话中迷路，这表现为可靠性显著下降，因为模型难以在轮次间保持上下文，做出过早假设，并过度依赖其先前的响应。
+          </p>
+          <p class="mb-4">
+            额外实验揭示，适用于更简单设置的已知修复(如代理式连接或生成期间降低温度)在多轮设置中无效，作者呼吁LLM构建者优先考虑多轮设置中模型的可靠性。
+          </p>
+          <p class="mb-4">
+            本研究的主要贡献包括：
+          </p>
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>提出了分片指令方法，用于评估LLM在多轮不完整对话中的性能</li>
+            <li>量化了LLM在多轮对话中的性能下降(平均39%)</li>
+            <li>将性能下降分解为能力损失和可靠性下降两个维度</li>
+            <li>识别了导致LLM在对话中迷路的具体行为模式</li>
+            <li>验证了常用修复方法在多轮对话中的局限性</li>
+          </ul>
+          <p>
+            这些发现强调了LLM在实际使用方式与模型评估方式之间的差距，为未来LLM开发提供了重要指导。
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      const observerOptions = {
+        threshold: 0.5
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const performanceBars = entry.target.querySelectorAll('.performance-bar');
+            performanceBars.forEach(bar => {
+              const width = bar.getAttribute('data-width');
+              setTimeout(() => {
+                bar.style.width = width;
+              }, 200);
+            });
+          }
+        });
+      }, observerOptions);
+      
+      // 观察所有包含性能条的部分
+      document.querySelectorAll('.performance-section').forEach(section => {
+        observer.observe(section);
+      });
+    });
+  </script>
+</body>
+</html>

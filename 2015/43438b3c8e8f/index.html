@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Large-scale cluster management at Google with Borg</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Large-scale cluster management at Google with Borg
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Abhishek Verma, Luis Pedrosa, Madhukar Korupolu, David Oppenheimer, Eric Tune, John Wilkes</div>
+                <div class="text-sm text-gray-600 mt-1">Google Inc.</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>EuroSys 2015</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">集群管理</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">资源调度</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">容器化</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">大规模系统</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献高亮框 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-6">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li>设计并实现了Borg系统，管理Google数十万台机器的集群</li>
+            <li>通过混合调度策略和资源回收实现高资源利用率</li>
+            <li>提供任务级性能隔离，支持延迟敏感和批处理任务的混合部署</li>
+            <li>基于十年运营经验总结了大规模集群管理的实践经验</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">Google的Borg系统是一个集群管理器，在多个集群中运行数十万个作业，每个集群包含多达数万台机器。它通过结合准入控制、高效任务打包、超量分配和进程级性能隔离来实现高利用率。</p>
+          <p class="mb-4">Borg通过运行时特性和调度策略支持高可用性应用，这些特性最小化故障恢复时间，并减少相关故障的概率。Borg通过提供声明式作业规范语言、名称服务集成、实时作业监控以及分析和模拟系统行为的工具，简化了用户的工作。</p>
+          <p>论文作者总结了Borg系统架构和特性、重要的设计决策、对其一些策略决策的定量分析，以及对十年运营经验教训的定性检查。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">Google需要管理大规模的计算集群，这些集群运行着从用户面向的服务（如Gmail、Google Docs和网页搜索）到内部基础设施服务（如BigTable）和批处理作业的各种工作负载。这些工作负载有不同的特性：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>长运行服务
+              </h4>
+              <p class="text-sm text-gray-700">应该"永不"停机，处理短时延敏感请求（几微秒到几百毫秒）</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-clock mr-2"></i>批处理作业
+              </h4>
+              <p class="text-sm text-gray-700">从几秒到几天完成，对短期性能波动不太敏感</p>
+            </div>
+          </div>
+          
+          <p class="mb-4">Borg的主要目标是：</p>
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>隐藏资源管理和故障处理的细节，让用户专注于应用开发</li>
+            <li>以高可靠性和可用性运行，并支持具有相同特性的应用</li>
+            <li>在数万台机器上有效运行工作负载</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">在大规模集群管理中，作者面临以下主要挑战：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 md:my-8">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-server mr-2"></i>规模与异构性
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>管理数万台机器的集群</li>
+                <li>处理异构的机器配置和性能</li>
+                <li>支持混合工作负载（服务和批处理）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>资源利用率
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>提高资源利用率以节省成本</li>
+                <li>处理用户资源过度请求的问题</li>
+                <li>平衡资源分配与实际使用</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>性能隔离
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>防止任务间的性能干扰</li>
+                <li>确保延迟敏感任务的响应时间</li>
+                <li>处理资源争用问题</li>
+              </ul>
+            </div>
+            
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 mb-3 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>容错与可用性
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>处理常态化的硬件和软件故障</li>
+                <li>最小化故障恢复时间</li>
+                <li>减少相关故障的概率</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">系统架构</h3>
+          <p class="mb-4">Borg系统由三个主要组件组成：</p>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - Borg高层架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: Borg高层架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: Borg高层架构图，展示Borgmaster、调度器和Borglet的组件关系" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Borg的高层架构。只显示了数千个工作节点中的一小部分。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>集中式控制:</strong> Borgmaster作为逻辑上集中的控制器管理整个集群</li>
+                  <li><strong>分布式代理:</strong> 每个机器上运行Borglet作为本地代理</li>
+                  <li><strong>高可用性:</strong> Borgmaster通过5个副本实现高可用性</li>
+                  <li><strong>调度分离:</strong> 调度器作为独立进程运行，提高可扩展性</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>Borgmaster使用Paxos协议实现状态一致性，每个cell有一个选举的主节点作为Paxos领导者和状态变更器。调度器使用可行性检查和评分机制来分配任务到机器。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择C++实现系统组件，使用Linux cgroups进行资源隔离，避免使用虚拟机以减少开销。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>使用分数缓存、等价类和宽松随机化等技术提高调度器性能，支持管理数万台机器的集群。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-crown mr-2"></i>Borgmaster
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>逻辑集中的控制器</li>
+                <li>5个副本实现高可用性</li>
+                <li>处理客户端RPC和状态管理</li>
+                <li>包含独立的调度器进程</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-server mr-2"></i>Borglet
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>每个机器上的本地代理</li>
+                <li>启动和停止任务</li>
+                <li>管理本地资源</li>
+                <li>报告机器状态</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-tasks mr-2"></i>调度器
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>独立进程处理任务分配</li>
+                <li>可行性检查和评分机制</li>
+                <li>支持优先级和抢占</li>
+                <li>优化资源打包效率</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">调度算法</h3>
+          <p class="mb-4">Borg调度器采用两阶段调度策略：</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-search mr-2"></i>可行性检查
+                </h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li>找到满足任务约束的机器</li>
+                  <li>检查是否有足够的可用资源</li>
+                  <li>考虑可抢占的低优先级任务资源</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-star mr-2"></i>评分阶段
+                </h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li>评估每个可行机器的"优劣"</li>
+                  <li>最小化被抢占任务的数量和优先级</li>
+                  <li>考虑数据局部性和故障域分布</li>
+                  <li>混合高低优先级任务以允许扩展</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">资源管理</h3>
+          <p class="mb-4">Borg采用精细粒度的资源管理策略：</p>
+          
+          <!-- 资源请求分布图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图8 - 资源请求分布
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 资源请求分布
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: CPU和内存请求分布的CDF图，显示没有明显的固定大小偏好" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 没有固定的容器大小适合大多数任务。CDF显示了样本单元中请求的CPU和内存分布。虽然没有一个值特别突出，但一些整数CPU核心大小稍微更受欢迎。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>精细粒度:</strong> 用户以毫核为单位请求CPU，以字节为单位请求内存和磁盘空间</li>
+                  <li><strong>无固定容器:</strong> 不强制使用固定大小的容器或虚拟机</li>
+                  <li><strong>多样化需求:</strong> 任务资源请求分布广泛，没有明显的"甜点"</li>
+                  <li><strong>独立维度:</strong> CPU和内存请求之间没有明显的相关性</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>数据来源: 15个Borg单元的实际工作负载</li>
+                      <li>资源维度: CPU和内存请求分布</li>
+                      <li>度量指标: 累积分布函数(CDF)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>任务资源需求高度多样化</li>
+                      <li>固定大小的容器会导致30-50%的资源浪费</li>
+                      <li>精细粒度资源请求提高资源利用率</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">资源回收</h3>
+          <p class="mb-4">Borg实现资源回收机制，估计任务实际使用的资源并回收未使用的部分：</p>
+          
+          <!-- 资源回收效果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-recycle mr-2"></i>技术细节：图11 - 资源回收效果
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 11: 资源回收效果
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig11.png" alt="论文图11: 资源估计成功识别未使用资源的CDF图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 虚线显示了15个单元中任务CPU和内存使用量与请求(限制)的比率CDF。大多数任务使用的资源远少于其限制，尽管有些任务使用的CPU比请求的多。实线显示了CPU和内存保留与限制的比率CDF；这些更接近100%。直线是资源估计过程的产物。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>资源估计:</strong> Borgmaster每几秒计算一次任务的保留值(预测使用量)</li>
+                  <li><strong>安全边际:</strong> 保留值设置为实际使用量加上安全边际</li>
+                  <li><strong>调度决策:</strong> 生产任务使用限制进行调度，非生产任务使用保留值</li>
+                  <li><strong>资源超售:</strong> 允许在保留资源上调度低优先级任务</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>初始保留设置为资源请求(限制)，经过300秒启动瞬态后，缓慢衰减到实际使用量加上安全边际。如果使用量超过保留值，则快速增加保留。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>使用Borglet捕获的细粒度使用信息进行资源预测，为批处理作业回收未使用的资源。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>通过调整安全边际参数平衡资源回收量和内存不足事件的风险。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">评估方法</h3>
+          <p class="mb-4">作者使用"单元压缩"作为评估指标：给定一个工作负载，找出可以容纳它的最小单元大小，通过反复从头重新打包工作负载来确保不会陷入不幸的配置。</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">评估设置</h4>
+            <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+              <li><strong>数据来源:</strong> 使用Fauxmaster进行高保真模拟，数据来自实际生产单元</li>
+              <li><strong>时间点:</strong> 2014年10月1日星期三14:00 PDT的Borg检查点</li>
+              <li><strong>样本选择:</strong> 15个Borg单元，排除特殊用途、测试和小型单元</li>
+              <li><strong>实验重复:</strong> 每个单元重复11次，使用不同的随机数种子</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">关键实验结果</h3>
+          
+          <!-- 单元共享效益 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-share-alt mr-2"></i>技术细节：图5 - 单元共享效益
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: 单元共享效益
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: 将生产和非生产工作分离到不同单元需要更多机器" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 将生产和非生产工作分离到不同单元需要更多机器。两个图表显示了如果将生产和非生产工作负载发送到单独的单元，将需要多少额外的机器，表示为在单个单元中运行工作负载所需的最小机器数的百分比。在此图和后续的CDF图中，每个单元显示的值来自我们的实验试验产生的不同单元大小的90%分位数；误差条显示了试验中的完整值范围。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>资源共享:</strong> 98%的共享Borg单元机器同时运行生产和非生产任务</li>
+                  <li><strong>资源回收:</strong> 生产作业通常保留资源以处理罕见的工作负载峰值，但大部分时间不使用这些资源</li>
+                  <li><strong>效率提升:</strong> Borg回收未使用的资源来运行大部分非生产工作，减少总体机器需求</li>
+                  <li><strong>成本节约:</strong> 分离生产和非生产工作将需要中位数单元增加20-30%的机器</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-lg">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>样本: 15个Borg单元</li>
+                      <li>比较场景: 共享vs分离单元</li>
+                      <li>度量指标: 额外机器百分比</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>中位数单元需要20-30%更多机器</li>
+                      <li>资源共享显著降低成本</li>
+                      <li>资源池化提高整体利用率</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 大单元优势 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-expand-arrows-alt mr-2"></i>技术细节：图7 - 大单元优势
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 大单元优势
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 将单元细分为更小的单元需要更多机器" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 将单元细分为更小的单元需要更多机器。如果将特定单元划分为不同数量的小单元，将需要额外的机器(作为单单元情况的百分比)。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>资源碎片:</strong> 大单元减少资源碎片，允许更大计算任务的运行</li>
+                  <li><strong>划分成本:</strong> 将工作负载划分到多个小单元需要显著更多机器</li>
+                  <li><strong>规模经济:</strong> 大单元提供更好的资源池化和利用率</li>
+                  <li><strong>实际限制:</strong> 单元大小的限制主要来自容错考虑，而非可扩展性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">性能隔离效果</h3>
+          <p class="mb-4">作者评估了共享环境中的性能干扰问题：</p>
+          
+          <!-- 性能隔离图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-shield-alt mr-2"></i>技术细节：图13 - 性能隔离效果
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 13: 性能隔离效果
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig13.png" alt="论文图13: 调度延迟与负载的函数关系" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 调度延迟作为负载的函数。绘制了可运行线程必须等待超过1ms才能访问CPU的频率，作为机器繁忙程度的函数。在每对条形图中，延迟敏感任务在左侧，批处理任务在右侧。只有百分之几的时间线程必须等待超过5ms才能访问CPU(白色条形)；它们几乎不需要等待更长时间(深色条形)。数据来自2013年12月的一个代表性单元；误差条显示每日方差。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>应用类别:</strong> Borg任务有应用类别，最重要的是延迟敏感(LS)和批处理类别</li>
+                  <li><strong>优先级处理:</strong> 高优先级LS任务获得最佳处理，能够暂时使批处理任务饥饿几秒钟</li>
+                  <li><strong>资源类型:</strong> 区分可压缩资源(CPU周期、磁盘I/O带宽)和不可压缩资源(内存、磁盘空间)</li>
+                  <li><strong>控制机制:</strong> Borglet基于预测的未来使用量(生产任务)或内存压力(非生产任务)为容器分配内存</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>所有Borg任务在基于Linux cgroup的资源容器中运行，Borglet操纵容器设置。LS任务可以保留整个物理CPU核心，批处理任务允许在任何核心上运行，但相对于LS任务获得极小的调度器份额。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>使用标准Linux CPU调度器(CFS)并进行大量调优以支持低延迟和高利用率。CFS版本使用扩展的每个cgroup负载历史，允许LS任务抢占批处理任务，并在多个LS任务可运行时减少调度量子。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>Borglet动态调整贪婪LS任务的资源上限，以确保它们不会使批处理任务饥饿多分钟，在需要时选择性地应用CFS带宽控制。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">在过去十年中，几乎所有的Google集群工作负载都已切换到使用Borg。作者继续发展它，并将从中学到的经验应用到Kubernetes中。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">经验教训</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 md:my-8">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>需要改进的方面
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>作业分组限制:</strong> 作业作为任务的唯一分组机制过于限制</li>
+                <li><strong>IP地址管理:</strong> 每台机器一个IP地址使事情复杂化</li>
+                <li><strong>API复杂性:</strong> 为高级用户优化而牺牲了普通用户的易用性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>成功的设计
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>Allocs抽象:</strong> 催生了广泛使用的logsaver模式</li>
+                <li><strong>集群服务:</strong> 超越任务管理的完整集群服务</li>
+                <li><strong>内省能力:</strong> 向所有用户展示调试信息</li>
+                <li><strong>主节点设计:</strong> 作为分布式系统内核的主节点</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">对Kubernetes的影响</h3>
+          <p class="mb-4">从Borg运营中获得的经验教训直接影响了Kubernetes的设计：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>Kubernetes使用标签而不是作业作为主要分组机制</li>
+            <li>每个Pod和服务获得自己的IP地址，简化网络配置</li>
+            <li>Kubernetes复制了许多Borg的内省技术</li>
+            <li>API服务器作为核心，集群管理逻辑构建为小型可组合微服务</li>
+          </ul>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-6">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>系统影响
+            </h4>
+            <p class="text-sm text-gray-700">Borg代表了大规模集群管理的重要里程碑，其设计理念和经验教训对现代容器编排系统（如Kubernetes）产生了深远影响。通过十年的生产运营，Borg证明了集中式调度架构可以扩展到数万台机器，同时实现高资源利用率和任务性能隔离。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

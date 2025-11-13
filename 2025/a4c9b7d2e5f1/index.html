@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatBug: A Common Vulnerability of Aligned LLMs Induced by Chat Templates</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          ChatBug: A Common Vulnerability of Aligned LLMs Induced by Chat Templates
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Fengqing Jiang*, Zhangchen Xu*, Luyao Niu, Bill Yuchen Lin, Radha Poovendran</div>
+                <div class="text-sm text-gray-600 mt-1">University of Washington</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv:2406.12935v2 [cs.CR] 7 Jan 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">资源链接</strong>
+                <div class="space-y-2">
+                  <div>
+                    <a href="https://github.com/uw-nsl/ChatBug" class="text-blue-600 hover:text-blue-800 flex items-center">
+                      <i class="fab fa-github mr-2"></i> 代码仓库
+                    </a>
+                  </div>
+                  <div>
+                    <a href="https://arxiv.org/abs/2406.12935" class="text-blue-600 hover:text-blue-800 flex items-center">
+                      <i class="fas fa-external-link-alt mr-2"></i> 扩展版本
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">LLM安全</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Chat模板</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">越狱攻击</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">对齐漏洞</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12 md:mb-16">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>识别了由聊天模板引入的通用漏洞ChatBug，影响对齐的大语言模型</li>
+          <li>提出了两种攻击方法：格式不匹配攻击和消息溢出攻击</li>
+          <li>在8个SOTA LLM上验证了ChatBug的严重性和普遍性</li>
+          <li>展示了ChatBug可以显著提升现有越狱攻击的成功率</li>
+          <li>评估了对抗训练等防御措施的有效性和性能权衡</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            大语言模型（LLMs）被期望能够遵循用户指令并进行有意义的对话。增强LLM指令遵循能力的标准技术通常使用根据预定义聊天模板结构化的数据进行微调。虽然聊天模板在优化LLM性能方面被证明是有效的，但它们对LLM安全对齐的影响尚未得到充分理解，这对于大规模安全部署LLM至关重要。
+          </p>
+          <p class="mb-4">
+            本文研究了聊天模板如何影响LLM的安全对齐。作者识别了一个由聊天模板引入的通用漏洞，命名为ChatBug。识别ChatBug的关键洞察是：聊天模板提供了需要LLM遵循的严格格式，但用户不一定需要遵循。因此，恶意用户可能利用其对聊天模板的了解，精心设计提示以绕过LLM的安全对齐。
+          </p>
+          <p>
+            作者研究了两种利用ChatBug漏洞的攻击，并证明了多种现有攻击的成功可以归因于ChatBug漏洞。研究结果表明，恶意用户可以成功利用八个SOTA LLM的ChatBug漏洞，有效引发这些模型产生非预期的响应。此外，作者还展示了现有越狱攻击可以利用ChatBug来提高其攻击成功率。最后，作者研究了ChatBug的潜在对策，结果表明虽然对抗训练可以有效缓解ChatBug漏洞，但受害者模型会遭受显著的性能下降，这突显了安全对齐与有用性之间的权衡。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">大语言模型与对话代理</h3>
+          <p class="mb-4">
+            大语言模型（LLMs）如GPT-4和Llama-3越来越多地被用于赋能对话代理。在与用户交互过程中，LLMs需要遵循用户指令并以有意义的方式进行对话。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">指令调优与聊天模板</h3>
+          <p class="mb-4">
+            增强指令遵循能力的标准技术包括指令调优和偏好调优。这些技术的常见实践是使用聊天模板来结构化数据。聊天模板定义了将对话表示为令牌序列的格式，指定了对话中涉及的角色和相关的消息。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>ChatML模板示例
+            </h5>
+            <div class="bg-white p-4 rounded border font-mono text-sm">
+              <div class="text-gray-600">用户: &lt;|im_start|> user</div>
+              <div class="ml-4">How are you &lt;|im_end|></div>
+              <div class="text-gray-600 mt-2">模型: &lt;|im_start|> assistant</div>
+              <div class="ml-4">I am doing well! &lt;|im_end|></div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">安全对齐的重要性</h3>
+          <p class="mb-4">
+            除了指令遵循能力外，LLMs还需要生成与人类价值观一致的回答。研究表明，聊天模板可以被用来缓解提示注入攻击，这是滥用LLM的主要威胁之一。然而，尽管聊天模板的有效性，对聊天模板如何影响LLM安全对齐的深入分析却被忽视了。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">ChatBug漏洞的识别</h3>
+          <p class="mb-4">
+            作者识别了一个由聊天模板引入的通用漏洞，命名为ChatBug。恶意用户可以利用此漏洞从LLMs中引发有害响应。关键洞察是：聊天模板预定义的严格格式需要LLMs遵循，但用户不一定需要遵循这些格式。
+          </p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h5 class="font-semibold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心洞察
+            </h5>
+            <p class="text-gray-700">
+              聊天模板预定义的严格格式需要LLMs遵循，但恶意用户不一定需要遵循这些格式。这种不对称性导致了ChatBug漏洞。
+            </p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">攻击假设</h3>
+          <p class="mb-4">
+            任何了解聊天模板知识的恶意用户都可以利用ChatBug漏洞。这个假设并不严格，特别是对于开源模型，其聊天模板通常是公开可用的。利用此漏洞不需要对受害者模型的白盒或灰盒访问。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">现有攻击的统一视角</h3>
+          <p class="mb-4">
+            作者发现多个现有攻击（如GCG、Vega等人的攻击、Andriushchenko等人的攻击）的成功都可以归因于ChatBug漏洞，尽管它们采用了看似不同的攻击策略。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">攻击方法概述</h3>
+          <p class="mb-6">
+            作者提出了两种利用ChatBug漏洞的攻击方法：格式不匹配攻击和消息溢出攻击。这些攻击通过篡改提示来利用ChatBug漏洞。
+          </p>
+          
+          <!-- 技术细节：攻击方法 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：攻击方法
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 格式不匹配攻击 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-code mr-2"></i>格式不匹配攻击
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-blue-700">攻击描述:</strong>
+                    <p>恶意用户修改或省略格式所需的某些令牌（例如特殊控制令牌）。结果查询可以表示为：</p>
+                    <div class="bg-white p-3 rounded border font-mono text-sm mt-2">
+                      x' = b' ⊕ r₁' ⊕ m ⊕ e' ⊕ b' ⊕ r₂'
+                    </div>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">攻击原理:</strong>
+                    <p>聊天模板指定的格式对用户来说不是强制性的。由于许多LLM可能不验证用户查询是否匹配聊天模板所需的格式，这些修改可能导致对受害者LLM输入查询的不同解释，从而产生有害或非预期的响应。</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 消息溢出攻击 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-stream mr-2"></i>消息溢出攻击
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">攻击描述:</strong>
+                    <p>恶意用户的消息超出其自身的EOT令牌和角色控制令牌r₂。这种溢出是一个短令牌序列，表示期望的有害响应的开头。形式上，攻击可以表示为：</p>
+                    <div class="bg-white p-3 rounded border font-mono text-sm mt-2">
+                      x' = b ⊕ r₁ ⊕ m ⊕ e ⊕ b ⊕ r₂ ⊕ s
+                    </div>
+                    <p class="mt-2">其中s是来自恶意用户的溢出消息。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">攻击原理:</strong>
+                    <p>受害者LLM被诱骗基于其自回归生成能力完成有害响应，而不是继续以其指定角色与用户对话。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 原图1：攻击示意图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: 攻击示意图
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: 格式不匹配攻击和消息溢出攻击如何利用ChatBug的示意图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 此图说明了格式不匹配攻击和消息溢出攻击如何利用ChatBug。格式不匹配攻击改变默认聊天格式以绕过LLM的安全对齐。消息溢出攻击将短令牌序列插入到对齐LLM保留的字段中以绕过安全对齐。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">攻击设置</h3>
+          <p class="mb-4">
+            作者考虑了六种攻击设置，其中格式不匹配攻击和消息溢出攻击利用ChatBug引发受害者LLM的非预期行为：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h5 class="font-semibold text-gray-700 mb-2">格式不匹配攻击</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li><strong>Mismatch-∅</strong>: 移除聊天格式中的所有特殊控制令牌</li>
+                <li><strong>Mismatch-C</strong>: 用OpenAI开发的复杂模板ChatML替换默认聊天模板</li>
+                <li><strong>Mismatch-V</strong>: 用Vicuna使用的简单模板替换默认聊天模板</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h5 class="font-semibold text-gray-700 mb-2">消息溢出攻击</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li><strong>Overflow-S</strong>: 插入固定前缀"Sure, here is"作为期望响应</li>
+                <li><strong>Overflow-L</strong>: 为每个输入查询插入特定定制的前缀</li>
+                <li><strong>Overflow-FS</strong>: 使用未经审查的LLM自动生成多个肯定语义的前缀</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h5 class="font-semibold text-gray-700 mb-3">受害者模型</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li><strong>开源模型:</strong> Vicuna, Mistral, Llama-2, Llama-3</li>
+                <li><strong>闭源模型:</strong> GPT-3.5, Gemini, Claude-2.1, Claude-3</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h5 class="font-semibold text-gray-700 mb-3">评估指标</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li><strong>ASR-R:</strong> 拒绝响应匹配的攻击成功率</li>
+                <li><strong>ASR-M:</strong> 主持人评估的攻击成功率</li>
+                <li><strong>MT-Bench:</strong> 多轮对话和指令遵循能力评估</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">主要实验结果</h3>
+          <p class="mb-6">
+            作者在八个LLM上评估了ChatBug漏洞的严重性，包括开源和闭源模型。实验结果表明，利用ChatBug漏洞可以有效绕过所有受害者LLM的安全对齐。
+          </p>
+          
+          <!-- 原图2：概率比演化 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 2: 概率比演化
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: 概率比演化图，显示格式不匹配攻击显著增加了生成期望有害响应的概率" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 此图显示了概率比P_M(·|x̂_1:n)/P_M(·|x_1:n)在每个解码步骤n（即响应令牌数）上的演化，结果在50个指令上平均。格式不匹配攻击显著增加了生成期望有害响应的概率。
+            </div>
+          </div>
+          
+          <!-- 原图3：消息溢出攻击效果 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 3: 消息溢出攻击效果
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图占位符 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: 消息溢出攻击效果图，显示随着溢出令牌数量增加，生成期望有害响应的概率增加" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 此图显示了当溢出令牌数量从0变化到9时，生成期望有害响应的概率，结果在50个指令上平均。注意当溢出令牌数量为零时，用户不发起消息溢出攻击。结果表明，随着用户溢出更多令牌，生成期望有害响应的概率增加。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">开源模型攻击成功率</h3>
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">攻击方法</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">Vicuna</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">Mistral</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">Llama-2</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">Llama-3</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-blue-50">
+                  <td class="py-3 px-4 border-b font-medium">Direct Instruct</td>
+                  <td class="py-3 px-4 border-b text-center">5.6%</td>
+                  <td class="py-3 px-4 border-b text-center">24.0%</td>
+                  <td class="py-3 px-4 border-b text-center">0.4%</td>
+                  <td class="py-3 px-4 border-b text-center">1.1%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">Mismatch-∅</td>
+                  <td class="py-3 px-4 border-b text-center">90.6%</td>
+                  <td class="py-3 px-4 border-b text-center">65.2%</td>
+                  <td class="py-3 px-4 border-b text-center">17.1%</td>
+                  <td class="py-3 px-4 border-b text-center">65.4%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">Overflow-S</td>
+                  <td class="py-3 px-4 border-b text-center">98.5%</td>
+                  <td class="py-3 px-4 border-b text-center">89.8%</td>
+                  <td class="py-3 px-4 border-b text-center">46.0%</td>
+                  <td class="py-3 px-4 border-b text-center">92.1%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">Overflow-FS</td>
+                  <td class="py-3 px-4 border-b text-center">98.8%</td>
+                  <td class="py-3 px-4 border-b text-center">96.2%</td>
+                  <td class="py-3 px-4 border-b text-center">51.0%</td>
+                  <td class="py-3 px-4 border-b text-center">100.0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">ChatBug提升越狱攻击</h3>
+          <p class="mb-4">
+            作者展示了ChatBug可以显著提升三种SOTA越狱攻击（GCG、GPTFuzzer和ArtPrompt）的攻击成功率。
+          </p>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">攻击 + 增强器</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">ASR-R</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">ASR-M</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-blue-50">
+                  <td class="py-3 px-4 border-b font-medium">GCG</td>
+                  <td class="py-3 px-4 border-b text-center">41.5%</td>
+                  <td class="py-3 px-4 border-b text-center">32.9%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">GCG + Mismatch-∅</td>
+                  <td class="py-3 px-4 border-b text-center">55.4%</td>
+                  <td class="py-3 px-4 border-b text-center">51.2%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">GCG + Overflow-S</td>
+                  <td class="py-3 px-4 border-b text-center">78.7%</td>
+                  <td class="py-3 px-4 border-b text-center">68.3%</td>
+                </tr>
+                <tr class="bg-blue-50">
+                  <td class="py-3 px-4 border-b font-medium">GPTFuzzer</td>
+                  <td class="py-3 px-4 border-b text-center">9.0%</td>
+                  <td class="py-3 px-4 border-b text-center">7.3%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">GPTFuzzer + Mismatch-∅</td>
+                  <td class="py-3 px-4 border-b text-center">99.2%</td>
+                  <td class="py-3 px-4 border-b text-center">83.3%</td>
+                </tr>
+                <tr class="bg-blue-50">
+                  <td class="py-3 px-4 border-b font-medium">ArtPrompt</td>
+                  <td class="py-3 px-4 border-b text-center">73.1%</td>
+                  <td class="py-3 px-4 border-b text-center">5.8%</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">ArtPrompt + Mismatch-∅</td>
+                  <td class="py-3 px-4 border-b text-center">100.0%</td>
+                  <td class="py-3 px-4 border-b text-center">94.0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">防御措施评估</h3>
+          <p class="mb-4">
+            作者评估了三种防御措施对ChatBug漏洞的有效性：Self-Reminder、SafeDecoding和Adversarial Training。
+          </p>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">防御措施</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">ASR-R</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">ASR-M</th>
+                  <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">MT-Bench</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-blue-50">
+                  <td class="py-3 px-4 border-b font-medium">无防御</td>
+                  <td class="py-3 px-4 border-b text-center">90.6%</td>
+                  <td class="py-3 px-4 border-b text-center">40.4%</td>
+                  <td class="py-3 px-4 border-b text-center">6.28</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">Self-Reminder</td>
+                  <td class="py-3 px-4 border-b text-center">23.3%</td>
+                  <td class="py-3 px-4 border-b text-center">16.3%</td>
+                  <td class="py-3 px-4 border-b text-center">6.07</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">SafeDecoding</td>
+                  <td class="py-3 px-4 border-b text-center">75.4%</td>
+                  <td class="py-3 px-4 border-b text-center">55.0%</td>
+                  <td class="py-3 px-4 border-b text-center">5.93</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">对抗训练 (5轮)</td>
+                  <td class="py-3 px-4 border-b text-center">1.3%</td>
+                  <td class="py-3 px-4 border-b text-center">2.6%</td>
+                  <td class="py-3 px-4 border-b text-center">6.15</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 border-b font-medium">对抗训练 (20轮)</td>
+                  <td class="py-3 px-4 border-b text-center">0.0%</td>
+                  <td class="py-3 px-4 border-b text-center">0.0%</td>
+                  <td class="py-3 px-4 border-b text-center">6.02</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-balance-scale mr-2"></i>安全与性能的权衡
+            </h5>
+            <p class="text-gray-700">
+              实验结果表明，虽然对抗训练可以有效缓解ChatBug漏洞，但其有效性是以显著的性能下降为代价的——MT-Bench分数从6.28（相当于Llama-2-70b-chat性能）下降到6.02（低于Llama-2-7b-chat性能）。这突显了在LLM未来开发中需要仔细平衡安全对齐与有用性之间的权衡。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">主要贡献总结</h3>
+          <p class="mb-4">
+            本文识别了一个由指令调优期间使用的聊天模板引入的通用漏洞ChatBug。作者开发了两种攻击（格式不匹配攻击和消息溢出攻击）来利用ChatBug漏洞。通过证明恶意用户可以有效地从八个SOTA对齐LLM中引发非预期行为，评估了ChatBug漏洞的严重性。作者进一步证明了越狱攻击可以通过利用ChatBug漏洞显著提高其攻击成功率。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">防御措施评估</h3>
+          <p class="mb-4">
+            作者研究了缓解ChatBug的潜在技术。实验结果表明，虽然对抗训练可以有效缓解ChatBug漏洞，但它是以模型性能下降为代价的，这突显了指令调优期间安全性与有用性之间的关键权衡。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">未来研究方向</h3>
+          <p class="mb-4">
+            未来的工作将专注于这种权衡。作者旨在开发新的指令调优方法来平衡这种权衡。
+          </p>
+          
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>局限性与伦理声明
+            </h4>
+            <p class="text-gray-700 mb-3">
+              除了Self-Reminder、SafeDecoding和Adversarial Training之外，针对作者识别的漏洞的缓解技术需要进一步探索。作者认为基于检测的对策可以有效缓解ChatBug漏洞。然而，由于潜在的延迟问题和检测中的误报，这些方法在实践中较少部署，这可能会显著降低性能并阻碍用户体验。
+            </p>
+            <p class="text-gray-700">
+              本文的主要目标是推进LLM的安全对齐，以改善与用户的交互。作者旨在理解聊天模板如何影响LLM的安全对齐。本文识别的ChatBug漏洞揭示了从广泛使用的LLM指令调优继承的局限性。作者承认ChatBug漏洞可能被利用来滥用LLM。作者研究了针对ChatBug漏洞的潜在缓解技术。作者将向社区发布和传播实验中使用的代码和提示，旨在协助红队工作以进一步缓解该漏洞。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

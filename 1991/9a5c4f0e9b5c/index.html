@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic File Allocation in Disk Arrays</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Dynamic File Allocation in Disk Arrays
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Gerhard Weikum, Peter Zabback, and Peter Scheuermann</div>
+                <div class="text-sm text-gray-600 mt-1">ETH Zurich, Department of Computer Science</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>1991 ACM SIGMOD Conference</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/115790.115790</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">磁盘阵列</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">动态文件分配</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">负载均衡</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">数据布局</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">论文研究磁盘阵列中的数据布局问题。与以往工作不同，本文不假设所有文件同时分配，而是考虑动态文件创建。这使得布局问题变得更加复杂，因为每个布局决策都必须考虑当前分配状态以及磁盘和现有文件的访问频率。</p>
+          <p class="mb-4">作者提出了动态创建文件放置的启发式算法。这些算法在最大化磁盘阵列I/O性能和最小化部分重组工作之间提供了良好的折衷。</p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mt-6">
+            <h4 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-trophy mr-2"></i>核心贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>提出了动态文件分配问题的启发式算法</li>
+              <li>开发了确定文件最佳分散度的方法</li>
+              <li>实现了考虑负载均衡和重组成本的磁盘选择算法</li>
+              <li>在FIVE文件系统中实现了原型并进行了性能评估</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">磁盘阵列作为高性能I/O架构的一种有前景的方法，使用大量小磁盘而不是相对较少的大磁盘，并通过高带宽互连实现磁盘与内存之间的数据传输。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>I/O并行性优势
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>更多独立I/O可以并行处理</li>
+                <li>大I/O的响应时间显著减少</li>
+                <li>通过分散存储实现并行读取</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>软件控制磁盘阵列
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>多个磁盘可以协作处理单个数据请求</li>
+                <li>文件系统负责数据分布和磁盘负载均衡</li>
+                <li>文件放置可以根据应用需求定制</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">数据布局问题</h3>
+          <div class="space-y-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">分散单元类型</h4>
+              <p>作者选择文件作为分散单元，可以统一处理不同类型的对象，对数据库系统和操作系统文件系统都有用。</p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">分散度确定</h4>
+              <p>小文件最好完全分配在一个磁盘上，大文件的高分散度增加I/O并行性，但也增加最大寻道时间和旋转延迟。</p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">负载均衡</h4>
+              <p>智能选择磁盘对磁盘负载均衡至关重要，可以通过考虑磁盘和文件的访问频率统计来实现。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">动态数据布局问题比静态布局更加复杂，需要考虑当前分配状态、访问频率变化以及可能需要的部分重组。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6">
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-sync-alt mr-2"></i>动态分配
+              </h4>
+              <p class="text-sm text-gray-700">文件系统高度动态，需要处理文件创建、删除和扩展</p>
+            </div>
+            
+            <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-balance-scale mr-2"></i>负载均衡
+              </h4>
+              <p class="text-sm text-gray-700">需要在文件访问性能和磁盘负载均衡之间找到平衡</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-compress-arrows-alt mr-2"></i>重组成本
+              </h4>
+              <p class="text-sm text-gray-700">部分重组操作会产生额外磁盘负载，需要最小化</p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 rounded-r-lg mt-6">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>性能目标冲突
+            </h4>
+            <p class="text-gray-700">论文中提到的三个性能目标（最小化文件访问时间、均衡磁盘负载、最小化重组成本）在某些情况下可能相互冲突，需要找到合适的折衷方案。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">FIVE文件系统</h3>
+          <p class="mb-4">作者开发了实验性文件系统FIVE（File System with Adaptive Enhancements），基于五个核心概念：块、运行、扩展、区域和文件。</p>
+          
+          <!-- 图1：FIVE文件组织结构 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - FIVE文件组织结构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: FIVE文件组织结构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: FIVE文件组织结构" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> FIVE文件系统中的文件组织结构，展示了两个文件及其逻辑块编号的物理分配。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>块:</strong> 最小的数据管理单元，是磁盘和内存之间的最小传输单元</li>
+                  <li><strong>运行:</strong> 文件逻辑连续块的物理连续集合，位于一个磁盘上</li>
+                  <li><strong>扩展:</strong> 一个磁盘上一个或多个运行的物理连续集合</li>
+                  <li><strong>区域:</strong> 位于不同磁盘上的扩展集合，所有扩展具有相同的运行大小和每个扩展的运行数</li>
+                  <li><strong>文件:</strong> 存储为区域集合，创建时分配一个区域，增长时分配额外区域</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">区域参数:</strong>
+                    <ul class="list-disc list-inside mt-1">
+                      <li>宽度: 区域的扩展数</li>
+                      <li>深度: 区域的块数</li>
+                      <li>高度: 区域的运行数</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">逻辑到物理映射:</strong>
+                    <p>通过文件的区域表将逻辑块号转换为磁盘块地址，支持各种重组操作</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">分散度确定方法</h3>
+          <p class="mb-4">作者开发了一种方法来确定文件的最佳分散度，旨在最小化访问时间同时满足整个磁盘阵列的吞吐量要求。</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">分散度计算步骤</h4>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+              <li>基于文件估计平均请求大小R和并行度P，开发响应时间函数A(P)</li>
+              <li>求解dA/dP=0得到最优并行度P<sub>opt</sub></li>
+              <li>根据所需吞吐量τ<sup>0</sup>和整体平均请求大小R，确定最大平均并行度P<sub>max</sub></li>
+              <li>计算有效并行度P<sub>eff</sub> = min(P<sub>opt</sub>, P<sub>max</sub>, N)，其中N是磁盘数</li>
+              <li>确定区域深度d = ⌈R/P<sub>eff</sub>⌉</li>
+              <li>确定区域宽度w = min(N, ⌈S/d⌉)</li>
+              <li>确定区域高度h = ⌈S/(w×d)⌉</li>
+            </ol>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">磁盘选择算法</h3>
+          <p class="mb-4">作者提出了多种磁盘选择算法，用于选择新创建文件的放置磁盘，这些算法反映了第3节中描述的性能目标的不同优先级。</p>
+          
+          <!-- 图3：通用磁盘选择算法 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-code-branch mr-2"></i>技术细节：图3 - 通用磁盘选择算法
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 通用磁盘选择算法
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 通用磁盘选择算法" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 通用磁盘选择算法的伪代码描述。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>算法输入:</strong> 区域宽度w和扩展大小e</li>
+                  <li><strong>算法流程:</strong> 按偏好顺序处理热列表中的每个分配状态类</li>
+                  <li><strong>磁盘冷却:</strong> 如果选定磁盘的热度超过平均磁盘热度且存在较冷磁盘，则执行磁盘冷却算法</li>
+                  <li><strong>分配处理:</strong> 根据磁盘分配状态执行相应操作（直接分配、部分磁盘压缩或空间回收）</li>
+                  <li><strong>升级机制:</strong> 如果无法选择足够磁盘，则放宽区域扩展必须位于不同磁盘的约束</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">热平衡(HB)</h4>
+              <p class="text-sm text-gray-700">选择热列表中的前w个条目，不考虑它们的分配状态。强调负载平衡目标，可能执行更多重组工作。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">空间限制热平衡(SHB)</h4>
+              <p class="text-sm text-gray-700">只有在没有足够的CS或ES磁盘时才选择NES磁盘。尝试尽可能避免部分重组，牺牲负载平衡目标。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">成本最小化(CM)</h4>
+              <p class="text-sm text-gray-700">分三轮处理热列表，旨在最小化重组成本。在实现合理负载平衡的同时尽可能避免重组。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">部分重组构建块</h3>
+          <p class="mb-4">作者开发了两个部分重组的基本构建块：部分磁盘压缩和磁盘冷却。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2">部分磁盘压缩</h4>
+              <p class="text-sm text-gray-700">当磁盘有足够的空闲空间但没有足够的连续空间时执行。使用启发式算法最小化移动的数据量。</p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2">磁盘冷却</h4>
+              <p class="text-sm text-gray-700">当磁盘变得太热导致负载不平衡时执行。将一些数据移动到较冷的磁盘，基于扩展温度选择迁移候选。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">实验设置</h3>
+          <p class="mb-4">作者使用实现的FIVE文件系统、负载生成器和基于CSIM的模拟I/O系统进行性能评估。</p>
+          
+          <!-- 图6：模拟磁盘参数 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图6 - 模拟磁盘参数
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: 模拟磁盘参数
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: 模拟磁盘参数" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 实验中使用的12个（非同步）磁盘的参数。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>磁盘阵列: 12个非同步磁盘</li>
+                      <li>工作负载: 合成复杂对象场景</li>
+                      <li>数据库: 约2500个复杂对象，每个对应一个文件</li>
+                      <li>文件大小: 指数分布，平均400KB</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">工作负载分布:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>文件创建: 5%</li>
+                      <li>文件删除: 2.5%</li>
+                      <li>读取: 60%</li>
+                      <li>写入: 32.5%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">比较策略</h3>
+          <p class="mb-4">作者比较了以下动态文件分配策略：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">Vanilla (V)</h4>
+              <p class="text-sm text-gray-700">分配文件扩展以平衡磁盘的空间利用率，忽略负载平衡。</p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">Cool Vanilla (C-V)</h4>
+              <p class="text-sm text-gray-700">V策略加上磁盘冷却算法。</p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">Simple Heat Balancing (HB)</h4>
+              <p class="text-sm text-gray-700">如第4.3节所述的热平衡策略。</p>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-bold text-gray-700 mb-2">Simple Cost Minimization (CM)</h4>
+              <p class="text-sm text-gray-700">如第4.3节所述的成本最小化策略。</p>
+            </div>
+          </div>
+          
+          <!-- 图7：热分布和负载平衡 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-pie mr-2"></i>技术细节：图7 - 热分布和负载平衡
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 热分布和负载平衡
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 热分布和负载平衡" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同策略的热分布和负载平衡数据。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>CM策略在高到达率下表现最佳</li>
+                      <li>HB策略过于激进，导致过多的部分磁盘压缩</li>
+                      <li>V策略在低到达率下表现良好，但在高到达率下响应时间急剧增加</li>
+                      <li>磁盘冷却对V策略有有益效果</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">负载平衡:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>CM策略实现了合理的负载平衡</li>
+                      <li>HB策略的负载平衡已经足够好，测量阶段从未超过磁盘冷却调用的不平衡阈值</li>
+                      <li>V策略在低到达率下受益于其空间平衡</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">性能结果</h3>
+          <p class="mb-4">主要观察结果总结如下：</p>
+          
+          <div class="space-y-4">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">CM策略优势</h4>
+              <p class="text-sm text-gray-700">在高到达率下，CM策略表现最佳，因为它实现了合理的负载平衡并尽可能避免重组。</p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2">HB策略问题</h4>
+              <p class="text-sm text-gray-700">HB策略过于激进，导致过多的部分磁盘压缩调用和高响应时间。</p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">V策略表现</h4>
+              <p class="text-sm text-gray-700">在低到达率下，V和C-V策略表现良好，因为负载不平衡尚未引起排队效应。但随着到达率增加，负载不平衡导致响应时间急剧增加。</p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2">重组成本</h4>
+              <p class="text-sm text-gray-700">部分磁盘压缩成本较高，移动了多达4400个块。在低到达率下，HB和CM策略执行部分磁盘压缩而没有获得任何好处。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">论文研究了磁盘阵列中动态文件分配问题，提出了基于文件系统FIVE的解决方案。作者开发了确定文件最佳分散度的方法和多种磁盘选择算法，并在模拟环境中进行了性能评估。</p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mt-6">
+            <h4 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要发现
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>成本最小化(CM)策略在高到达率下表现最佳</li>
+              <li>热平衡(HB)策略过于激进，导致过多的部分磁盘压缩</li>
+              <li>磁盘冷却对空间平衡策略有有益效果</li>
+              <li>部分磁盘压缩成本较高，应谨慎使用</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">未来工作</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">算法改进</h4>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>开发更智能的部分磁盘压缩算法</li>
+                <li>改进磁盘冷却的触发机制</li>
+                <li>优化重组成本估算</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">系统扩展</h4>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>支持更复杂的磁盘阵列配置</li>
+                <li>集成到实际文件系统中</li>
+                <li>考虑更多工作负载特征</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-6">
+            <h4 class="font-bold text-gray-700 mb-2">总结</h4>
+            <p class="text-gray-700">论文提出的动态文件分配方法为磁盘阵列中的数据布局问题提供了有效的解决方案。通过平衡文件访问性能、磁盘负载均衡和重组成本，CM策略在大多数情况下都能提供良好的性能表现。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

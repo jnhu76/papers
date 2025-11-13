@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B-Trees Are Back: Engineering Fast and Pageable Node Layouts</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          B-Trees Are Back: Engineering Fast and Pageable Node Layouts
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Marcus Müller, Lawrence Benson, Viktor Leis</div>
+                <div class="text-sm text-gray-600 mt-1">Technical University of Munich, Germany</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>2023</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">研究领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">B-Tree</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">索引优化</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">内存数据库</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">节点布局</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>系统评估了六种B-Tree节点布局优化技术</li>
+          <li>提出了一种自适应B-Tree，能够在运行时选择最佳节点布局</li>
+          <li>展示了优化后的B-Tree在性能和内存使用上可与纯内存结构竞争</li>
+          <li>将自适应B-Tree集成到多线程存储引擎中验证了系统级性能提升</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            大容量主内存和更大的数据集推动了混合存储系统的发展，这些系统大多数事务从内存中服务，但可以无缝过渡到闪存存储。在这样的系统中，首选的数据结构通常是具有可分页节点的B-Tree。
+          </p>
+          <p class="mb-4">
+            大多数学术B-Tree工作只考虑固定大小的记录，这使得它们不适合大多数实际应用。鉴于B-Tree的普及，令人惊讶的是，很少有可用的优化B-Tree实现和基准测试涵盖可变大小的记录。
+          </p>
+          <p class="mb-4">
+            在本文中，作者描述了一个高效的B-Tree实现，支持包含六种已知节点布局优化的可变大小记录。作者评估了每种优化，为未来的实现提供指导，并提出了一种优化的自适应布局，可以在许多工作负载中与纯内存结构竞争。
+          </p>
+          <p>
+            研究结果表明，经过良好设计的B-Tree可以高效处理内存内和内存外的工作负载。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">内存外与内存内索引</h3>
+          <p class="mb-4">
+            索引结构对数据库性能至关重要，几十年来，B-Tree一直主导着索引领域。随着主内存成本的下降，研究重点暂时从磁盘优化的B-Tree转向纯内存数据结构，如ART、HOT和Wormhole。
+          </p>
+          <p class="mb-4">
+            现在，随着廉价快速的闪存存储、停滞的主内存价格和不断增长的数据集，内存外索引结构再次变得相关。新一代数据库系统旨在提供与内存系统竞争的性能，同时为更大的工作集无缝过渡到闪存存储。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">对固定大小记录的狭隘关注</h3>
+          <p class="mb-4">
+            尽管B-Tree在数据库中普遍存在且历史悠久，但令人惊讶的是，关于高效B-Tree实现的详细指导并不容易获得。大量研究关注简单的B-Tree，其中值存储在节点的数组中。这些只适用于固定大小的键，明显排除了字符串。
+          </p>
+          <p class="mb-4">
+            字符串键在数据库工作负载中非常常见。对OLAP系统实际使用的研究发现，大约一半的值是字符串，其中许多不仅用作有效载荷，而且用作键。鉴于索引通常跨越多个键列，许多将包含至少一个字符串列，使得固定大小的结构不适用。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">缺少对基础知识的关注</h3>
+          <p class="mb-4">
+            令人惊讶的是，关于B-Tree内存性能的研究也普遍缺乏。大多数现代研究要么关注特殊的计算硬件，要么关注优化I/O。第一种包括利用持久内存和GPU的B-Tree。第二种主要由从磁盘到闪存的过渡推动。
+          </p>
+          <p class="mb-4">
+            然而，最简单的情况，即在商用硬件上B-Tree的内存性能，仍然被忽视。作者既提供一般建议，也提供特定条件下特定技术性能的详细信息。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-bug mr-2"></i>可变大小记录支持不足
+            </h4>
+            <p class="text-sm text-gray-700">
+              大多数B-Tree实现仅支持固定大小记录，而实际应用中字符串等可变大小键非常普遍。
+            </p>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2"></i>内存性能研究缺乏
+            </h4>
+            <p class="text-sm text-gray-700">
+              现代研究关注特殊硬件或I/O优化，而商用硬件上的B-Tree内存性能被忽视。
+            </p>
+          </div>
+          
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-memory mr-2"></i>缓存效率问题
+            </h4>
+            <p class="text-sm text-gray-700">
+              现代处理器受限于内存访问性能，需要优化节点在内存中的表示。
+            </p>
+          </div>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-balance-scale mr-2"></i>与纯内存结构的性能差距
+            </h4>
+            <p class="text-sm text-gray-700">
+              传统B-Tree在查找性能上比最先进的纯内存结构（如Wormhole）慢50%以上。
+            </p>
+          </div>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者的研究目标是通过优化节点布局来缩小B-Tree与纯内存结构之间的性能差距，同时保持B-Tree的分页能力，使其适用于混合存储系统。
+          </p>
+        </div>
+        
+        <!-- 图1：B-Tree与Wormhole的查找吞吐量对比 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-line mr-2"></i>技术细节：图1 - B-Tree与Wormhole的查找吞吐量对比
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: B-Tree与Wormhole的查找吞吐量对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: 传统B-Tree与Wormhole的查找吞吐量对比，显示B-Tree性能不足Wormhole的一半" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 传统B-Tree与最先进的纯内存Wormhole数据结构的查找吞吐量对比。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>性能差距:</strong> 传统B-Tree的查找性能比Wormhole低50%以上</li>
+                <li><strong>优化目标:</strong> 通过节点布局优化缩小这一性能差距</li>
+                <li><strong>研究意义:</strong> 展示了B-Tree在优化后可以与纯内存结构竞争的可能性</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">基础B-Tree设计</h3>
+          <p class="mb-4">
+            作者实现了一个支持可变大小记录的B+-Tree，使用分槽页面布局。每个节点由三部分组成：头部、槽和堆。头部包含元数据字段，堆作为可变大小条目和围栏键的碰撞分配器，槽数组和堆在相反方向上相互增长。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">评估的优化技术</h3>
+          <p class="mb-4">
+            作者评估了六种节点布局优化：前缀截断、头部、提示、指纹识别、半密集叶子和全密集叶子。前两种是常见的，已经使用了几十年，后两种是最近提出的。据作者所知，密集叶子从未在文献中讨论过，尽管类似的方法可能在实际系统中使用。
+          </p>
+        </div>
+        
+        <!-- 优化技术网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-scissors mr-2"></i>前缀截断
+            </h4>
+            <p class="text-sm text-gray-700">省略节点内所有键共享的围栏键前缀，节省空间并提高缓存利用率。</p>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-heading mr-2"></i>头部
+            </h4>
+            <p class="text-sm text-gray-700">在每个槽中存储键的前4字节副本，提高二进制搜索的缓存局部性。</p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-lightbulb mr-2"></i>提示
+            </h4>
+            <p class="text-sm text-gray-700">在节点头中存储均匀间隔槽的头部副本，减少后续二进制搜索的缓存未命中。</p>
+          </div>
+          
+          <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-fingerprint mr-2"></i>指纹识别
+            </h4>
+            <p class="text-sm text-gray-700">使用键的单字节哈希在未排序的叶子中高效定位记录的候选位置。</p>
+          </div>
+          
+          <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-layer-group mr-2"></i>半密集叶子
+            </h4>
+            <p class="text-sm text-gray-700">对于密集整数键，使用帧参考编码将键表示为偏移量，无需键比较。</p>
+          </div>
+          
+          <div class="tech-card bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+            <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-th-large mr-2"></i>全密集叶子
+            </h4>
+            <p class="text-sm text-gray-700">假设所有值大小相等，将值存储在数组中，无需额外间接寻址。</p>
+          </div>
+        </div>
+        
+        <!-- 图2：节点布局 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - 节点布局设计
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 分槽页面布局的节点结构
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 分槽页面布局的节点结构，显示头部、槽数组和堆的布局" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 具有分槽页面布局的节点（右），其头部（左）和一个槽（右上）。每个头部行是4字节。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>节点结构:</strong> 节点由头部、槽数组和堆三部分组成</li>
+                <li><strong>头部:</strong> 包含节点类型、计数、前缀长度等元数据</li>
+                <li><strong>槽数组:</strong> 存储指向堆中条目的偏移量、键长度和值长度</li>
+                <li><strong>堆:</strong> 作为可变大小条目的碰撞分配器</li>
+                <li><strong>内存布局:</strong> 槽数组和堆在相反方向上增长，最大化空间利用率</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">自适应B-Tree设计</h3>
+          <p class="mb-4">
+            基于实验结果，作者提出了一种自适应B-Tree，根据节点中存储的键和执行的操作类型，在运行时自动选择合适的叶子类型。考虑了三种叶子类型：带有提示数组的比较叶子、指纹识别叶子和全密集叶子。
+          </p>
+          <p class="mb-4">
+            自适应机制包括两个部分：键适应和操作适应。键适应在节点分裂和合并时执行，分析叶子中的键集。操作适应使用计数器跟踪扫描操作的相对频率，影响布局选择。
+          </p>
+        </div>
+        
+        <!-- 图12：叶子布局转换 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>技术细节：图12 - 叶子布局转换机制
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 12: 叶子布局转换
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig12.png" alt="论文图12: 自适应B-Tree中叶子布局之间的转换机制" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 自适应B-Tree中叶子布局之间的转换。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>转换机制:</strong> 自适应B-Tree在运行时根据键特性和操作频率自动选择最佳叶子布局</li>
+                <li><strong>键适应:</strong> 分析叶子中的键集，确定是否为字符串键或整数键</li>
+                <li><strong>操作适应:</strong> 使用计数器跟踪扫描操作的频率，影响布局选择</li>
+                <li><strong>布局选择:</strong> 在比较叶子、指纹识别叶子和全密集叶子之间动态选择</li>
+                <li><strong>转换触发:</strong> 在节点分裂、合并或计数器达到阈值时触发布局转换</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          <p class="mb-4">
+            作者在AMD Ryzen 9 7950X上进行了评估，频率提升禁用为4.5GHz。系统有32 KiB L1、1 MiB L2和32 MiB L3缓存，运行Linux 6.2.0。使用四种键集：平均62字节的URL、平均23字节的维基百科标题、32位密集整数和32位稀疏随机整数。
+          </p>
+          <p class="mb-4">
+            对于每种配置，首先插入90%的记录，然后在剩余的10%上进行插入基准测试。插入顺序是随机的。然后根据Zipfian分布（α=0.99）对选择的键运行500万次查找和扫描。
+          </p>
+        </div>
+        
+        <!-- 优化效果表格 -->
+        <div class="overflow-x-auto mb-8">
+          <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">优化技术</th>
+                <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">URLs</th>
+                <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">Wiki</th>
+                <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">稀疏整数</th>
+                <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">密集整数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4 border-b font-medium">前缀截断</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">+</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4 border-b font-medium">头部</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">+</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">++</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">++</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">++</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4 border-b font-medium">提示</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">+</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">+</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4 border-b font-medium">指纹识别</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">++</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">++</td>
+                <td class="py-3 px-4 border-b text-center text-red-600">-</td>
+                <td class="py-3 px-4 border-b text-center text-red-600">-</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4 border-b font-medium">密集叶子</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-gray-500">≈</td>
+                <td class="py-3 px-4 border-b text-center text-green-600">+++</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="text-sm text-gray-600 mt-2 text-center">表1：优化技术对查找性能的影响（+表示提升，-表示下降，≈表示无显著变化）</div>
+        </div>
+        
+        <!-- 图7：优化技术吞吐量提升 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>技术细节：图7 - 优化技术吞吐量提升
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 7: 前缀截断、头部和提示的吞吐量提升
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig7.png" alt="论文图7: 前缀截断、头部和提示三种优化技术的吞吐量提升对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 前缀截断、头部和提示的吞吐量提升。每种优化都应用于前一种之上。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>前缀截断:</strong> 对URL键集效果最明显，扫描操作受益最大</li>
+                <li><strong>头部:</strong> 对整数键集效果最显著，查找和插入吞吐量提升16-64%</li>
+                <li><strong>提示:</strong> 对整数键集效果最好，查找性能提升25-26%</li>
+                <li><strong>累积效果:</strong> 优化技术叠加使用可产生更大的性能提升</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">与内存结构的比较</h3>
+          <p class="mb-4">
+            作者将基线和自适应B-Tree与四种最先进的内存数据结构进行比较：ART、HOT、Wormhole和LITS。选择这些是因为它们支持可变大小键和扫描，并且有开源实现可用。
+          </p>
+        </div>
+        
+        <!-- 图15：与内存结构的吞吐量对比 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-balance-scale mr-2"></i>技术细节：图15 - 与内存结构的吞吐量对比
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 15: 与内存结构的吞吐量对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig15.png" alt="论文图15: 自适应B-Tree与纯内存结构的吞吐量对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 自适应B-Tree与纯内存结构的吞吐量对比。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>性能竞争:</strong> 自适应B-Tree在大多数工作负载中与纯内存结构竞争</li>
+                <li><strong>字符串键:</strong> 自适应B-Tree在URL和Wiki键集上接近或超过某些内存结构</li>
+                <li><strong>整数键:</strong> 自适应B-Tree在密集整数键上表现最佳，超过所有比较的内存结构</li>
+                <li><strong>扫描性能:</strong> 自适应B-Tree在扫描操作上表现优异，特别是对于字符串键</li>
+                <li><strong>内存使用:</strong> 自适应B-Tree在内存使用上通常比纯内存结构更高效</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">系统级评估</h3>
+          <p class="mb-4">
+            作者将自适应B-Tree集成到Umbra存储引擎中，替换其默认的B-Tree实现。在TPC-C基准测试上，自适应B-Tree比基线B-Tree快12%，比Wormhole快3%。在TPC-H基准测试上，自适应B-Tree比基线B-Tree快7%，比Wormhole快1%。
+          </p>
+          <p class="mb-4">
+            这些结果表明，经过优化的B-Tree可以在实际数据库系统中提供有竞争力的性能，同时保持可分页的优势。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者评估了六种B-Tree节点布局优化，并提出了自适应B-Tree，它根据键特性和操作模式在运行时选择最佳布局。实验结果表明，经过良好优化的B-Tree可以在许多工作负载中与最先进的纯内存结构竞争。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">主要发现</h3>
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>头部优化对整数键特别有效，查找吞吐量提升16-64%</li>
+            <li>指纹识别对字符串键效果最好，查找吞吐量提升高达2.5倍</li>
+            <li>密集叶子对密集整数键效果显著，查找吞吐量提升高达3.5倍</li>
+            <li>自适应B-Tree在大多数工作负载中与纯内存结构竞争</li>
+            <li>在系统级评估中，自适应B-Tree比基线B-Tree快7-12%</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">未来工作</h3>
+          <p class="mb-4">
+            未来的工作可以探索更复杂的自适应策略，考虑更多因素如工作负载变化、并发访问模式和硬件特性。此外，可以研究这些优化技术在分布式和持久内存环境中的应用。
+          </p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mt-6">
+            <p class="text-gray-700">
+              <strong>总结:</strong> 作者的研究表明，经过精心优化的B-Tree仍然是一个有竞争力的索引结构，特别是在需要支持可变大小记录和可分页节点的混合存储系统中。B-Tree的复兴为现代数据库系统提供了新的可能性。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incremental Bidirectional Typing via Order Maintenance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Incremental Bidirectional Typing via Order Maintenance
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Thomas J. Porter, Marisa Kirisame, Ivan Wei, Pavel Panchekha, Cyrus Omar</div>
+                <div class="text-sm text-gray-600 mt-1">University of Michigan, University of Utah</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>计算机科学领域论文</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">论文标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2504.08946v1</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">增量类型检查</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">双向类型系统</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">实时编程环境</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">顺序维护数据结构</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>提出了<strong>增量标记和注释λ演算（MALC）</strong>，支持细粒度程序编辑下的类型信息维护</li>
+          <li>设计了<strong>增量更新传播语义</strong>，通过小步动态传播类型更新，确保编辑不阻塞</li>
+          <li>实现了<strong>Malcom系统</strong>，利用顺序维护数据结构高效处理绑定关系更新</li>
+          <li>在大型合成程序上实现了<strong>275.96倍加速</strong>，相比从头重新分析</li>
+          <li>在Agda中机械化证明了系统的<strong>正确性、收敛性和终止性</strong></li>
+        </ul>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">现代编程环境越来越多地提供<strong>实时语义反馈</strong>，但传统编程语言实现通常设计用于批处理使用，难以满足实时编程环境的需求。</p>
+          <p class="mb-4">本文针对程序草图编辑过程中的<strong>实时类型信息维护</strong>问题，提出了一个形式化系统和高效实现。系统能够增量更新类型信息，包括类型错误标记以及每个表达式的期望类型和实际类型信息。</p>
+          <p class="mb-4">作者的主要贡献包括：</p>
+          <ul class="list-disc list-inside space-y-2 mb-4">
+            <li>基于标记λ演算（MLC）开发了<strong>标记和注释λ演算（MALC）</strong></li>
+            <li>设计了<strong>增量MALC</strong>，通过小步更新传播动态传播类型信息变更</li>
+            <li>实现了<strong>Malcom系统</strong>，利用顺序维护数据结构高效维护绑定指针</li>
+            <li>在Agda中机械化证明了系统的正确性、收敛性和终止性</li>
+            <li>在大型合成程序上实现了<strong>275.96倍加速</strong></li>
+          </ul>
+          <p>这项工作为实现大规模实时编程环境提供了理论基础和高效实现。</p>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实时编程环境的需求</h3>
+          <p class="mb-4">现代编程环境越来越多地提供<strong>实时语义反馈</strong>，即使在程序不完整或包含局部错误时也是如此。传统编程语言实现设计用于批处理使用，期望完整的程序，因此往往难以满足实时编程环境的需求。</p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术背景</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>双向类型系统
+              </h4>
+              <p class="text-sm text-gray-700">将类型检查分为分析判断Γ⊢e⇐τ（检查表达式e是否具有类型τ）和综合判断Γ⊢e⇒τ（从e推断类型），提供局部类型错误定位。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-code-branch mr-2"></i>渐进类型
+              </h4>
+              <p class="text-sm text-gray-700">允许类型检查混合类型和无类型代码，通过未知类型?和类型一致性关系处理类型不正确的程序。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-map-marker-alt mr-2"></i>标记λ演算（MLC）
+              </h4>
+              <p class="text-sm text-gray-700">结合双向类型和渐进类型，实现"完全类型错误定位和恢复"，在任何输入程序上都能定位类型错误。</p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-sort-amount-down mr-2"></i>顺序维护数据结构
+              </h4>
+              <p class="text-sm text-gray-700">支持快速元素创建和比较的有序集合，用于高效维护绑定指针和更新传播优先级。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">应用场景</h3>
+          <p class="mb-4">这项工作受到以下趋势的推动：</p>
+          <ul class="list-disc list-inside space-y-2 mb-4">
+            <li>组织中数百万行代码库（通常组织为"monorepos"）的日益普及</li>
+            <li>大规模科学和社会协作在共享实时编程环境中进行的愿景</li>
+            <li>支持数千参与者协作编辑单个"行星级"实时程序的未来编程模式</li>
+          </ul>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实时类型信息维护的挑战</h3>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-bolt mr-2"></i>核心约束
+            </h4>
+            <p class="text-gray-700">系统<strong>不能</strong>需要在编辑之间遍历整个程序草图（假设任意大），而应该能够以与可能受影响位置数量成比例的计算成本<strong>增量更新</strong>收集的类型信息。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-sync-alt mr-2 text-blue-500"></i>更新传播效率
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>最小化编辑被阻塞等待类型信息更新的情况</li>
+                <li>消除先前编辑引起的更新在后续编辑执行时回滚和重新计算的情况</li>
+                <li>允许更新以有限速度通过程序草图传播，即使有新编辑进入</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-link mr-2 text-green-500"></i>绑定关系维护
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>绑定结构在程序中创建非局部连接</li>
+                <li>绑定变更可能影响任意远处的变量类型</li>
+                <li>朴素实现需要大量子树遍历，成本与程序大小成线性关系</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有方法的局限性</h3>
+          <ul class="list-disc list-inside space-y-2 mb-4">
+            <li><strong>Hazelnut</strong>：仅能局部更新光标处的类型错误标记，对需要远程更改的编辑未定义</li>
+            <li><strong>Datalog-based方法</strong>：通用性强但受限于Datalog实现的增量更新算法，绑定结构更新可能产生线性时间惩罚</li>
+            <li><strong>属性文法方法</strong>：缺乏现代实现，难以适应复杂类型系统</li>
+            <li><strong>记忆化方法</strong>：变量绑定变更时仍需要遍历程序的大部分</li>
+          </ul>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">标记和注释λ演算（MALC）</h3>
+          <p class="mb-4">MALC是对MLC的扩展，支持增量类型信息维护：</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-3">MALC的关键特性</h4>
+            <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+              <li>使用<strong>布尔标记</strong>而非项构造器表示错误位置</li>
+              <li>每个项都使用<strong>可选的分析和综合类型</strong>进行注释</li>
+              <li>标记程序建模为没有分析类型的分析表达式</li>
+              <li>变量具有指示是否自由的标记，函数抽象和应用具有特定错误类型的标记</li>
+            </ul>
+          </div>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - MALC类型系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: MALC类型系统架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: MALC类型系统架构图，展示双向类型信息流和错误标记机制" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> MALC类型系统的双向信息流架构，展示分析类型从左向右流动，综合类型从右向左流动，以及错误标记的传播机制。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>双向信息流:</strong> 分析类型从上下文流向表达式，综合类型从表达式流向上下文</li>
+                  <li><strong>错误标记传播:</strong> 类型错误通过一致性标记在表达式间传播，确保错误准确定位</li>
+                  <li><strong>渐进类型恢复:</strong> 使用未知类型?从类型错误中恢复，允许类型检查继续执行</li>
+                  <li><strong>局部类型推断:</strong> 类型信息在语法树中局部传播，支持增量更新</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">标记规则:</strong>
+                    <p>MALC定义了相互递归的综合和分析标记规则，分别处理类型推断和类型检查场景。标记过程是完全函数，任何输入程序无论类型多么不正确都能被标记。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">一致性检查:</strong>
+                    <p>使用类型一致性关系而非严格类型相等，支持渐进类型。一致性检查通过标记传播错误信息。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">错误恢复:</strong>
+                    <p>在类型错误位置使用未知类型?，确保下游类型检查不会因单个错误而失败。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">增量MALC</h3>
+          <p class="mb-4">增量MALC通过小步更新传播动态维护类型信息：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-code-branch mr-2 text-purple-500"></i>脏位机制
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>类型附加<strong>脏位</strong>（*表示脏，•表示干净）</li>
+                <li>脏类型是更新传播前沿的成员</li>
+                <li>编辑操作在编辑位置创建初始脏位</li>
+                <li>更新传播步骤考虑前沿的脏类型，计算其局部影响</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-project-diagram mr-2 text-green-500"></i>更新传播
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>小步动态传播类型信息更新</li>
+                <li>编辑操作和更新可以并发交错</li>
+                <li>正确性在更新传播静止时确保</li>
+                <li>证明具有收敛性和终止性</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 增量更新流程图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图2 - 增量更新传播流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 增量更新传播流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 增量更新传播流程图，展示编辑操作如何触发脏位，以及更新如何通过程序传播" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 增量更新传播流程，展示用户编辑操作如何创建初始脏位，以及小步更新动态如何通过程序传播类型信息变更，直到达到静止状态。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>编辑触发:</strong> 用户编辑操作在编辑位置和程序绑定结构隐含的其他位置创建初始脏位</li>
+                  <li><strong>前沿管理:</strong> 更新传播前沿包含所有需要处理的脏类型，通过优先级队列管理</li>
+                  <li><strong>局部传播:</strong> 每个更新步骤考虑前沿的脏类型，计算其局部影响，并相应传播前沿</li>
+                  <li><strong>静止检测:</strong> 当更新传播前沿为空时，程序达到静止状态，类型信息正确</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">动作性能规则:</strong>
+                    <p>定义编辑操作如何修改程序结构并设置初始脏位。每个规则确保程序结构正确变更，同时维护良好形式不变式。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">更新传播规则:</strong>
+                    <p>定义类型信息如何通过程序传播。每个规则从前沿移除一个脏类型，可能添加新脏类型到前沿，确保向终止进展。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">绑定处理:</strong>
+                    <p>绑定相关操作在动作性能期间原子处理，不通过更新传播步骤更新，确保绑定变更的高效处理。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Malcom实现</h3>
+          <p class="mb-4">Malcom是增量MALC的高效OCaml实现，关键特性包括：</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2">顺序维护数据结构的应用</h4>
+            <p class="text-gray-700">Malcom使用<strong>顺序维护数据结构</strong>高效维护绑定指针和更新传播优先级，这是实现高性能的关键。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-3 rounded border border-gray-200 text-center">
+              <i class="fas fa-clock text-blue-500 text-2xl mb-2"></i>
+              <p class="text-sm font-medium">时间戳机制</p>
+              <p class="text-xs text-gray-600 mt-1">预排序和后排序时间戳支持快速 containment 测试</p>
+            </div>
+            <div class="bg-white p-3 rounded border border-gray-200 text-center">
+              <i class="fas fa-link text-green-500 text-2xl mb-2"></i>
+              <p class="text-sm font-medium">绑定指针</p>
+              <p class="text-xs text-gray-600 mt-1">变量指向绑定位置，绑定位置存储有序的绑定变量集合</p>
+            </div>
+            <div class="bg-white p-3 rounded border border-gray-200 text-center">
+              <i class="fas fa-sort-amount-down text-purple-500 text-2xl mb-2"></i>
+              <p class="text-sm font-medium">优先级队列</p>
+              <p class="text-xs text-gray-600 mt-1">基于时间戳的更新步骤优先级，最小化冗余计算</p>
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">绑定处理算法</h4>
+          <p class="mb-4">Malcom使用伸展树（splay trees）高效处理绑定关系变更：</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3">绑定插入算法</h5>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+              <li>使用全局变量名到绑定器映射查找变量的所有绑定器</li>
+              <li>找到包含变量的预排序时间戳最大的绑定器（最内层绑定器）</li>
+              <li>将外层绑定器的范围分割为三个段：仅在外层绑定器下的初始段、在新绑定器下的中间段、以及仅在外层绑定器下的最终段</li>
+              <li>中间段成为新绑定器的有序绑定变量集合</li>
+              <li>初始段和最终段连接成为外层绑定器的新绑定变量集合</li>
+            </ol>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3">绑定删除算法</h5>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+              <li>找到外层绑定器</li>
+              <li>在删除绑定器的预排序时间戳处分割其伸展树</li>
+              <li>两个半部分成为初始段和最终段</li>
+              <li>将初始段、最终段和删除绑定器的绑定变量集合连接</li>
+              <li>结果成为外层绑定器的新绑定变量集合</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">基准测试设计</h3>
+          <p class="mb-4">作者设计了一个合成编辑轨迹来测试Malcom的多个方面：</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-3">测试程序构造</h4>
+            <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+              <li>构建<strong>100个嵌套的归并排序算法副本</strong>，达到相当大的程序规模</li>
+              <li>每层包含split函数、merge函数和sort函数</li>
+              <li>每个辅助函数（merge和split）绑定到唯一的编号标识符</li>
+              <li>每个sort函数绑定到相同的标识符（mergesort）</li>
+              <li>每个sort实现随机选择范围内可用的split和merge副本</li>
+            </ul>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-eye-slash mr-2 text-purple-500"></i>阴影测试
+              </h4>
+              <p class="text-sm text-gray-700">每个mergesort阴影前一个，测试Malcom高效查找祖先绑定器的能力。</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-recycle mr-2 text-green-500"></i>名称重用测试
+              </h4>
+              <p class="text-sm text-gray-700">split_n、merge_n和mergesort的定义使用常见的局部变量名（如x），测试Malcom将每个出现绑定到正确绑定器的能力。</p>
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">编辑序列</h4>
+          <p class="mb-4">构建阶段完成后，在整个程序中应用随机编辑：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>重复<strong>500次</strong>移动到程序中均匀随机位置，应用基于节点的小变更，并恢复变更</li>
+            <li>变更包括：删除叶节点并插入另一个、替换绑定器、在子项周围包装构造器、展开构造器</li>
+            <li>这些编辑测试删除、插入、包装和展开，包括更新类型和绑定器</li>
+            <li>编辑可以引入错误，展示Malcom的增量错误标记能力</li>
+          </ul>
+          
+          <!-- 性能对比图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图7 - 增量与从头分析性能对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 增量与从头分析性能对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 增量分析与从头分析性能对比散点图，显示大多数编辑点位于对角线下方，表明增量分析提供加速" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 增量分析（Malcom）与从头分析性能对比散点图。每个数据点代表对程序的一次非移动编辑。对角线以上的点表示从头分析更快，对角线以下的点表示增量分析更快。大多数点位于对角线下方，表明增量分析提供加速。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>性能优势:</strong> 大多数数据点位于对角线下方，表明增量分析在大多数情况下提供显著加速</li>
+                  <li><strong>加速因子:</strong> 几何平均加速为275.96倍，表明增量方法相比从头分析具有巨大优势</li>
+                  <li><strong>异常情况:</strong> 少数位于对角线上方的点对应影响整个程序结构的编辑，如绑定器删除</li>
+                  <li><strong>可扩展性:</strong> 随着程序规模增加，增量方法的优势预计会更加明显</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 标准工作站配置</li>
+                      <li>软件栈: OCaml实现，使用顺序维护数据结构</li>
+                      <li>工作负载: 100层归并排序程序，500次随机编辑</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>几何平均加速: 275.96倍</li>
+                      <li>内存消耗: 与程序大小成线性关系</li>
+                      <li>扩展性: 支持大规模程序编辑</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">性能结果分析</h3>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-green-700 mb-2">关键性能指标</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div class="text-2xl font-bold text-green-700">275.96×</div>
+                <div class="text-sm text-gray-600">几何平均加速</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-green-700">100</div>
+                <div class="text-sm text-gray-600">嵌套层数</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-green-700">500</div>
+                <div class="text-sm text-gray-600">编辑次数</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-green-700">线性</div>
+                <div class="text-sm text-gray-600">内存复杂度</div>
+              </div>
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">性能分析要点</h4>
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li><strong>绑定器删除</strong>是性能最差的情况，因为删除绑定器需要更新所有引用该绑定器的变量</li>
+            <li>对于大多数编辑，<strong>增量分析显著更快</strong>，因为只重新计算受影响的部分</li>
+            <li>性能优势随着程序规模增加而增加，因为从头分析需要遍历整个程序</li>
+            <li>顺序维护数据结构的使用是<strong>实现高性能的关键</strong>，支持快速绑定关系更新</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">正确性验证</h3>
+          <p class="mb-4">作者在Agda中机械化证明了系统的正确性、收敛性和终止性：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-check-circle text-green-500 text-3xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">正确性</h5>
+              <p class="text-sm text-gray-600">当更新传播静止时，类型信息与从头分析一致</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-sync-alt text-blue-500 text-3xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">收敛性</h5>
+              <p class="text-sm text-gray-600">无论编辑和更新如何交错，系统最终达到静止状态</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-hourglass-end text-purple-500 text-3xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">终止性</h5>
+              <p class="text-sm text-gray-600">更新传播最终终止，不会无限循环</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">主要贡献总结</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-cube mr-2"></i>理论贡献
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>提出了<strong>标记和注释λ演算（MALC）</strong>，支持增量类型信息维护</li>
+                <li>设计了<strong>增量MALC</strong>，通过小步更新传播动态维护类型信息</li>
+                <li>在Agda中机械化证明了系统的<strong>正确性、收敛性和终止性</strong></li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-code mr-2"></i>实现贡献
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>实现了<strong>Malcom系统</strong>，增量MALC的高效OCaml实现</li>
+                <li>应用<strong>顺序维护数据结构</strong>高效处理绑定关系更新</li>
+                <li>在大型合成程序上实现了<strong>275.96倍加速</strong></li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术意义</h3>
+          <p class="mb-4">这项工作为实现大规模实时编程环境提供了理论基础和高效实现：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>展示了如何<strong>增量维护复杂类型信息</strong>，包括类型错误标记和每个表达式的期望类型和实际类型</li>
+            <li>证明了<strong>顺序维护数据结构</strong>在高效处理绑定关系更新中的关键作用</li>
+            <li>提供了<strong>形式化保证</strong>，确保增量更新的正确性和终止性</li>
+            <li>实现了<strong>显著的性能提升</strong>，相比从头重新分析</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">未来工作方向</h3>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2">扩展方向</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>支持更丰富的类型系统特性，如多态性、依赖类型和效果系统</li>
+                <li>扩展到其他语言特性，如模块系统和宏系统</li>
+                <li>集成到实际编程语言实现中</li>
+              </ul>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>优化内存使用和垃圾回收性能</li>
+                <li>支持并行和分布式更新传播</li>
+                <li>集成到大规模协作编程环境中</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">应用前景</h3>
+          <p class="mb-4">这项工作的技术为以下应用场景提供了基础：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-users text-blue-500 text-2xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">大规模协作编程</h5>
+              <p class="text-sm text-gray-600">支持数千参与者协作编辑单个"行星级"实时程序</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-rocket text-green-500 text-2xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">实时编程环境</h5>
+              <p class="text-sm text-gray-600">提供即时语义反馈，即使在程序不完整或包含错误时</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <i class="fas fa-graduation-cap text-purple-500 text-2xl mb-3"></i>
+              <h5 class="font-bold text-gray-700 mb-2">编程教育工具</h5>
+              <p class="text-sm text-gray-600">提供即时类型错误反馈，帮助学习者理解类型系统</p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>最终结论
+            </h4>
+            <p class="text-gray-700">这项工作为实现支持大规模实时协作的编程环境迈出了重要一步，通过形式化方法和高效实现解决了增量类型信息维护的关键挑战。作者提出的增量双向类型系统不仅提供了理论基础，还通过Malcom实现展示了实际可行性，为未来编程环境的发展指明了方向。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片自动展开/折叠
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
