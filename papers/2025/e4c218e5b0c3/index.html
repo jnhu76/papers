@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIMI K2: Open Agentic Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          KIMI K2: Open Agentic Intelligence
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Kimi Team</div>
+                <div class="text-sm text-gray-600 mt-1">Moonshot AI</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">技术报告</strong>
+                <div>arXiv:2507.20534v1</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">模型规模</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">1.04T总参数 / 32B激活参数</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Agentic Intelligence</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Mixture-of-Experts</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">MuonClip</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Tool Use</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 核心贡献突出显示 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-6">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>MuonClip优化器</strong>：结合Muon算法的令牌效率与QK-Clip稳定性机制</li>
+    <li><strong>大规模代理数据合成流水线</strong>：通过模拟和真实环境生成工具使用演示</li>
+    <li><strong>通用强化学习框架</strong>：结合可验证奖励与自批判评分奖励机制</li>
+    <li><strong>1.04万亿参数MoE模型</strong>：32B激活参数，在代理任务中达到最先进性能</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p>作者介绍了Kimi K2，这是一个具有320亿激活参数和1万亿总参数的专家混合（MoE）大语言模型。作者提出了MuonClip优化器，通过新颖的QK-clip技术改进了Muon，解决了训练不稳定性问题，同时保持了Muon的高级令牌效率。</p>
+          
+          <p>基于MuonClip，K2在15.5万亿令牌上进行了预训练，零损失峰值。在后训练阶段，K2经历了多阶段后训练过程，重点包括大规模代理数据合成流水线和联合强化学习（RL）阶段，模型通过与真实和合成环境的交互来提高其能力。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-chart-bar mr-2"></i>关键性能指标
+            </h5>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div class="text-center">
+                <div class="font-bold text-blue-600">Tau2-Bench</div>
+                <div class="text-lg font-semibold">66.1</div>
+              </div>
+              <div class="text-center">
+                <div class="font-bold text-blue-600">ACEBench (En)</div>
+                <div class="text-lg font-semibold">76.5</div>
+              </div>
+              <div class="text-center">
+                <div class="font-bold text-blue-600">SWE-Bench Verified</div>
+                <div class="text-lg font-semibold">65.8</div>
+              </div>
+              <div class="text-center">
+                <div class="font-bold text-blue-600">LiveCodeBench v6</div>
+                <div class="text-lg font-semibold">53.7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-robot mr-2"></i>代理智能的范式转变
+            </h4>
+            <p>大语言模型的发展正在经历向<strong>代理智能</strong>的深刻范式转变——模型在复杂动态环境中自主感知、规划、推理和行动的能力。这种转变标志着从静态模仿学习转向通过交互主动学习的模型。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2 text-green-500"></i>预训练挑战
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>高质量数据有限情况下的通用先验</li>
+                <li>令牌效率作为关键扩展系数</li>
+                <li>最大化每个令牌的学习信号</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-tools mr-2 text-purple-500"></i>后训练挑战
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>多步推理和长期规划能力稀缺</li>
+                <li>工具使用在自然数据中罕见</li>
+                <li>结构化高质量代理轨迹的合成</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-bolt mr-2"></i>Muon训练不稳定性
+            </h4>
+            <p>尽管Muon优化器具有令牌效率优势，但在扩展训练时面临<strong>注意力logits爆炸</strong>的问题，这会导致训练不稳定和损失峰值。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2 text-orange-500"></i>数据挑战
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>高质量人类数据供应有限</li>
+                <li>代理能力在自然数据中罕见</li>
+                <li>大规模真实环境交互成本高</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-expand-arrows-alt mr-2 text-blue-500"></i>扩展性挑战
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>万亿参数模型训练基础设施</li>
+                <li>多节点并行训练的通信开销</li>
+                <li>长上下文处理的效率问题</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- MuonClip优化器 -->
+        <div class="mb-8">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-rocket mr-2 text-green-500"></i>MuonClip优化器
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：MuonClip优化器设计
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: MuonClip训练稳定性对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: MuonClip训练稳定性对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 左：中等规模训练中注意力logits迅速超过1000，可能导致数值不稳定和训练发散。右：使用MuonClip和τ=100的Kimi K2在整个训练过程中的最大logits。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>QK-Clip机制:</strong> 通过重新缩放查询和键投影权重来约束注意力logits</li>
+                  <li><strong>最小干预原则:</strong> 仅在必要时激活，训练稳定后自动停用</li>
+                  <li><strong>逐头缩放:</strong> 仅对表现出logits爆炸的头部子集应用剪裁</li>
+                  <li><strong>Muon集成:</strong> 结合权重衰减、一致RMS匹配和QK-Clip</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">核心算法:</strong>
+                    <p>当最大logits S<sub>max</sub><sup>h</sup>超过目标阈值τ时，重新缩放W<sub>k</sub>, W<sub>q</sub>权重矩阵</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">平衡参数:</strong>
+                    <p>使用平衡参数α（通常设为0.5）对查询和键应用相等缩放</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">MLA支持:</strong>
+                    <p>针对多头潜在注意力机制的特殊处理，避免影响共享组件</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <!-- 模型架构 -->
+        <div class="mb-8">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-purple-500"></i>模型架构
+          </h3>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <i class="fas fa-cube text-3xl text-blue-500 mb-2"></i>
+                <div class="font-bold text-blue-700">总参数</div>
+                <div class="text-2xl font-semibold">1.04T</div>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg">
+                <i class="fas fa-bolt text-3xl text-green-500 mb-2"></i>
+                <div class="font-bold text-green-700">激活参数</div>
+                <div class="text-2xl font-semibold">32B</div>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <i class="fas fa-users text-3xl text-purple-500 mb-2"></i>
+                <div class="font-bold text-purple-700">专家数量</div>
+                <div class="text-2xl font-semibold">384</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 border-b text-left">架构参数</th>
+                  <th class="px-4 py-2 border-b">DeepSeek-V3</th>
+                  <th class="px-4 py-2 border-b">Kimi K2</th>
+                  <th class="px-4 py-2 border-b">变化</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="px-4 py-2 border-b">总参数</td>
+                  <td class="px-4 py-2 border-b">671B</td>
+                  <td class="px-4 py-2 border-b">1.04T</td>
+                  <td class="px-4 py-2 border-b text-green-600">↑ 54%</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">激活参数</td>
+                  <td class="px-4 py-2 border-b">37B</td>
+                  <td class="px-4 py-2 border-b">32.6B</td>
+                  <td class="px-4 py-2 border-b text-red-600">↓ 13%</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">专家总数</td>
+                  <td class="px-4 py-2 border-b">256</td>
+                  <td class="px-4 py-2 border-b">384</td>
+                  <td class="px-4 py-2 border-b text-green-600">↑ 50%</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">注意力头数</td>
+                  <td class="px-4 py-2 border-b">128</td>
+                  <td class="px-4 py-2 border-b">64</td>
+                  <td class="px-4 py-2 border-b text-red-600">↓ 50%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 代理数据合成 -->
+        <div class="mb-8">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tools mr-2 text-orange-500"></i>代理数据合成流水线
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：代理数据合成系统
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 工具使用数据合成流水线
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 工具使用数据合成流水线" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (a) 工具规范来自真实世界工具和LLM合成工具；从工具库生成代理和任务。(b) 用于生成和过滤工具调用轨迹的多代理流水线。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>三阶段流水线:</strong> 工具规范生成 → 代理和任务生成 → 轨迹生成</li>
+                  <li><strong>工具库构建:</strong> 结合3000+真实MCP工具和20000+合成工具</li>
+                  <li><strong>领域演化:</strong> 通过分层领域生成过程系统演化合成工具</li>
+                  <li><strong>混合方法:</strong> 结合可扩展模拟与针对性真实世界执行</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">工具规范生成:</strong>
+                    <p>从GitHub仓库获取真实MCP工具，通过分层领域生成过程演化合成工具</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">代理多样化:</strong>
+                    <p>合成不同系统提示并配备不同工具组合，创建多样化代理群体</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">基于评分的任务生成:</strong>
+                    <p>为每个代理配置生成任务，配对明确评分标准指定成功标准</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">多轮轨迹生成:</strong>
+                    <p>模拟真实工具使用场景，包括用户模拟和工具执行环境</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 综合性能概览 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-trophy mr-2 text-yellow-500"></i>综合性能概览
+            </h3>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                <div class="text-2xl font-bold text-blue-700">66.1</div>
+                <div class="text-sm text-gray-600">Tau2-Bench</div>
+              </div>
+              <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                <div class="text-2xl font-bold text-green-700">76.5</div>
+                <div class="text-sm text-gray-600">ACEBench (En)</div>
+              </div>
+              <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                <div class="text-2xl font-bold text-purple-700">65.8</div>
+                <div class="text-sm text-gray-600">SWE-Bench Verified</div>
+              </div>
+              <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
+                <div class="text-2xl font-bold text-orange-700">53.7</div>
+                <div class="text-sm text-gray-600">LiveCodeBench v6</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 基准测试对比 -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 border-b text-left">基准测试</th>
+                  <th class="px-4 py-2 border-b">Kimi-K2-Instruct</th>
+                  <th class="px-4 py-2 border-b">DeepSeek-V3</th>
+                  <th class="px-4 py-2 border-b">Qwen3-235B</th>
+                  <th class="px-4 py-2 border-b">Claude Sonnet 4</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="px-4 py-2 border-b">LiveCodeBench v6</td>
+                  <td class="px-4 py-2 border-b font-bold text-green-600">53.7</td>
+                  <td class="px-4 py-2 border-b">46.9</td>
+                  <td class="px-4 py-2 border-b">37.0</td>
+                  <td class="px-4 py-2 border-b">48.5</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">OJBench</td>
+                  <td class="px-4 py-2 border-b font-bold text-green-600">27.1</td>
+                  <td class="px-4 py-2 border-b">24.0</td>
+                  <td class="px-4 py-2 border-b">11.3</td>
+                  <td class="px-4 py-2 border-b">15.3</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">SWE-bench Verified</td>
+                  <td class="px-4 py-2 border-b font-bold text-green-600">65.8</td>
+                  <td class="px-4 py-2 border-b">38.8</td>
+                  <td class="px-4 py-2 border-b">34.4</td>
+                  <td class="px-4 py-2 border-b">72.7</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">AIME 2024</td>
+                  <td class="px-4 py-2 border-b font-bold text-green-600">69.6</td>
+                  <td class="px-4 py-2 border-b">59.4</td>
+                  <td class="px-4 py-2 border-b">40.1</td>
+                  <td class="px-4 py-2 border-b">43.4</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-2 border-b">MMLU</td>
+                  <td class="px-4 py-2 border-b">89.5</td>
+                  <td class="px-4 py-2 border-b">89.4</td>
+                  <td class="px-4 py-2 border-b">87.0</td>
+                  <td class="px-4 py-2 border-b font-bold text-green-600">91.5</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 性能分析 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-code mr-2 text-blue-500"></i>编码能力优势
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>在SWE-bench Verified上达到65.8%，显著超越开源基线</li>
+                <li>LiveCodeBench v6得分53.7%，领先所有模型</li>
+                <li>OJBench得分27.1%，展示竞争级编程能力</li>
+                <li>多语言编程(MultiPL-E)准确率85.7%</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-toolbox mr-2 text-green-500"></i>工具使用能力
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                <li>Tau2-Bench得分66.1，建立新标准</li>
+                <li>ACEBench得分76.5，大幅超越基线</li>
+                <li>在多轮工具调用基准中表现优异</li>
+                <li>在真实世界软件工程任务中缩小与Claude 4的差距</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 训练稳定性 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：训练稳定性分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: Kimi K2训练损失曲线
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: Kimi K2训练损失曲线" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Kimi K2的每步训练损失曲线，无平滑或子采样。整个训练过程无峰值。为清晰起见，我们省略了训练的最开始部分。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>零损失峰值:</strong> 在15.5万亿令牌的预训练过程中没有出现损失峰值</li>
+                  <li><strong>MuonClip效果:</strong> QK-Clip机制有效控制了注意力logits的增长</li>
+                  <li><strong>训练稳定性:</strong> 整个训练过程损失曲线平滑，无发散现象</li>
+                  <li><strong>扩展性验证:</strong> 在万亿参数规模上验证了训练方法的稳定性</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">训练配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>总令牌数: 15.5T</li>
+                      <li>上下文窗口: 4,096令牌</li>
+                      <li>学习率: 2e-4 (恒定) → 2e-5 (余弦衰减)</li>
+                      <li>全局批大小: 67M令牌</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>训练稳定性: 零损失峰值</li>
+                      <li>模型性能: 在多个基准测试中达到SOTA</li>
+                      <li>扩展能力: 支持128K上下文窗口</li>
+                      <li>效率优化: 通过稀疏性提高计算效率</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6 text-gray-700">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要成就
+            </h4>
+            <ul class="list-disc list-inside space-y-3">
+              <li>成功开发了<strong>1.04万亿参数MoE模型</strong>，专为代理智能设计</li>
+              <li>提出了<strong>MuonClip优化器</strong>，解决了Muon训练不稳定性问题</li>
+              <li>构建了<strong>大规模代理数据合成流水线</strong>，生成高质量工具使用演示</li>
+              <li>设计了<strong>统一强化学习框架</strong>，结合可验证奖励和自批判反馈</li>
+              <li>在<strong>代理和推理基准测试</strong>中设立了新的最先进水平</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-yellow-700 mb-4 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-3">
+              <li>处理困难推理任务或模糊工具定义时可能生成过多令牌</li>
+              <li>在某些任务中不必要启用工具使用时性能可能下降</li>
+              <li>构建完整软件项目时，一次性提示的成功率不如在代理编码框架下使用K2</li>
+              <li>在LMSYS Arena排行榜中排名第5，仍有提升空间</li>
+            </ul>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来方向
+            </h4>
+            <ul class="list-disc list-inside space-y-3">
+              <li>进一步优化模型在复杂推理任务中的令牌效率</li>
+              <li>扩展工具使用能力，支持更广泛的真实世界应用</li>
+              <li>改进强化学习框架，提高在多领域任务中的一致性性能</li>
+              <li>探索更大规模模型的训练方法和效率优化</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
