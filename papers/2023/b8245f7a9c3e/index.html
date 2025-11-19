@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Efficiency in the Serverless Cloud Paradigm: A Survey on the Reusing and Approximation Aspects</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">研究背景</a>
+        <a href="#nuts-and-bolts" class="nav-item whitespace-nowrap">Serverless基础</a>
+        <a href="#paradigm-comparison" class="nav-item whitespace-nowrap">范式对比</a>
+        <a href="#reusing-techniques" class="nav-item whitespace-nowrap">重用技术</a>
+        <a href="#approximation-techniques" class="nav-item whitespace-nowrap">近似计算技术</a>
+        <a href="#future-directions" class="nav-item whitespace-nowrap">未来方向</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Efficiency in the Serverless Cloud Paradigm: A Survey on the Reusing and Approximation Aspects
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Chavit Denninnart, Thanawat Chanikaphon, Mohsen Amini Salehi</div>
+                <div class="text-sm text-gray-600 mt-1">University of Louisiana at Lafayette, High Performance Cloud Computing (HPCC) Laboratory</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv:2110.06508v2 [cs.DC], June 2023</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">研究资助</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">NSF CNS-2007209, CNS-2047144</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Serverless Computing</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Function-as-a-Service</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Computational Reuse</span>
+                  <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">Approximate Computing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献高亮框 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>系统性调研了Serverless计算范式中的计算重用技术和近似计算技术，建立了完整的分类体系</li>
+          <li>提出计算重用可分为确定性重用和语义重用两大类，涵盖了从数据缓存到容器重用的多个层次</li>
+          <li>详细分析了近似计算在Serverless环境中的应用场景，包括数据级、指令级、硬件级和调度级四个层次</li>
+          <li>指出了Serverless与传统分布式计算范式（如HPC、Grid、IaaS/PaaS等）的本质区别，以及新技术面临的独特挑战</li>
+          <li>提出了未来研究方向，包括高层抽象（如Object-as-a-Service）、异构硬件支持、边缘到云的统一管理等</li>
+        </ul>
+      </div>
+      
+      <!-- Section 1: 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            这篇综述论文深入分析了Serverless计算范式中通过<strong>计算重用</strong>和<strong>近似计算</strong>提升系统效率的机遇与挑战。Serverless计算作为第二代云技术，通过Function-as-a-Service (FaaS) 和 Backend-as-a-Service (BaaS) 为开发者提供了高度透明的基础设施。
+          </p>
+          <p class="mb-4">
+            论文指出，Serverless函数的细粒度、无状态特性创造了独特的效率优化空间。作者将优化技术分为两大主线：<strong>计算重用</strong>（避免重复处理相同或相似函数请求）和<strong>近似计算</strong>（在可接受的结果质量损失下降低资源消耗）。
+          </p>
+          <p>
+            通过系统性分类和比较现有技术，论文为未来Serverless平台的效率提升提供了清晰的路线图，并指出了跨用户函数重用、异构硬件支持、边缘到云统一管理等重要研究方向。
+          </p>
+        </div>
+        
+        <!-- Figure 1 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - Serverless计算范式架构
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: Serverless计算范式架构
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: Serverless计算范式架构图，展示FaaS和BaaS的层次结构，包括多媒体处理、IoT数据分析、流式处理等应用场景" class="max-w-full h-auto rounded-lg">
+              </div>
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> The serverless computing paradigm mitigates the burden of developing cloud-native applications via offering a high-level programming abstraction (FaaS) and transparently executing them (BaaS). Different applications can define and trigger functions with minimal configurations needed for each.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>FaaS层:</strong> 提供高级编程抽象，支持多种编程语言，开发者定义和触发函数</li>
+                <li><strong>BaaS层:</strong> 负责任务调度、资源配置、弹性伸缩、监控和透明执行</li>
+                <li><strong>应用场景:</strong> 多媒体处理、IoT数据分析、流式处理等，通过触发器机制调用函数</li>
+                <li><strong>核心价值:</strong> 将基础设施管理抽象化，让开发者专注于业务逻辑而非服务器配置</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">函数触发机制:</strong>
+                  <p>支持API调用、定时器、事件完成等多种触发源，通过云网关统一接入</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">资源分配:</strong>
+                  <p>BaaS调度器将请求映射到可扩展的计算资源池，实现细粒度弹性伸缩</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">任务隔离:</strong>
+                  <p>使用容器或Firecracker微虚拟机等技术实现强隔离，避免共享资源副作用</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- Section 2: 研究背景 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          研究背景与动机
+        </h2>
+        
+        <!-- Figure 2 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>技术细节：图2 - 函数执行场景对比
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 处理相似函数调用的三种场景
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 三种函数执行场景：(a) 独立执行 (b) 函数重用 (c) 函数近似，展示transcode和bitrate函数的优化机会" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Comparison of three scenarios to handle similar function invocations: (a) separately executing functions; (b) reusing load and decode microservices of the function calls, and (c) approximating a function call and making it compatible with an existing one.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>独立执行 (a):</strong> 两次transcode调用分别执行load、decode、encode，资源浪费严重</li>
+                <li><strong>函数重用 (b):</strong> 合并调用，重用相同的load和decode操作，仅encode阶段分别处理，节省计算资源</li>
+                <li><strong>函数近似 (c):</strong> 将bitrate(v1,b2)近似为bitrate(v1,b1)，完全重用执行链，适用于可容忍质量损失的场景</li>
+                <li><strong>关键洞察:</strong> Serverless的共享执行环境为计算重用和近似提供了天然优势</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">计算重用机制:</strong>
+                  <p>BaaS调度器需要具备函数调用模式识别能力，通过分析函数签名（函数名+参数哈希值）检测可重用机会。对于确定性重用，比较输入参数的哈希值；对于语义重用，需要应用特定的相似性检测算法</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">近似决策:</strong>
+                  <p>平台需评估用户的QoS容忍度，识别可近似参数（如视频分辨率、图像质量），在满足SLO前提下进行近似合并</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">安全边界:</strong>
+                  <p>跨用户重用需确保数据隔离，对敏感数据使用私有缓存，对公共计算（如标准转码）使用共享缓存</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+          <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-bullseye text-blue-500 mr-2"></i>
+            研究动机
+          </h3>
+          <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm md:text-base">
+            <li><strong>Serverless普及:</strong> 作为第二代云技术，Serverless通过FaaS抽象大幅简化了云原生应用开发，支持快速CI/CD和微服务架构</li>
+            <li><strong>效率潜力:</strong> 函数级别的细粒度执行、共享资源和透明管理创造了计算重用和近似优化的巨大空间</li>
+            <li><strong>双重收益:</strong> 优化可同时提升用户QoS（响应时间、成本）和系统指标（吞吐量、能耗、碳排放）</li>
+            <li><strong>技术空白:</strong> 现有Serverless研究多关注冷启动和平台扩展，缺乏对计算重用和近似计算的系统性分类和评估</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- Section 3: Serverless基础 -->
+      <section id="nuts-and-bolts" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          Serverless基础机制与技术剖析
+        </h2>
+        
+        <!-- Table 3 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-table mr-2"></i>技术细节：表3 - 主流Serverless平台对比
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-table mr-2 text-blue-500"></i>
+                  原表 3: 主流Serverless云平台功能对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/table3.png" alt="论文表3: AWS Lambda、Azure Functions、Google Cloud Functions等主流平台的功能对比矩阵，包含语言支持、工作流、状态管理等维度" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原表说明:</strong> Comparison of the major serverless computing platforms including AWS Lambda, Azure Functions, Google Cloud Functions, IBM Cloud Functions, OpenFaaS, Knative, etc. across dimensions like supported languages, workflow support, stateful capabilities, and underlying container platform.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>AWS Lambda:</strong> 开创性商业平台，支持Firecracker微虚拟机，提供Step Functions工作流服务</li>
+                <li><strong>Azure Functions:</strong> 微软云平台，支持Durable Functions实现有状态函数，与Kubernetes集成</li>
+                <li><strong>Google Cloud Run:</strong> 基于Knative，原生支持容器，提供高级流量管理和自动伸缩</li>
+                <li><strong>开源方案:</strong> OpenFaaS、Knative、OpenWhisk等提供私有部署能力，避免供应商锁定</li>
+                <li><strong>关键差异:</strong> 语言支持、状态管理、工作流能力、底层隔离技术（容器/微虚拟机）</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <!-- Figure 3 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>技术细节：图3 - 函数触发模式对比
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 两种函数工作流配置方式
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 场景A单独触发函数，场景B使用工作流模式链式触发函数，展示两种架构模式的差异" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> An example workflow with two functions uploaded by the application provider. In this example, the Function trigger is configured as an on-demand API request and the result of Function 1 serves as the input for Function 2. Scenario A (on the left) sets up two functions separately. Scenario B (on the right) chains two functions on the serverless platform.
+              </div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">模式A（独立触发）:</strong>
+                  <p>应用提供者在云端分别创建两个函数，手动管理函数间的数据传递，灵活性高但管理复杂</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">模式B（工作流）:</strong>
+                  <p>在平台层面定义函数链，平台自动管理执行顺序和数据流，支持并行化调度和错误处理</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">工作流优势:</strong>
+                  <p>提供元数据帮助调度器识别并行任务，支持复杂工作流定义，提高可移植性和可重用性</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+          <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-layer-group text-blue-500 mr-2"></i>
+            关键技术组件
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-cube mr-2"></i>函数隔离机制
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>WebAssembly：轻量级软件故障隔离，跨平台支持</li>
+                <li>容器化：OCI标准，共享宿主机内核，镜像分层复用</li>
+                <li>微虚拟机（Firecracker）：AWS开源，快速启动（<125ms），强隔离性</li>
+                <li>Unikernel：应用级库捆绑，适合小内存占用场景</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-thermometer-half mr-2"></i>冷启动与温启动
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>冷启动：从存储加载函数，延迟显著（数秒级），包括镜像拉取、运行时初始化</li>
+                <li>温启动：容器驻留内存，亚毫秒级响应，但占用内存资源</li>
+                <li>启动开销：低频函数冷启动频繁则累积成本高，高频函数应保持常驻内存</li>
+                <li>优化策略：预加载、预测性预热、持久化容器、分层缓存</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section 4: 范式对比 -->
+      <section id="paradigm-comparison" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-balance-scale mr-3 text-blue-500"></i>
+          Serverless与其他分布式计算范式对比
+        </h2>
+        
+        <!-- Table 4 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-table mr-2"></i>技术细节：表4 - 任务特性对比
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-table mr-2 text-blue-500"></i>
+                  原表 4: 不同分布式计算范式的任务与平台特性对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/table4.png" alt="论文表4: 对比HPC、Grid、P2P、IaaS、PaaS、SaaS、Edge-to-cloud和Serverless在任务延迟敏感性、请求性质等方面的差异" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原表说明:</strong> Characteristics of the tasks and platforms across different distributed system paradigms including HPC, Grid, P2P, IaaS, PaaS, SaaS, Edge-to-cloud and Serverless across dimensions like task latency sensitivity, request nature, task types, hardware accessibility and statefulness.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>任务延迟敏感性:</strong> Serverless任务普遍高敏感，与HPC/Grid的离线批处理模式形成对比</li>
+                <li><strong>请求性质:</strong> Serverless采用按需/交互式，不同于HPC的资源预留模式，要求快速响应</li>
+                <li><strong>任务类型:</strong> Serverless支持用户自定义函数，而PaaS/SaaS多为预定义任务类型，限制优化空间</li>
+                <li><strong>状态特性:</strong> Serverless原生无状态，与HPC/Grid的有状态应用形成差异，但可通过外部存储实现有状态计算</li>
+              </ul>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">Serverless独特挑战:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>实时检测重复任务需要低开销机制</li>
+                    <li>用户无法直接控制硬件，近似计算需平台支持</li>
+                    <li>跨用户函数重用需解决安全和隐私问题</li>
+                    <li>任务粒度极细，传统调度器开销过大</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">优化机会:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>无状态特性便于缓存和重用</li>
+                    <li>统一执行引擎便于全局优化</li>
+                    <li>短生命周期便于快速试错和动态调整</li>
+                    <li>平台控制资源分配，可实现透明优化</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- Figure 6 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图6 - 重用与近似技术分类
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+                  原图 6: Serverless中重用与近似技术的分类框架
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig6.png" alt="论文图6: 四类重用与近似技术：全局平台级、选择性上下文级、应用独立级、应用依赖平台支持级" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Categorizing reusing and approximation techniques that can be used in the serverless paradigm.
+              </div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">全局技术（平台无关）:</strong>
+                  <p>容器镜像复用、Union Mounting等，对所有应用透明，无需应用修改</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">选择性技术（上下文感知）:</strong>
+                  <p>结果缓存，仅适用于真正无状态的函数，需要平台识别安全边界</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">应用特定技术:</strong>
+                  <p>应用内部实现近似逻辑，如降低输出精度，与平台无关但开发成本高</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">应用特定+平台支持:</strong>
+                  <p>应用定义近似接口，平台负责调度到近似硬件（如ASIC），平衡灵活性和效率</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+          <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-exclamation-circle text-yellow-500 mr-2"></i>
+            Serverless优化的独特挑战
+          </h3>
+          <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm md:text-base">
+            <li><strong>实时性要求:</strong> 任务延迟敏感，传统离线优化不适用，需要低开销的在线检测机制</li>
+            <li><strong>缺乏硬件控制:</strong> 用户无法直接访问硬件，近似技术需平台提供抽象接口，如DVFS、近似计算单元</li>
+            <li><strong>用户自定义性:</strong> 函数逻辑多样，上下文无关的优化方案效果有限，需要应用特定的优化策略</li>
+            <li><strong>安全性顾虑:</strong> 跨用户函数重用可能泄露敏感数据，私有缓存表虽安全但降低复用率</li>
+            <li><strong>调度复杂性:</strong> 任务粒度极细，传统调度器开销占比过高，需要轻量级、低延迟的调度算法</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- Section 5: 重用技术 -->
+      <section id="reusing-techniques" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-recycle mr-3 text-blue-500"></i>
+          计算重用技术体系
+        </h2>
+        
+        <!-- Figure 7 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图7 - Serverless效率优化技术分类
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+                  原图 7: Serverless平台效率优化技术全景分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig7.png" alt="论文图7: 完整的分类树，包含重用技术（任务缓存、中间数据缓存、函数合并、增量计算、容器重用）和近似技术（数据级、指令级、硬件级、调度级）两大分支" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Taxonomy of approaches for efficiency in serverless computing platforms. The approaches are classified into two categories that are based on the computational reuse, and then based on approximate computing. There are approaches in the intersection of these two, known as approximate reusing.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>任务缓存:</strong> 捕获完整函数执行结果，通过函数调用签名哈希快速识别重复请求</li>
+                <li><strong>中间数据缓存:</strong> 缓存工作流中的中间结果，提升缓存命中率，适用于多阶段计算</li>
+                <li><strong>函数合并:</strong> 将相邻函数合并执行，消除数据传输开销，但可能降低资源分配灵活性</li>
+                <li><strong>增量计算:</strong> 基于前一结果和修正函数快速更新，仅处理数据变化部分，适合定期分析任务</li>
+                <li><strong>容器重用:</strong> 镜像层复用（Union Mounting）和实例复用，减少启动时间和存储占用</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h3 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-database mr-2"></i>确定性重用技术
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>任务结果缓存:</strong> 基于函数名+参数哈希构建缓存表，可实现跨用户公共缓存或按用户隔离的私有缓存</li>
+              <li><strong>中间数据缓存:</strong> 在key-value存储中显式保存和检索中间结果，需函数代码配合，非透明但对工作流优化效果显著</li>
+              <li><strong>函数合并:</strong> 后端框架自动分析数据依赖性，合并相邻函数，减少跨网络数据传输，但需权衡资源分配灵活性损失</li>
+              <li><strong>增量计算:</strong> 针对周期性查询，利用减法函数移除过期数据，加法函数补充新增数据，避免全量重算</li>
+            </ul>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h3 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-layer-group mr-2"></i>容器级重用技术
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>Union Mounting:</strong> 将容器镜像拆分为多层，共享相同层（如操作系统、框架），减少存储和加载时间</li>
+              <li><strong>镜像合并:</strong> 将多个相似函数合并到同一镜像，提高集体调用频率，避免冷启动，但增加镜像体积</li>
+              <li><strong>持久化容器:</strong> 函数执行后不终止容器，保持状态，适用于高频调用和状态更新场景（如在线学习）</li>
+              <li><strong>预测性预热:</strong> 基于历史调用模式预测需求，提前加载容器，平衡内存占用与启动延迟</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+          <h3 class="font-bold text-yellow-700 mb-3 flex items-center">
+            <i class="fas fa-brain mr-2"></i>语义（近似）重用技术
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+            <div>
+              <strong class="text-yellow-700">相似输入重用:</strong>
+              <p>允许函数某些参数近似（如视频分辨率），将相似调用合并处理，发送近似结果给容忍低QoS的用户（如免费用户）</p>
+            </div>
+            <div>
+              <strong class="text-yellow-700">相似函数重用:</strong>
+              <p>检测功能相同但实现不同的函数，复用执行结果或替换函数实现，减少活跃函数数量</p>
+            </div>
+            <div>
+              <strong class="text-yellow-700">相似上下文重用:</strong>
+              <p>有状态函数间共享状态（如ML模型权重），加速模型收敛，适用于联邦学习等场景</p>
+            </div>
+            <div>
+              <strong class="text-yellow-700">先验知识重用:</strong>
+              <p>利用历史执行时间数据，通过迁移学习预测新函数在不同硬件上的性能，指导调度决策</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Section 6: 近似计算技术 -->
+      <section id="approximation-techniques" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          近似计算技术体系
+        </h2>
+        
+        <div class="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+          <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-cog text-blue-500 mr-2"></i>
+            近似计算核心要求
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-ruler mr-2"></i>错误幅度 (Error Magnitude)
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">
+                测量结果与理想值的偏差程度，应用容忍度因场景而异：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>视频会议视频处理：可容忍较高错误（人眼不敏感）</li>
+                <li>交通监控分析：需要高精度（安全关键）</li>
+                <li>ML推理：可接受一定精度损失（如INT8量化）</li>
+              </ul>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-dice mr-2"></i>错误概率 (Error Chance)
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">
+                获得过度不准确近似结果的可能性，需权衡纠错开销：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>低错误概率：DVFS技术，大部分结果准确，偶发严重错误</li>
+                <li>高错误概率：激进采样，需频繁纠错，可能抵消收益</li>
+                <li>验证机制：通过校验函数检测错误，触发改正函数重算</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h3 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-database mr-2"></i>数据级近似技术
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>近似重用:</strong> 检测语义相似任务，复用结果，挑战在于相似性检测的准确性和开销</li>
+              <li><strong>数据采样:</strong> 对批量数据分析任务，采样部分数据计算，推断整体结果，如ApproxIoT的蓄水池采样</li>
+              <li><strong>近似存储:</strong> 仅持久化高频访问数据，低频数据惰性生成；对容错数据使用有损压缩</li>
+              <li><strong>数据剪枝:</strong> 去除对最终结果影响小的数据点，减少计算量，需应用提供剪枝策略</li>
+            </ul>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h3 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-microchip mr-2"></i>硬件级近似技术
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>动态电压频率调节 (DVFS):</strong> 策略性欠压降低功耗，计算结果可能出错但可控，适合批处理任务</li>
+              <li><strong>近似硬件加速器:</strong> 专用ASIC针对特定计算（如DNN推理、视频编码）提供近似模式，能效比高</li>
+              <li><strong>随机计算:</strong> 用概率比特流表示数值，精度可调，需专用硬件支持，在边缘设备广泛应用</li>
+              <li><strong>循环穿孔:</strong> 跳过部分循环迭代或计算步骤，适用于迭代收敛算法</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-6">
+          <h3 class="font-bold text-purple-700 mb-3 flex items-center">
+            <i class="fas fa-tasks mr-2"></i>调度级近似技术
+          </h3>
+          <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+            <li><strong>预测性批处理:</strong> 延迟非紧急任务聚合执行，最大化容器复用，需预测成本收益避免错过Deadline</li>
+            <li><strong>任务丢弃/延迟:</strong> 工作流中可选任务在系统过载时丢弃或推迟，适用于容忍部分数据丢失的场景（如视频会议中的音频增强）</li>
+            <li><strong>预测性服务:</strong> 基于历史模式预测函数调用，提前预热容器，属于云平台内部优化技术</li>
+            <li><strong>优先级调度:</strong> 根据任务QoS需求分级调度，低优先级任务可在系统空闲时批处理，需自动识别任务紧急度</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- Section 7: 未来方向 -->
+      <section id="future-directions" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-rocket mr-3 text-blue-500"></i>
+          未来研究方向
+        </h2>
+        
+        <!-- Figure 8 占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-road mr-2"></i>技术细节：图8 - 四大研究主题
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-road mr-2 text-blue-500"></i>
+                  原图 8: Serverless未来研究主题分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig8.png" alt="论文图8: 四个研究主题：高层抽象（云原生编程语言、数据流语义、OaaS）、性能优化（内存争用、工作流优化、数据局部性）、领域特定平台（ASIC加速器）、边缘到云扩展（无缝迁移、统一管理）和安全" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Topics for future research directions on the serverless paradigm including high-level abstractions, performance aspects, domain-specific computing, edge-to-cloud platforms and security.
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>高层抽象 (A):</strong> 云原生编程语言集成FaaS概念，Object-as-a-Service统一数据和计算抽象，数据流编程语义自动管理状态</li>
+                <li><strong>性能优化 (B):</strong> 解决内存争用（冷/温启动权衡），工作流感知调度，数据局部性优化跨数据中心传输</li>
+                <li><strong>领域特定平台 (C):</strong> 针对ML、多媒体等场景提供专用硬件（ASIC）、领域语言和内置函数，提升效率和易用性</li>
+                <li><strong>边缘到云扩展 (D):</strong> 统一Serverless框架管理设备-边缘-云连续体，支持无缝迁移和资源联邦</li>
+                <li><strong>安全与可信 (E):</strong> 平台可信验证、安全容器（gVisor/Kata）、钱包耗尽攻击防护等</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+            <h3 class="font-bold text-indigo-700 mb-3 flex items-center">
+              <i class="fas fa-code mr-2"></i>高层抽象创新
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>云原生编程语言:</strong> 将FaaS概念内置到语言和编译器，自动识别可云化的代码块，支持运行时自动迁移</li>
+              <li><strong>Object-as-a-Service:</strong> 超越函数抽象，将数据和计算封装为对象，提供内置的数据局部性、缓存、访问控制和不变式语义</li>
+              <li><strong>基础设施即代码融合:</strong> 编程代码与部署代码结合，编译器自动分析基础设施需求并部署，提升开发效率</li>
+              <li><strong>硬件无关抽象:</strong> 函数代码自动适配CPU/GPU/TPU/FPGA等异构硬件，平台智能选择最优执行单元</li>
+            </ul>
+          </div>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <h3 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-server mr-2"></i>性能优化方向
+            </h3>
+            <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+              <li><strong>内存管理智能化:</strong> 自动化冷热函数识别和容器生命周期管理，平衡内存占用与启动延迟</li>
+              <li><strong>工作流感知调度:</strong> 针对MapReduce等大数据工作流优化，避免重复加载大内存函数，支持任务间数据重用</li>
+              <li><strong>数据局部性优化:</strong> 将频繁通信的函数调度到同一机架或节点，减少跨数据中心流量</li>
+              <li><strong>异构硬件调度:</strong> 为ML、多媒体等任务分配GPU/TPU等加速器，通过性能分析器指导调度决策</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200 mb-6">
+          <h3 class="font-bold text-purple-700 mb-3 flex items-center">
+            <i class="fas fa-network-wired mr-2"></i>边缘到云统一Serverless
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+            <div>
+              <strong class="text-purple-700">无缝迁移:</strong>
+              <p>函数执行可在设备、边缘、云之间透明迁移，根据资源可用性、延迟需求和能耗动态调整执行位置。例如，低电量时迁移到云端，低带宽时在本地执行</p>
+            </div>
+            <div>
+              <strong class="text-purple-700">统一管理:</strong>
+              <p>多层级资源统一编排，支持跨组织资源共享，类似于CDN但支持动态函数执行，实现边缘计算的Serverless化</p>
+            </div>
+            <div>
+              <strong class="text-purple-700">联邦学习支持:</strong>
+              <p>在Serverless框架中实现联邦学习，边缘设备重用中心模型并本地训练，保护数据隐私</p>
+            </div>
+            <div>
+              <strong class="text-purple-700">实时场景:</strong>
+              <p>支持AR/VR、智能眼镜等低延迟应用，通过动态资源重分配保障关键任务QoS</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 p-4 rounded-lg border border-red-200 mb-6">
+          <h3 class="font-bold text-red-700 mb-3 flex items-center">
+            <i class="fas fa-shield-alt mr-2"></i>安全与可信
+          </h3>
+          <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+            <li><strong>平台可信验证:</strong> 开发者难以验证平台是否满足QoS承诺、隔离配置是否安全，需要透明化机制和审计接口</li>
+            <li><strong>安全容器:</strong> 解决容器共享内核的特权提升风险，gVisor和Kata Containers提供更强隔离，但增加启动延迟</li>
+            <li><strong>跨用户重用安全:</strong> 缓存投毒、数据泄露风险，需要加密缓存和严格的访问控制策略</li>
+            <li><strong>钱包耗尽攻击:</strong> 利用Serverless自动扩展特性触发大量调用耗尽用户预算，需平台级防护（如任务丢弃、费用上限）</li>
+            <li><strong>供应链安全:</strong> 平台内置CI/CD可能引入第三方漏洞，需镜像扫描和依赖检查机制</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+    });
+  </script>
+</body>
+</html>

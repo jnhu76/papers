@@ -1,0 +1,10 @@
+{
+  "id": "b8245f7a9c3e",
+  "title": "Efficiency in the Serverless Cloud Paradigm: A Survey on the Reusing and Approximation Aspects",
+  "authors": ["Chavit Denninnart", "Thanawat Chanikaphon", "Mohsen Amini Salehi"],
+  "year": 2023,
+  "conference": "arXiv",
+  "category": "分布式系统",
+  "keywords": ["无服务器计算", "FaaS", "计算重用", "近似计算", "云计算", "资源效率", "云原生"],
+  "abstract": "Serverless computing along with Function-as-a-Service (FaaS is forming a new computing paradigm that is anticipated to found the next generation of cloud systems.The popularity of this paradigm is due to offering a highly transparent infrastructure that enables user applications to scale in the granularity of their functions.Since these often small and single-purpose functions are managed on shared computing resources behind the scene,a great potential for computational reuse and approximate computing emerges that if unleashed,can remarkably improve the efficiency of serverless cloud systems—both from the user's QoS and system's (energy consumption and incurred cost)perspectives.Accordingly,the goal of this survey study is to,first,unfold the internal mechanics of serverless computing and,second,explore the scope for efficiency within this paradigm via studying function reuse and approximation approaches and discussing the pros and cons of each one.Next,we outline potential future research directions within this paradigm that can either unlock new use cases or make the paradigm more"
+}
