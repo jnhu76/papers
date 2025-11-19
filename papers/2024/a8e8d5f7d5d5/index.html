@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Survey on Efficient Inference for Large Language Models</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .survey-analysis {
+        margin: 1rem 0;
+      }
+      .pdf-figure-container {
+        padding: 1rem;
+      }
+      .image-display {
+        padding: 1rem;
+      }
+      .taxonomy-placeholder .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-purple-600 hover:bg-purple-50;
+    }
+    .nav-item.active {
+      @apply text-purple-600 bg-purple-100;
+    }
+    /* 图像交互样式 */
+    .pdf-figure-container img {
+      transition: transform 0.3s ease;
+    }
+    .pdf-figure-container img:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">引言</a>
+        <a href="#taxonomy" class="nav-item whitespace-nowrap">分类体系</a>
+        <a href="#data-level" class="nav-item whitespace-nowrap">数据级优化</a>
+        <a href="#model-level" class="nav-item whitespace-nowrap">模型级优化</a>
+        <a href="#system-level" class="nav-item whitespace-nowrap">系统级优化</a>
+        <a href="#application" class="nav-item whitespace-nowrap">应用场景</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          A Survey on Efficient Inference for Large Language Models
+        </h1>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Zixuan Zhou, Xuefei Ning, Ke Hong等</div>
+                <div class="text-sm text-gray-600 mt-1">清华大学、上海交通大学等</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">发表信息</strong>
+                <div>arXiv预印本，v3版本，2024年4月</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">标识符</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2404.14294v3</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">综述范围</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">大语言模型</span>
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">高效推理</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">优化技术</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-purple-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed">
+            大型语言模型(LLMs)因其在各种任务中的卓越表现而受到广泛关注。然而，LLM推理的大量计算和内存需求给资源受限场景下的部署带来了挑战。本文对现有关于高效LLM推理的文献进行了全面综述。我们首先分析了低效LLM推理的主要原因，即大模型规模、二次复杂度注意力操作和自回归解码方法。然后，我们引入了一个全面的分类法，将当前文献组织为数据级、模型级和系统级优化。此外，本文还包括对关键子领域中代表性方法的比较实验，以提供定量见解。最后，我们提供了一些知识总结并讨论了未来的研究方向。
+          </p>
+          <p class="text-gray-700 leading-relaxed">注意：本文由AI生成。更详细的解说请参考<a href="https://zhuanlan.zhihu.com/p/1973396792977678874" target="_blank" class="text-purple-500 hover:underline">原始论文</a>。</p>
+        </div>
+      </section>
+      
+      <!-- 引言 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-purple-500"></i>
+          引言
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            近年来，大型语言模型(LLMs)在学术界和工业界引起了广泛关注。LLM领域经历了显著增长和重要成就，涌现了许多开源LLMs，如GPT系列、OPT、LLaMA系列、BLOOM、FALCON、GLM和Mistral等，用于学术研究和商业目的。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg my-6">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-map mr-2"></i>研究领域概览
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>领域发展时间线：从早期Transformer到现代大规模LLMs</li>
+              <li>核心技术分支：数据级优化、模型级优化、系统级优化</li>
+              <li>关键里程碑：注意力机制优化、量化技术、推测解码等</li>
+            </ul>
+          </div>
+          
+          <p class="text-gray-700 leading-relaxed">
+            然而，LLMs的部署并不总是一帆风顺。LLMs在推理过程中通常需要更高的计算成本、内存访问成本和内存使用量，这降低了资源受限场景下的效率指标（如延迟、吞吐量、功耗和存储）。这对LLMs在边缘和云场景中的应用提出了挑战。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 分类体系 -->
+      <section id="taxonomy" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-sitemap mr-3 text-purple-500"></i>
+          分类体系
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            本文提出了一个层次化的分类体系，将高效LLM推理技术分为三个级别：数据级优化、模型级优化和系统级优化。
+          </p>
+          
+          <!-- PDF图像占位符 -->
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 4: 大语言模型高效推理方法分类法
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig4.png" 
+                   alt="论文图4: 大语言模型高效推理方法分类法" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sitemap text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 4: 大语言模型高效推理方法分类法</p>
+                  <p class="text-sm text-gray-500 text-center">展示数据级、模型级和系统级优化的层次分类结构</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig4.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示了高效LLM推理方法的三个主要级别：数据级优化、模型级优化和系统级优化，以及每个级别下的具体技术分类。</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>数据级优化：输入压缩、输出组织</li>
+                  <li>模型级优化：高效结构设计、模型压缩</li>
+                  <li>系统级优化：推理引擎、服务系统</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">大语言模型高效推理方法的分类法</span>
+            </div>
+          </div>
+          
+          <!-- 分类体系可视化 -->
+          <div class="taxonomy-placeholder bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-xl font-bold text-purple-700 mb-4 text-center">高效LLM推理技术分类体系</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- 数据级优化 -->
+              <div class="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <div class="flex items-center mb-3">
+                  <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-database text-purple-600"></i>
+                  </div>
+                  <h4 class="font-bold text-purple-700">数据级优化</h4>
+                </div>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-purple-500 mt-1 mr-2"></i>
+                    <span><strong>输入压缩</strong>：提示剪枝、提示摘要、软提示压缩、检索增强生成</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-purple-500 mt-1 mr-2"></i>
+                    <span><strong>输出组织</strong>：思维骨架、自适应骨架图解码、自动并行自回归解码</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- 模型级优化 -->
+              <div class="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                <div class="flex items-center mb-3">
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-cogs text-blue-600"></i>
+                  </div>
+                  <h4 class="font-bold text-blue-700">模型级优化</h4>
+                </div>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-blue-500 mt-1 mr-2"></i>
+                    <span><strong>高效结构设计</strong>：高效FFN设计、高效注意力设计、Transformer替代</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-blue-500 mt-1 mr-2"></i>
+                    <span><strong>模型压缩</strong>：量化、稀疏化、结构优化、知识蒸馏、动态推理</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- 系统级优化 -->
+              <div class="bg-white p-4 rounded-lg border border-green-200 shadow-sm">
+                <div class="flex items-center mb-3">
+                  <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-server text-green-600"></i>
+                  </div>
+                  <h4 class="font-bold text-green-700">系统级优化</h4>
+                </div>
+                <ul class="text-sm text-gray-700 space-y-2">
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-green-500 mt-1 mr-2"></i>
+                    <span><strong>推理引擎</strong>：图和算子优化、推测解码、卸载</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-caret-right text-green-500 mt-1 mr-2"></i>
+                    <span><strong>服务系统</strong>：内存管理、连续批处理、调度策略、分布式系统</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 数据级优化 -->
+      <section id="data-level" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-database mr-3 text-purple-500"></i>
+          数据级优化
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            数据级优化通过优化输入提示或更好地组织输出内容来提高效率。这类优化通常不改变原始模型，因此无需昂贵的模型训练成本。
+          </p>
+          
+          <!-- 输入压缩分类 -->
+          <div class="mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">输入压缩技术</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 5: 大语言模型输入压缩方法分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig5.png" 
+                     alt="论文图5: 大语言模型输入压缩方法分类" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-filter text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 5: 大语言模型输入压缩方法分类</p>
+                    <p class="text-sm text-gray-500 text-center">展示提示剪枝、提示摘要、软提示压缩和检索增强生成四种输入压缩方法</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig5.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">大语言模型输入压缩方法的分类</span>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                  <i class="fas fa-cut mr-2"></i>提示剪枝
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  基于预定义或可学习的重要性指标，从每个输入提示中在线移除不重要的标记、句子或文档。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>DYNAICL</strong>：动态决定上下文示例数量</li>
+                  <li><strong>Selective Context</strong>：基于自信息指标的单元级剪枝</li>
+                  <li><strong>LLMLingua</strong>：从粗到细的剪枝方案</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-file-contract mr-2"></i>提示摘要
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  将原始提示压缩为较短的摘要，同时保留相似的语义信息。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>RECOMP</strong>：从极端规模LLMs中提取轻量级压缩器</li>
+                  <li><strong>SemanticCompression</strong>：按主题分组句子并总结</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-sliders-h mr-2"></i>软提示压缩
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  设计比原始提示短得多的软提示，用作LLMs的输入。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>PromptCompression</strong>：训练软提示模拟预定系统提示</li>
+                  <li><strong>Gisting</strong>：使用前缀调整将任务特定提示压缩为要点标记</li>
+                </ul>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                  <i class="fas fa-search mr-2"></i>检索增强生成
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  通过合并外部知识源来提高LLMs回答质量，同时减少提示长度。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>RAG</strong>：检索增强生成基础框架</li>
+                  <li><strong>FLARE</strong>：主动决定何时检索什么信息</li>
+                  <li><strong>Self-RAG</strong>：通过检索和自我反思提高质量和事实性</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 输出组织 -->
+          <div>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">输出组织技术</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 6: SoT推理过程演示
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig6.png" 
+                     alt="论文图6: SoT推理过程演示" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-project-diagram text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 6: SoT推理过程演示</p>
+                    <p class="text-sm text-gray-500 text-center">展示思维骨架(SoT)方法的推理过程，包括骨架阶段和点扩展阶段</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig6.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">SoT推理过程的演示</span>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">代表性方法</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-3 rounded border">
+                  <h5 class="font-semibold text-green-700 mb-2">思维骨架(SoT)</h5>
+                  <p class="text-sm text-gray-700">
+                    利用LLMs规划输出内容结构的能力，先生成简洁的答案骨架，然后并行扩展每个点。
+                  </p>
+                  <div class="mt-2 text-xs text-green-600">
+                    <i class="fas fa-bolt mr-1"></i>速度提升: 最高2.39倍
+                  </div>
+                </div>
+                
+                <div class="bg-white p-3 rounded border">
+                  <h5 class="font-semibold text-blue-700 mb-2">自适应骨架图解码(SGD)</h5>
+                  <p class="text-sm text-gray-700">
+                    将子问题点组织成有向无环图(DAG)，在一轮中并行回答逻辑独立的子问题。
+                  </p>
+                  <div class="mt-2 text-xs text-blue-600">
+                    <i class="fas fa-star mr-1"></i>优先答案质量而非速度
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 模型级优化 -->
+      <section id="model-level" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-purple-500"></i>
+          模型级优化
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            模型级优化主要关注优化模型结构或数据表示，包括设计高效模型结构或压缩预训练模型。
+          </p>
+          
+          <!-- 高效结构设计 -->
+          <div class="mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">高效结构设计</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 7: 大语言模型高效结构设计分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig7.png" 
+                     alt="论文图7: 大语言模型高效结构设计分类" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-cubes text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 7: 大语言模型高效结构设计分类</p>
+                    <p class="text-sm text-gray-500 text-center">展示高效FFN设计、高效注意力设计和Transformer替代三种高效结构设计方法</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig7.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">大语言模型高效结构设计的分类</span>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-3">高效FFN设计</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  将混合专家(MoE)技术集成到LLMs中，在保持计算成本的同时提高性能。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>Switch Transformers</strong>：引入负载平衡损失</li>
+                  <li><strong>Mixtral 8x7B</strong>：每个token分配给两个专家</li>
+                  <li><strong>Expert Choice</strong>：每个专家独立选择top-k tokens</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3">高效注意力设计</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  设计新机制来降低每个注意力头的计算复杂度。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>多查询注意力(MQA)</strong>：跨注意力头共享K和V缓存</li>
+                  <li><strong>分组查询注意力(GQA)</strong>：MHA和MQA的混合</li>
+                  <li><strong>低复杂度注意力</strong>：核基注意力和低秩注意力</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-3">Transformer替代</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  设计高效且有效的序列建模架构。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>状态空间模型(SSM)</strong>：Mamba、S4等</li>
+                  <li><strong>长卷积模型</strong>：Hyena等</li>
+                  <li><strong>注意力类循环操作</strong>：RWKV、RetNet等</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 非Transformer模型效率比较 -->
+            <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-3">非Transformer模型效率比较</h4>
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-4 border text-left">模型</th>
+                      <th class="py-2 px-4 border text-left">训练形式</th>
+                      <th class="py-2 px-4 border text-left">训练计算复杂度</th>
+                      <th class="py-2 px-4 border text-left">推理形式</th>
+                      <th class="py-2 px-4 border text-left">预填充复杂度</th>
+                      <th class="py-2 px-4 border text-left">解码复杂度(每token)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">Transformer</td>
+                      <td class="py-2 px-4 border">Transformer-like</td>
+                      <td class="py-2 px-4 border">O(n²d)</td>
+                      <td class="py-2 px-4 border">Transformer-like</td>
+                      <td class="py-2 px-4 border">O(n²d)</td>
+                      <td class="py-2 px-4 border">O(nd)</td>
+                    </tr>
+                    <tr class="bg-blue-50">
+                      <td class="py-2 px-4 border font-medium">S4</td>
+                      <td class="py-2 px-4 border">卷积</td>
+                      <td class="py-2 px-4 border">O(nd² log n)</td>
+                      <td class="py-2 px-4 border">循环</td>
+                      <td class="py-2 px-4 border">O(nd²)</td>
+                      <td class="py-2 px-4 border">O(d²)</td>
+                    </tr>
+                    <tr class="bg-blue-50">
+                      <td class="py-2 px-4 border font-medium">Mamba</td>
+                      <td class="py-2 px-4 border">循环</td>
+                      <td class="py-2 px-4 border">O(nd² log n)</td>
+                      <td class="py-2 px-4 border">循环</td>
+                      <td class="py-2 px-4 border">O(nd²)</td>
+                      <td class="py-2 px-4 border">O(d²)</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">Hyena</td>
+                      <td class="py-2 px-4 border">卷积</td>
+                      <td class="py-2 px-4 border">O(nd log n)</td>
+                      <td class="py-2 px-4 border">卷积</td>
+                      <td class="py-2 px-4 border">O(nd log n)</td>
+                      <td class="py-2 px-4 border">O(nd log n)</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">RetNet</td>
+                      <td class="py-2 px-4 border">Transformer-like</td>
+                      <td class="py-2 px-4 border">O(n²d)</td>
+                      <td class="py-2 px-4 border">循环</td>
+                      <td class="py-2 px-4 border">O(nd²)</td>
+                      <td class="py-2 px-4 border">O(d²)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-xs text-gray-600 mt-2">注：n表示输入长度，d表示输入维度</p>
+            </div>
+          </div>
+          
+          <!-- 模型压缩 -->
+          <div>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">模型压缩</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 8: 大语言模型压缩方法分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig8.png" 
+                     alt="论文图8: 大语言模型压缩方法分类" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-compress text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 8: 大语言模型压缩方法分类</p>
+                    <p class="text-sm text-gray-500 text-center">展示量化、稀疏化、结构优化、知识蒸馏和动态推理五种模型压缩方法</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig8.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">大语言模型压缩方法的分类</span>
+              </div>
+            </div>
+            
+            <!-- 量化技术 -->
+            <div class="mb-6">
+              <h4 class="text-lg font-bold text-gray-800 mb-3">量化技术</h4>
+              
+              <!-- PDF图像占位符 -->
+              <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-700">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    论文图 9: 权重仅量化与权重激活量化推理工作流
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+                </div>
+                
+                <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                  <img src="./images/fig9.png" 
+                       alt="论文图9: 权重仅量化与权重激活量化推理工作流" 
+                       class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                  
+                  <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                    <div class="flex flex-col items-center justify-center">
+                      <i class="fas fa-exchange-alt text-3xl text-gray-400 mb-3"></i>
+                      <p class="text-gray-600 font-medium mb-2">图 9: 权重仅量化与权重激活量化推理工作流</p>
+                      <p class="text-sm text-gray-500 text-center">展示两种量化方法在推理阶段的工作流程对比</p>
+                      <div class="mt-3 text-xs text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        图像路径: ./images/fig9.png
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <strong class="text-yellow-700 flex items-center">
+                    <i class="fas fa-quote-left mr-2"></i>原图图注:
+                  </strong>
+                  <span class="ml-2">(a) 权重仅量化的推理工作流。(b) 权重激活量化的推理工作流。</span>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-bold text-blue-700 mb-3">训练后量化(PTQ)</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    无需重新训练即可量化预训练模型，适用于快速部署。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>GPTQ</strong>：基于OBQ的高效量化算法</li>
+                    <li><strong>AWQ</strong>：激活感知的权重量化</li>
+                    <li><strong>SmoothQuant</strong>：通过重新参数化解决激活值量化挑战</li>
+                    <li><strong>BiLLM</strong>：将LLMs广泛量化为1.08位</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-bold text-green-700 mb-3">量化感知训练(QAT)</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    在模型训练过程中纳入量化影响，提高量化后性能。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>LLM-QAT</strong>：使用原始FP16 LLMs生成训练数据的无数据方法</li>
+                    <li><strong>QLoRA</strong>：将LLMs权重量化为4位并采用LoRA微调</li>
+                    <li><strong>QA-LoRA</strong>：将分组量化纳入QLoRA</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- 量化实验比较 -->
+              <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-3">量化性能实验比较</h5>
+                <p class="text-sm text-gray-700 mb-3">
+                  实验表明，权重仅量化可以显著加速解码阶段，但对预填充阶段的延迟影响有限。随着批大小和输入长度的增加，权重仅量化的加速效果逐渐减弱。
+                </p>
+                <div class="text-xs text-gray-600">
+                  <i class="fas fa-chart-bar mr-1"></i>关键发现：权重仅量化对较大模型提供更大益处
+                </div>
+              </div>
+            </div>
+            
+            <!-- 稀疏化技术 -->
+            <div class="mb-6">
+              <h4 class="text-lg font-bold text-gray-800 mb-3">稀疏化技术</h4>
+              
+              <!-- PDF图像占位符 -->
+              <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-700">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    论文图 10: 非结构化剪枝与结构化剪枝示意图
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+                </div>
+                
+                <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                  <img src="./images/fig10.png" 
+                       alt="论文图10: 非结构化剪枝与结构化剪枝示意图" 
+                       class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                  
+                  <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                    <div class="flex flex-col items-center justify-center">
+                      <i class="fas fa-cut text-3xl text-gray-400 mb-3"></i>
+                      <p class="text-gray-600 font-medium mb-2">图 10: 非结构化剪枝与结构化剪枝示意图</p>
+                      <p class="text-sm text-gray-500 text-center">展示非结构化剪枝(左)和结构化剪枝(右)的对比</p>
+                      <div class="mt-3 text-xs text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        图像路径: ./images/fig10.png
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <strong class="text-yellow-700 flex items-center">
+                    <i class="fas fa-quote-left mr-2"></i>原图图注:
+                  </strong>
+                  <span class="ml-2">非结构化剪枝(左)和结构化剪枝(右)的示意图。</span>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-bold text-purple-700 mb-3">权重剪枝</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    系统地从模型中移除不太重要的权重和结构，减少计算和内存成本。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>非结构化剪枝</strong>：剪枝单个权重值，细粒度</li>
+                    <li><strong>结构化剪枝</strong>：剪枝更大的结构单元，粗粒度</li>
+                    <li><strong>SparseGPT</strong>：基于OBS思想的大规模语言模型剪枝</li>
+                    <li><strong>LLM-Pruner</strong>：任务无关的结构化剪枝算法</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-bold text-blue-700 mb-3">稀疏注意力</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    战略性地省略某些注意力计算以增强注意力操作的计算效率。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>静态稀疏注意力</strong>：预确定稀疏注意力掩码</li>
+                    <li><strong>动态稀疏注意力</strong>：基于不同输入自适应消除激活值</li>
+                    <li><strong>StreamingLLM</strong>：可以处理400万个token</li>
+                    <li><strong>Bigbird</strong>：结合局部、全局和随机模式</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 系统级优化 -->
+      <section id="system-level" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-server mr-3 text-purple-500"></i>
+          系统级优化
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            系统级优化主要涉及增强模型前向传递，包括优化推理引擎和服务系统。
+          </p>
+          
+          <!-- 推理引擎 -->
+          <div class="mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">推理引擎优化</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 14: LLM推理引擎优化分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig14.png" 
+                     alt="论文图14: LLM推理引擎优化分类" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-microchip text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 14: LLM推理引擎优化分类</p>
+                    <p class="text-sm text-gray-500 text-center">展示图和算子优化、推测解码和卸载三种推理引擎优化方法</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig14.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">LLM推理引擎优化的分类</span>
+              </div>
+            </div>
+            
+            <!-- 图和算子优化 -->
+            <div class="mb-6">
+              <h4 class="text-lg font-bold text-gray-800 mb-3">图和算子优化</h4>
+              
+              <!-- PDF图像占位符 -->
+              <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-700">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    论文图 15: 多个LLMs的推理运行时分解
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+                </div>
+                
+                <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                  <img src="./images/fig15.png" 
+                       alt="论文图15: 多个LLMs的推理运行时分解" 
+                       class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                  
+                  <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                    <div class="flex flex-col items-center justify-center">
+                      <i class="fas fa-chart-pie text-3xl text-gray-400 mb-3"></i>
+                      <p class="text-gray-600 font-medium mb-2">图 15: 多个LLMs的推理运行时分解</p>
+                      <p class="text-sm text-gray-500 text-center">展示不同LLMs在推理过程中各算子的运行时占比</p>
+                      <div class="mt-3 text-xs text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        图像路径: ./images/fig15.png
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <strong class="text-yellow-700 flex items-center">
+                    <i class="fas fa-quote-left mr-2"></i>原图图注:
+                  </strong>
+                  <span class="ml-2">多个LLMs的推理运行时分解</span>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-bold text-blue-700 mb-3">注意力算子优化</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    针对注意力操作的二次复杂度问题，开发定制化的注意力算子。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>FlashAttention</strong>：将整个注意力操作融合到单个内存高效算子</li>
+                    <li><strong>FlashDecoding</strong>：在序列维度引入并行计算</li>
+                    <li><strong>FlashDecoding++</strong>：基于统计预先确定缩放因子</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-bold text-green-700 mb-3">线性算子优化</h5>
+                  <p class="text-sm text-gray-700 mb-3">
+                    针对解码阶段维度减少的特点，优化线性算子实现。
+                  </p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li><strong>TensorRT-LLM</strong>：引入专用GEMV实现</li>
+                    <li><strong>FlashDecoding++</strong>：提出FlatGEMM概念和细粒度分块策略</li>
+                    <li><strong>MegaBlocks</strong>：为MoE FFN层优化计算</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 推测解码 -->
+            <div class="mb-6">
+              <h4 class="text-lg font-bold text-gray-800 mb-3">推测解码</h4>
+              
+              <!-- PDF图像占位符 -->
+              <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-700">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    论文图 16: 自回归解码与推测解码比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+                </div>
+                
+                <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                  <img src="./images/fig16.png" 
+                       alt="论文图16: 自回归解码与推测解码比较" 
+                       class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                  
+                  <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                    <div class="flex flex-col items-center justify-center">
+                      <i class="fas fa-forward text-3xl text-gray-400 mb-3"></i>
+                      <p class="text-gray-600 font-medium mb-2">图 16: 自回归解码与推测解码比较</p>
+                      <p class="text-sm text-gray-500 text-center">展示传统自回归解码(a)和推测解码(b)的对比</p>
+                      <div class="mt-3 text-xs text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        图像路径: ./images/fig16.png
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <strong class="text-yellow-700 flex items-center">
+                    <i class="fas fa-quote-left mr-2"></i>原图图注:
+                  </strong>
+                  <span class="ml-2">自回归解码(a)和推测解码(b)的比较。</span>
+                </div>
+              </div>
+              
+              <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200 mb-6">
+                <h5 class="font-bold text-purple-700 mb-3">推测解码核心思想</h5>
+                <p class="text-sm text-gray-700 mb-3">
+                  使用较小的草案模型高效预测几个后续token，然后使用目标LLM并行验证这些预测，使LLM在通常需要单次推理的时间框架内生成多个token。
+                </p>
+                <div class="text-xs text-gray-600">
+                  <i class="fas fa-lightbulb mr-1"></i>关键优势：在不影响输出质量的情况下提高解码效率
+                </div>
+              </div>
+              
+              <!-- 推测解码方法比较 -->
+              <div class="overflow-x-auto mb-6">
+                <table class="min-w-full bg-white text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-4 border text-left">方法</th>
+                      <th class="py-2 px-4 border text-left">草案模型</th>
+                      <th class="py-2 px-4 border text-left">草案验证器</th>
+                      <th class="py-2 px-4 border text-left">接受率</th>
+                      <th class="py-2 px-4 border text-left">加速比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">SpD</td>
+                      <td class="py-2 px-4 border">小型推测模型</td>
+                      <td class="py-2 px-4 border">推测采样</td>
+                      <td class="py-2 px-4 border">1.77~2.02×</td>
+                      <td class="py-2 px-4 border">1.05~1.77×</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">LADE</td>
+                      <td class="py-2 px-4 border">LLM + N-grams</td>
+                      <td class="py-2 px-4 border">贪婪采样</td>
+                      <td class="py-2 px-4 border">1.92~2.14×</td>
+                      <td class="py-2 px-4 border">1.12~1.30×</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">SSD</td>
+                      <td class="py-2 px-4 border">子LLM</td>
+                      <td class="py-2 px-4 border">推测采样</td>
+                      <td class="py-2 px-4 border">1.64~1.74×</td>
+                      <td class="py-2 px-4 border">1.01~1.23×</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border font-medium">REST</td>
+                      <td class="py-2 px-4 border">数据存储</td>
+                      <td class="py-2 px-4 border">推测采样</td>
+                      <td class="py-2 px-4 border">2.18~2.31×</td>
+                      <td class="py-2 px-4 border">1.72~2.27×</td>
+                    </tr>
+                    <tr class="bg-green-50">
+                      <td class="py-2 px-4 border font-medium">Medusa-1</td>
+                      <td class="py-2 px-4 border">四个LLM头</td>
+                      <td class="py-2 px-4 border">推测采样</td>
+                      <td class="py-2 px-4 border">2.52~2.62×</td>
+                      <td class="py-2 px-4 border">2.04~2.86×</td>
+                    </tr>
+                    <tr class="bg-green-50">
+                      <td class="py-2 px-4 border font-medium">Eagle</td>
+                      <td class="py-2 px-4 border">一个Transformer层</td>
+                      <td class="py-2 px-4 border">推测采样</td>
+                      <td class="py-2 px-4 border">3.47~3.72×</td>
+                      <td class="py-2 px-4 border">2.77~3.74×</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-xs text-gray-600 mb-6">注：Eagle表现出卓越性能，实现显著的端到端加速</p>
+            </div>
+          </div>
+          
+          <!-- 服务系统 -->
+          <div>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">服务系统优化</h3>
+            
+            <!-- PDF图像占位符 -->
+            <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  论文图 17: LLM服务系统优化分类
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+              </div>
+              
+              <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <img src="./images/fig17.png" 
+                     alt="论文图17: LLM服务系统优化分类" 
+                     class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                
+                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                  <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-cloud text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 font-medium mb-2">图 17: LLM服务系统优化分类</p>
+                    <p class="text-sm text-gray-500 text-center">展示内存管理、连续批处理、调度策略和分布式系统四种服务系统优化方法</p>
+                    <div class="mt-3 text-xs text-gray-400">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      图像路径: ./images/fig17.png
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong class="text-yellow-700 flex items-center">
+                  <i class="fas fa-quote-left mr-2"></i>原图图注:
+                </strong>
+                <span class="ml-2">LLM服务系统优化的分类</span>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3">内存管理</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  KV缓存的存储主导了LLM服务中的内存使用，尤其是在上下文长度较长时。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>vLLM</strong>：以分页方式存储KV缓存</li>
+                  <li><strong>LightLLM</strong>：使用更细粒度的KV缓存存储</li>
+                  <li><strong>FlashInfer</strong>：为KV缓存编排不同的数据布局</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-3">连续批处理</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  一旦某些旧请求完成，就批处理新请求，利用服务场景中的异步性质。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>ORCA</strong>：首次在LLM服务中利用连续批处理技术</li>
+                  <li><strong>vLLM</strong>：将技术扩展到注意力计算</li>
+                  <li><strong>Sarathi</strong>：引入拆分和融合方法</li>
+                </ul>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-3">调度策略</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  在LLM服务中，每个请求的作业长度表现出可变性，因此执行请求的顺序显著影响服务系统的吞吐量。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>FCFS</strong>：先到先服务原则</li>
+                  <li><strong>FastServe</strong>：抢占式调度策略优化队头阻塞问题</li>
+                  <li><strong>VTC</strong>：基于token数量的成本函数衡量客户端间公平性</li>
+                </ul>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 class="font-bold text-orange-700 mb-3">分布式系统</h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  为了实现高吞吐量，LLM服务通常部署在分布式平台上。
+                </p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li><strong>Splitwise</strong>：分离预填充和解码步骤</li>
+                  <li><strong>SpotServe</strong>：在可抢占GPU实例上提供LLM服务</li>
+                  <li><strong>Infinite-LLM</strong>：在数据中心并行化序列的不同部分</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 应用场景 -->
+      <section id="application" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-rocket mr-3 text-purple-500"></i>
+          应用场景
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            当前研究在探索高效LLM推理的各种优化级别的边界方面取得了显著进展。然而，需要进一步研究以增强LLM在实际场景中的效率。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3">智能体和多模型框架</h4>
+              <p class="text-sm text-gray-700 mb-3">
+                智能体和多模型框架通过利用LLMs的强大能力，显著提高了智能体处理复杂任务和人类请求的能力。
+              </p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>引入更多并行性到LLMs输出内容结构中</li>
+                <li>创建数据级和系统级优化的机会</li>
+                <li>自然引入新的优化级别，即流水线级</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">长上下文LLMs</h4>
+              <p class="text-sm text-gray-700 mb-3">
+                目前，LLMs面临处理越来越长输入上下文的挑战。然而，Transformer风格LLMs的基本组件自注意力操作在上下文长度方面表现出二次复杂度。
+              </p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>输入压缩、稀疏注意力、低复杂度结构设计</li>
+                <li>注意力算子优化</li>
+                <li>非Transformer架构的竞争力仍在审查中</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-yellow-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">边缘场景部署</h4>
+              <p class="text-sm text-gray-700 mb-3">
+                尽管在提高LLM推理效率方面付出了大量努力，但将LLMs部署到资源极度受限的边缘设备（如手机）上仍然存在持续挑战。
+              </p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>预训练参数为1B到3B的较小语言模型</li>
+                <li>MLC-LLM成功在手机上部署LLaMA-7B模型</li>
+                <li>采用云边协作技术或设计更复杂的硬件加速器</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-red-50 to-orange-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3">安全效率协同</h4>
+              <p class="text-sm text-gray-700 mb-3">
+                除了任务性能和效率外，安全性也是LLM应用中必须考虑的关键因素。
+              </p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>当前研究主要关注效率优化而未充分考虑安全性</li>
+                <li>研究效率与安全性之间的相互作用</li>
+                <li>开发新优化方法或改进现有方法以实现更好的权衡</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-purple-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            高效LLM推理专注于减少LLM推理过程中的计算、内存访问和内存成本，旨在优化效率指标，如延迟、吞吐量、存储、功率和能量。本综述对高效LLM推理研究进行了全面回顾，为关键技术提供了见解、建议和未来方向。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>提出了包含数据级、模型级和系统级优化的层次分类法</li>
+              <li>对每个级别和子领域的研究进行了细致检查和总结</li>
+              <li>对模型量化和高效服务系统等技术进行了实验评估和分析</li>
+              <li>为领域从业者和研究人员提供了实用建议和有前景的研究方向</li>
+            </ul>
+          </div>
+          
+          <div class="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>论文不足之处
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>实验分析主要集中在量化技术和推测解码，其他技术领域的实验验证相对有限</li>
+              <li>对于某些新兴技术（如Mamba等非Transformer架构）的评估可能不够全面</li>
+              <li>缺乏对实际部署中硬件兼容性和系统集成挑战的深入讨论</li>
+              <li>安全性与效率的权衡讨论相对较少，这是实际应用中的重要考量</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 图像交互增强
+      const images = document.querySelectorAll('.pdf-figure-container img');
+      images.forEach(img => {
+        img.addEventListener('click', function() {
+          this.classList.toggle('max-w-full');
+          this.classList.toggle('max-w-none');
+          this.classList.toggle('cursor-zoom-out');
+        });
+        
+        img.style.cursor = 'zoom-in';
+      });
+    });
+  </script>
+</body>
+</html>
