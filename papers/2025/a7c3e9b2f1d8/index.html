@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The FastLanes File Format - 可视化教学工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .concept-visual {
+      transition: all 0.3s ease;
+    }
+    .concept-visual:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          The FastLanes File Format
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Azim Afroozeh, Peter Boncz</div>
+                <div class="text-sm text-gray-600 mt-1">Centrum Wiskunde & Informatica, The Netherlands</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>PVLDB, 18(11): 4629 - 4643, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.14778/3749646.3749718</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">文件格式</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">数据压缩</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">SIMD</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">列式存储</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-2 flex items-center">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-1 text-gray-700">
+          <li>提出了一种新的开源大数据文件格式FastLanes，专为现代数据并行执行（SIMD或GPU）设计</li>
+          <li>引入了表达式编码机制，支持级联编码和多列压缩</li>
+          <li>设计了分段页面布局，支持细粒度访问和压缩执行</li>
+          <li>开发了两阶段算法，用于在压缩期间找到最佳编码表达式</li>
+          <li>实现了开源C++实现，在压缩比和解压缩速度方面均优于现有格式</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            本文介绍了一种名为FastLanes的新型开源大数据文件格式。它专为现代数据并行执行（SIMD或GPU）设计，并发展了先前数据格式（如Parquet）的特性，这些格式是数据湖的基础，并越来越多地用于AI管道。
+          </p>
+          
+          <p class="text-gray-700 leading-relaxed mb-4">
+            FastLanes通过避免使用通用压缩方法（如Snappy）而采用轻量级编码来实现这一目标，这些编码完全支持数据并行。为了提高压缩比，它使用灵活的<em>表达式编码</em>机制级联编码。这种机制还支持多列压缩（MCC），通过利用列之间的相关性来增强压缩，这是列式存储长期存在的弱点。
+          </p>
+          
+          <p class="text-gray-700 leading-relaxed">
+            FastLanes还在其API方面进行了创新，提供对<em>部分</em>解压缩的灵活支持，促进引擎在压缩数据上执行查询。FastLanes设计用于细粒度访问，在小批次级别而不是行组级别；为了限制解压缩内存占用以适应CPU和GPU缓存。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">现有格式的局限性</h3>
+            <p class="text-gray-700 mb-4">
+              Apache Parquet和ORC等数据格式设计于2013年，类似的设计也用于现代分析系统，如DuckDB和Snowflake。Parquet现在是数据湖和"湖仓"的事实标准格式。然而，作者认为过去十年中硬件和工作负载的变化需要重新设计。
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center concept-visual">
+                <i class="fas fa-brain text-blue-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-blue-700 mb-2">AI工作负载</h4>
+                <p class="text-sm text-gray-700">分析数据系统的工作负载越来越多地包括执行训练或推理的AI管道</p>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center concept-visual">
+                <i class="fas fa-microchip text-green-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-green-700 mb-2">硬件多样性</h4>
+                <p class="text-sm text-gray-700">CPU变得多样化（不仅是x86，还有ARM和RISC-V），AI管道增加了基于GPU或TPU的数据处理的重要性</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center concept-visual">
+                <i class="fas fa-tachometer-alt text-purple-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-purple-700 mb-2">数据并行性需求</h4>
+                <p class="text-sm text-gray-700">为了在此类硬件上高效处理数据，算法需要包含数据并行性，特别是需要由大规模规则计算模式组成，没有数据和控制依赖</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">压缩技术演进</h3>
+            
+            <!-- 图1：特征对比 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-table mr-2 text-blue-500"></i>
+                  图1: 大数据文件格式的特征对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-4 border-b text-left">特性</th>
+                      <th class="py-2 px-4 border-b text-center">Parquet</th>
+                      <th class="py-2 px-4 border-b text-center">BtrBlocks</th>
+                      <th class="py-2 px-4 border-b text-center">FastLanes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="py-2 px-4 border-b">重量级压缩方法</td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">数据并行：SIMD/GPU友好</td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">级联轻量级压缩</td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">多列压缩方法</td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">访问粒度</td>
+                      <td class="py-2 px-4 border-b text-center">64K行组</td>
+                      <td class="py-2 px-4 border-b text-center">64K行组</td>
+                      <td class="py-2 px-4 border-b text-center">1K向量</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">可返回压缩向量</td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                      <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 大数据文件格式的特征对比。BtrBlocks引入了级联轻量级压缩以避免在Parquet中使用的重量级压缩（如Zstd），但其编码不是数据并行（SIMD/GPU友好）的。FastLanes完全数据并行，可以按向量进行解压缩（小内存占用），引入了多列压缩并允许访问压缩向量。
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">简单解释</h4>
+              <p class="text-gray-700 text-sm">
+                这个表格展示了三种文件格式的关键区别。FastLanes在数据并行性和细粒度访问方面具有明显优势，这使它更适合现代硬件和AI工作负载。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">当前格式的技术挑战</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200 concept-visual">
+                <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                  <i class="fas fa-bolt mr-2"></i>数据并行性不足
+                </h4>
+                <p class="text-gray-700 text-sm">
+                  当前数据格式在设计时没有考虑数据并行性，难以有效利用SIMD和GPU进行数据解压缩。像Snappy这样的算法是数据并行算法的对立面。
+                </p>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 concept-visual">
+                <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                  <i class="fas fa-compress-alt mr-2"></i>压缩执行支持有限
+                </h4>
+                <p class="text-gray-700 text-sm">
+                  现代查询引擎添加了压缩执行能力，但当前格式的API不支持直接交付压缩向量，无法充分利用压缩执行的优势。
+                </p>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 concept-visual">
+                <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                  <i class="fas fa-columns mr-2"></i>多列压缩缺失
+                </h4>
+                <p class="text-gray-700 text-sm">
+                  列式格式独立存储各列，错过了利用列间相关性进行压缩的机会，导致某些具有强相关列的表在行导向格式中可能更紧凑。
+                </p>
+              </div>
+              
+              <div class="bg-pink-50 p-4 rounded-lg border border-pink-200 concept-visual">
+                <h4 class="font-bold text-pink-700 mb-2 flex items-center">
+                  <i class="fas fa-memory mr-2"></i>粗粒度访问
+                </h4>
+                <p class="text-gray-700 text-sm">
+                  现有格式如BitBlocks在完整的行组级别执行解压缩，导致较大的内存占用，不适合CPU和GPU缓存。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">压缩比与速度的权衡</h3>
+            
+            <!-- 级联压缩示例 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-project-diagram mr-2 text-blue-500"></i>
+                  级联压缩示例
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">概念图</span>
+              </div>
+              
+              <div class="bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <div class="text-left mb-4 bg-white p-4 rounded border">
+                  <strong>原始数据:</strong> {'Cascading', 'Cascading', 'Cascading', 'Cascading', 'Cascading', 'Cascading', 'Compression', 'Compression'}
+                </div>
+                
+                <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
+                  <div class="bg-blue-100 p-3 rounded border border-blue-300 text-center">
+                    <i class="fas fa-database text-blue-600 mb-2"></i>
+                    <p class="text-sm font-medium">步骤1: DICT编码</p>
+                    <p class="text-xs mt-1">代码: (0,0,0,0,0,0,1,1)</p>
+                    <p class="text-xs">字典: {'Cascading', 'Compression'}</p>
+                  </div>
+                  
+                  <div class="flex items-center justify-center text-gray-500">
+                    <i class="fas fa-arrow-right text-xl"></i>
+                  </div>
+                  
+                  <div class="bg-green-100 p-3 rounded border border-green-300 text-center">
+                    <i class="fas fa-compress-arrows-alt text-green-600 mb-2"></i>
+                    <p class="text-sm font-medium">步骤2: RLE编码</p>
+                    <p class="text-xs mt-1">结果: ((0,6),(1,2))</p>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-600">
+                  级联压缩结合了DICT和RLE两种轻量级压缩方法，实现了更好的压缩效果
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>技术解释:</strong> 这个数组展示了两个模式：重复值和低熵，这些模式非常适合[RLE, DICT]编码。但仅应用DICT或RLE只能捕获其中一个模式。通过先应用DICT，数组被转换为代码和字典，然后应用RLE将代码转换为运行长度编码，实现更好的压缩。
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">简单理解</h4>
+              <p class="text-gray-700 text-sm">
+                就像打包行李一样，单独折叠衣服（DICT编码）或单独压缩空气（RLE编码）都不够好，但先折叠再压缩空气（级联压缩）可以获得最小的行李体积！
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 表达式编码 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">表达式编码机制</h3>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+              <h4 class="font-bold text-blue-700 mb-2">表达式编码概念</h4>
+              <p class="text-gray-700 text-sm">
+                表达式编码是一种统一的压缩模型，提供级联编码、多列压缩、压缩执行和向量化解码的统一方法。它通过将不同的编码操作符组合成表达式来实现复杂的压缩策略。
+              </p>
+            </div>
+            
+            <!-- 表1：FastLanes操作符 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-table mr-2 text-blue-500"></i>
+                  表1: FastLanes操作符及其编码布局
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-4 border-b text-left">ID</th>
+                      <th class="py-2 px-4 border-b text-left">操作符</th>
+                      <th class="py-2 px-4 border-b text-left">编码布局</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="py-2 px-4 border-b">0</td>
+                      <td class="py-2 px-4 border-b">FFOR</td>
+                      <td class="py-2 px-4 border-b">位打包数据, 基值, 位宽</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">1</td>
+                      <td class="py-2 px-4 border-b">PATCH</td>
+                      <td class="py-2 px-4 border-b">数据, 异常值, 异常位置</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">2</td>
+                      <td class="py-2 px-4 border-b">DELTA</td>
+                      <td class="py-2 px-4 border-b">差值, 基值</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">3</td>
+                      <td class="py-2 px-4 border-b">ALP</td>
+                      <td class="py-2 px-4 border-b">数据</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">6</td>
+                      <td class="py-2 px-4 border-b">DICT</td>
+                      <td class="py-2 px-4 border-b">字典, 代码</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">13</td>
+                      <td class="py-2 px-4 border-b">CONSTANT</td>
+                      <td class="py-2 px-4 border-b">单个值</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">15</td>
+                      <td class="py-2 px-4 border-b">EXTERNAL DICT</td>
+                      <td class="py-2 px-4 border-b">字典, 指向另一列的指针</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原表图注:</strong> FastLanes操作符，以及每个操作符持有的编码数据。操作符是执行编码布局中的1024值向量。编码操作符可用于压缩执行。以FFOR为例，它将基值与位打包数据分开。在简单查询谓词（如加法）的情况下，可以延迟解码，并且该值可以仅添加到基值。这些操作符中的多个可以组合在一个链中，形成编码表达式。
+              </div>
+            </div>
+            
+            <!-- 技术细节 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-microscope mr-2"></i>技术细节：表达式编码
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>操作符组合:</strong> 表达式编码将不同的编码操作符组合成链式结构，每个操作符执行特定的数据转换</li>
+                    <li><strong>灵活配置:</strong> 支持任意嵌套的编码表达式，允许根据数据特性选择最优的压缩策略</li>
+                    <li><strong>部分解压缩:</strong> 查询引擎可以选择只解压缩表达式链的一部分，生成压缩向量用于压缩执行</li>
+                    <li><strong>统一表示:</strong> 使用修改的反波兰表示法存储和表示表达式，减少运行时解释开销</li>
+                  </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">操作符池:</strong>
+                      <p>FastLanes提供了丰富的操作符池，包括FFOR、PATCH、DELTA、ALP、DICT、FSST等，每个操作符针对特定数据类型和压缩模式优化</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">表达式检测:</strong>
+                      <p>使用两阶段算法（基于规则的阶段和基于采样的编码阶段）自动选择最优的编码表达式</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">向量粒度:</strong>
+                      <p>所有操作在1024个值的向量上执行，确保工作模式一致，便于编译器自动向量化</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 分段页面布局 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">分段页面布局</h3>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+              <h4 class="font-bold text-blue-700 mb-2">分段布局概念</h4>
+              <p class="text-gray-700 text-sm">
+                分段页面布局将编码数据的相似部分存储在同一位置，每个段存储具有相同角色和类型的编码数据。这种设计支持细粒度访问和进一步的压缩优化。
+              </p>
+            </div>
+            
+            <!-- 图7：FastLanes文件布局 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+                  图7: FastLanes文件布局示例
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <div class="text-left mb-6 bg-white p-4 rounded border shadow-sm">
+                  <h6 class="font-bold text-gray-700 mb-2">示例表数据:</h6>
+                  <div class="text-sm font-mono">
+                    <div>ID: 100, 101, 100, 101, ...</div>
+                    <div>Name: "Alice", "Bob", "Alice", "Bob", ...</div>
+                    <div>Institute: "CWI", "CWI", "CWI", "CWI", ...</div>
+                    <div>Alias: "Alice", "Bob", "Alice", "Bob", ...</div>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="bg-white p-4 rounded border shadow-sm">
+                    <h6 class="font-bold text-gray-700 mb-3">文件页脚 (FlatBuffers格式)</h6>
+                    <div class="text-xs font-mono bg-gray-100 p-3 rounded">
+                      {<br>
+                      &nbsp;&nbsp;"Rowgroup size": 2,<br>
+                      &nbsp;&nbsp;"Rowgroup binary size": 26,<br>
+                      &nbsp;&nbsp;"Column Descriptors": [...]<br>
+                      }
+                    </div>
+                  </div>
+                  
+                  <div class="bg-white p-4 rounded border shadow-sm">
+                    <h6 class="font-bold text-gray-700 mb-3">二进制数据格式</h6>
+                    <div class="text-xs font-mono bg-gray-100 p-3 rounded">
+                      <!-- 简化的二进制数据表示 -->
+                      01010101 01010101 01010101 ...<br>
+                      00000000 01000000 10000000 ...<br>
+                      "Alice" "Bob" ...
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-600">
+                  列编码策略: Name列使用Dictionary_FFOR_UINT8编码，Institute列使用常量编码，ID列使用一对一映射，Alias列使用相等性编码
+                </div>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 左上角表格的FastLanes文件布局。我们将行组大小减少到8大小的2个向量（v0.1默认是64×1024）。FastLanes文件页脚显示在右上角，最后，FastLanes文件格式的实际字节显示在底部，左下角是颜色图例。每个框代表一个字节，下面标有与图例匹配的颜色和灰色的字节位置。
+              </div>
+            </div>
+            
+            <!-- 技术细节 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-microscope mr-2"></i>技术细节：分段页面布局
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>段定义:</strong> 段存储具有相同角色和类型的编码数据，例如所有FFOR编码的基值存储在一个段中</li>
+                    <li><strong>入口点数组:</strong> 每个段包含一个入口点数组，跟踪每个向量数据的起始偏移，支持向量化解码</li>
+                    <li><strong>细粒度访问:</strong> 分段布局支持在向量粒度（1024值）访问编码数据，限制解压缩内存占用</li>
+                    <li><strong>查询优化:</strong> 查询引擎可以访问特定段中的数据（如FFOR基值）进行谓词下推和向量跳过</li>
+                  </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">段描述符:</strong>
+                      <p>每个段在文件页脚中有对应的描述符，包含入口点偏移和大小、数据偏移和大小等关键信息</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">进一步压缩:</strong>
+                      <p>将相似数据收集在一个段中允许在单个过程中进一步压缩这些数据</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">缓存友好:</strong>
+                      <p>分段布局避免在读取结构时用不必要的数据填充缓存，特别是当只需要结构的子字段时</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 压缩比评估 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">压缩比评估</h3>
+            
+            <!-- 表3：压缩比对比 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-table mr-2 text-blue-500"></i>
+                  表3: 不同文件格式在Public BI和TPC-H数据集上的压缩比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-4 border-b text-left">数据集</th>
+                      <th class="py-2 px-4 border-b text-center">CSV</th>
+                      <th class="py-2 px-4 border-b text-center">FastLanes</th>
+                      <th class="py-2 px-4 border-b text-center">Parquet+Snappy</th>
+                      <th class="py-2 px-4 border-b text-center">Parquet+Zstd</th>
+                      <th class="py-2 px-4 border-b text-center">BtrBlocks</th>
+                      <th class="py-2 px-4 border-b text-center">DuckDB</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="py-2 px-4 border-b">Public_BI</td>
+                      <td class="py-2 px-4 border-b text-center">980.03 MB</td>
+                      <td class="py-2 px-4 border-b text-center font-bold text-green-600">172.05 MB</td>
+                      <td class="py-2 px-4 border-b text-center">+41.0%</td>
+                      <td class="py-2 px-4 border-b text-center">+2.0%</td>
+                      <td class="py-2 px-4 border-b text-center">+18.0%</td>
+                      <td class="py-2 px-4 border-b text-center">+66.0%</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-4 border-b">TPC-H</td>
+                      <td class="py-2 px-4 border-b text-center">43.6 MB</td>
+                      <td class="py-2 px-4 border-b text-center font-bold">11.8 MB</td>
+                      <td class="py-2 px-4 border-b text-center">+20.8%</td>
+                      <td class="py-2 px-4 border-b text-center text-red-600">-15.3%</td>
+                      <td class="py-2 px-4 border-b text-center">+17.5%</td>
+                      <td class="py-2 px-4 border-b text-center">+14.0%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原表图注:</strong> 相对于FastLanes的文件格式压缩比。FastLanes仅使用轻量级压缩方案就提供了非常好的压缩；只有使用缓慢且粗粒度的Zstd的Parquet在压缩比上能与之匹敌。
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">关键发现</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>FastLanes明显优于BtrBlocks以及常用的Parquet默认配置Snappy</li>
+                <li>仅使用LWC方案，FastLanes在Public_BI上仍然比Parquet+Zstd高出2%</li>
+                <li>在TPC-H上，Parquet+Zstd压缩效果比FastLanes好15.3%，主要原因是TPC-H数据规范化且不提供MCC机会</li>
+                <li>正百分比表示FastLanes压缩效果更好的百分比</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 性能评估 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">性能评估</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm concept-visual">
+                <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-tachometer-alt text-green-500 mr-2"></i>解压缩速度
+                </h4>
+                
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">FastLanes:</span>
+                    <span class="text-sm font-bold text-green-600">基准 (1.0x)</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Parquet+Snappy:</span>
+                    <span class="text-sm text-gray-700">43倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Parquet+Zstd:</span>
+                    <span class="text-sm text-gray-700">44倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">BtrBlocks:</span>
+                    <span class="text-sm text-gray-700">7倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">DuckDB:</span>
+                    <span class="text-sm text-gray-700">29倍慢</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm concept-visual">
+                <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-random text-blue-500 mr-2"></i>随机访问时间
+                </h4>
+                
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">FastLanes:</span>
+                    <span class="text-sm font-bold text-blue-600">0.14毫秒</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Parquet+Snappy:</span>
+                    <span class="text-sm text-gray-700">315倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Parquet+Zstd:</span>
+                    <span class="text-sm text-gray-700">416倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">BtrBlocks:</span>
+                    <span class="text-sm text-gray-700">800倍慢</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">DuckDB:</span>
+                    <span class="text-sm text-gray-700">5倍慢</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2">性能分析</h4>
+              <p class="text-gray-700 text-sm">
+                基准测试表明，基于块的压缩方法对于随机访问极其低效，因为它们需要解压缩整个块来访问单个值。相比之下，FastLanes和DuckDB中使用的向量化解码模型在压缩效果和足够小的块大小之间提供了良好的平衡，从而实现高效的元组检索。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">主要贡献总结</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200 concept-visual">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-compress-arrows-alt mr-2"></i>压缩技术突破
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>引入了表达式编码机制，支持级联编码和多列压缩</li>
+                  <li>设计了分段页面布局，支持细粒度访问和压缩执行</li>
+                  <li>开发了两阶段算法，用于在压缩期间找到最佳编码表达式</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 concept-visual">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-tachometer-alt mr-2"></i>性能优势
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>在压缩比上优于或等于现有格式</li>
+                  <li>解压缩速度比现有格式快一个数量级</li>
+                  <li>支持高效的细粒度数据访问和随机访问</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">论文局限性</h3>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2">当前版本的局限性</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>在TPC-H等规范化数据集上，压缩比不如Parquet+Zstd</li>
+                <li>编码速度尚未优化，v0.1代码路径非常基础</li>
+                <li>对某些合成数据模式（如"String#Integer"格式的字符串列）的编码规则不完善</li>
+                <li>嵌套数据类型支持有限</li>
+                <li>尚未集成到主流查询引擎中</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节展开/收起
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+      
+      // 概念可视化交互
+      const conceptVisuals = document.querySelectorAll('.concept-visual');
+      conceptVisuals.forEach(visual => {
+        visual.addEventListener('click', function() {
+          this.classList.toggle('bg-opacity-80');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

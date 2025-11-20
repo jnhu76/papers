@@ -3,7 +3,7 @@
   "title": "Time, Clocks, and the Ordering of Events in a Distributed System",
   "authors": ["Leslie Lamport"],
   "year": 1978,
-  "conference": "Communications of the ACM",
+  "conference": "CACM",
   "category": "分布式系统",
   "keywords": ["分布式系统", "逻辑时钟", "事件排序", "时钟同步", "互斥问题", "happened before", "partial ordering"],
   "abstract": "The concept of one event happening before another in a distributed system is examined, and is shown to define a partial ordering of the events. A distributed algorithm is given for synchronizing a system of logical clocks which can be used to totally order the events. The use of the total ordering is illustrated with a method for solving synchronization problems. The algorithm is then specialized for synchronizing physical clocks, and a bound is derived on how far out of synchrony the clocks can become."
