@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyzing Modern NVIDIA GPU cores</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Analyzing Modern NVIDIA GPU cores
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Rodrigo Huerta, Joselorenzo Cruz, Mojtaba Abaie Shoushtary, Antonio Gonzalez</div>
+                <div class="text-sm text-gray-600 mt-1">Universitat Politecnica de Catalunya, Barcelona, Spain</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv预印本，论文编号：2503.20481v1</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2503.20481v1</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">GPU微架构</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">NVIDIA</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">逆向工程</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">硬件-软件协同设计</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>逆向工程现代NVIDIA GPU核心，揭示了其微架构设计细节</li>
+          <li>描述了现代NVIDIA GPU中控制位的工作原理和依赖管理机制</li>
+          <li>揭示了指令调度器策略、寄存器文件架构和内存流水线细节</li>
+          <li>重新设计了Accel-sim模拟器中的SM/核心模型，显著提高了模拟精度</li>
+          <li>展示了基于控制位的依赖管理机制优于传统记分牌方法</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">GPU已成为加速HPC工作负载（如人工智能和科学模拟）的最流行平台。然而，学术界的大多数微架构研究依赖于基于15年以上历史的架构的GPU核心流水线设计。</p>
+          <p class="mb-4">本文逆向工程了现代NVIDIA GPU核心，揭示了其设计的许多关键方面，并解释了GPU如何利用硬件-编译器技术，在编译器执行期间指导硬件。特别地，它揭示了指令调度逻辑的工作原理，包括指令调度器的策略、寄存器文件的结构及其相关缓存，以及内存流水线的多个特性。</p>
+          <p class="mb-4">通过建模所有这些新发现的微架构细节，作者在执行周期方面实现了比先前最先进模拟器低18.24%的平均绝对百分比误差（MAPE），相对于真实硬件（NVIDIA RTX A6000）平均为13.98%的MAPE。作者还证明这个新模型适用于其他NVIDIA架构，如Turing。</p>
+          <p>最后，作者展示了现代NVIDIA GPU中包含的基于软件的依赖管理机制在性能和面积方面优于基于记分牌的硬件机制。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">近年来，GPU除了图形处理外，在执行通用工作负载方面也变得非常流行。GPU的架构提供了大规模并行性，可以被许多现代应用程序利用，如生物信息学、物理学和化学等。如今，GPU是加速现代机器学习工作负载的主要候选者，这些工作负载具有高内存带宽和计算需求。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>研究空白
+            </h4>
+            <p>然而，关于现代商业GPU微架构设计的信息稀缺，当前的学术研究以2006年发布的Tesla微架构为基线。自Tesla以来，今天的GPU架构经历了重大变化，因此基于该架构的模型可能会偏离报告的发现。</p>
+          </div>
+          
+          <p class="mb-4">这项工作旨在揭示现代NVIDIA GPU架构使用的各种组件的不同特性和细节，以提高学术微架构模型的准确性。本文解释的模型和细节使研究人员能够更好地识别改进未来GPU的挑战和机会。</p>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+                原图 1: SM/Core academia design
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: 学术界的SM/核心设计" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 学术界GPU设计，包含四个子核心和共享组件，如L1指令缓存、L1数据缓存、共享内存和纹理单元。
+            </div>
+          </div>
+          
+          <p class="mb-4">学术界的大多数GPU微架构研究依赖于GPGPU-Sim模拟器使用的微架构。该模拟器最近更新为包含从Volta开始的子核心（NVIDIA术语中的处理块）方法。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>传统GPU流水线阶段
+            </h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>取指阶段:</strong> 轮询调度器选择其下一条指令在L1指令缓存中且指令缓冲区中有空槽的warp</li>
+              <li><strong>发射阶段:</strong> GTO调度器选择不等待屏障且其最旧指令与流水线中其他飞行指令没有数据依赖的warp</li>
+              <li><strong>操作数收集:</strong> 指令发射后放置在收集器单元中，等待所有源寄存器操作数被检索</li>
+              <li><strong>写回阶段:</strong> 结果写入寄存器文件</li>
+            </ul>
+          </div>
+          
+          <p>Accel-sim中建模的GPU微架构类似于基于2006年发布的Tesla的NVIDIA GPU，并更新了一些现代特性，主要是子核心模型和类似于Volta的具有IPOLY索引的分区缓存。然而，它缺乏现代NVIDIA GPU中存在的一些重要组件，如L0指令缓存和统一寄存器文件。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-bug mr-2"></i>技术挑战
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm">
+                <li>现代NVIDIA GPU微架构细节不公开</li>
+                <li>学术模拟器基于过时的架构模型</li>
+                <li>依赖管理机制发生重大变化</li>
+                <li>缺乏对控制位语义的准确理解</li>
+              </ul>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>性能挑战
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm">
+                <li>模拟精度与实际硬件存在显著差距</li>
+                <li>传统记分牌机制效率低下</li>
+                <li>寄存器文件访问成为性能瓶颈</li>
+                <li>指令预取机制不明确</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p class="mb-4">现代NVIDIA GPU架构经历了重大变化，但学术界的模拟器仍然基于过时的Tesla架构。这导致了以下主要问题：</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">关键研究问题</h4>
+            <ol class="list-decimal list-inside space-y-2">
+              <li>现代NVIDIA GPU核心的微架构设计细节是什么？</li>
+              <li>控制位如何工作以及它们如何管理数据依赖？</li>
+              <li>指令调度器使用什么策略来选择warp？</li>
+              <li>寄存器文件及其缓存的组织结构是什么？</li>
+              <li>内存流水线的关键特性是什么？</li>
+              <li>如何将这些发现整合到模拟器中以提高准确性？</li>
+            </ol>
+          </div>
+          
+          <p>作者通过逆向工程方法解决了这些问题，揭示了现代NVIDIA GPU核心的微架构细节，并开发了一个更准确的模拟模型。</p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">逆向工程方法</h3>
+          <p class="mb-4">作者采用基于编写小型微基准测试的研究方法，这些测试由少量指令组成，并测量特定小指令序列的执行时间。通过使用保存GPU的CLOCK计数器到寄存器中的指令包围代码区域来获取经过的周期，并将其存储在主内存中供后续后处理。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-tools mr-2"></i>工具和方法
+            </h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>使用CUAssembler工具编写和修改SASS汇编指令</li>
+              <li>开发小型微基准测试来测试特定假设</li>
+              <li>通过可视化记录的周期来确认或反驳关于控制位语义或微架构特定特性的假设</li>
+              <li>分析多个记录的时间标记以发现warp的发射策略</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">控制位和依赖管理</h3>
+          <p class="mb-4">现代NVIDIA GPU架构的ISA包含控制位和编译器提供的信息以保持正确性。与先前工作中通过运行时跟踪寄存器读写来检查数据依赖的GPU架构不同，这些GPU架构依赖编译器来处理寄存器数据依赖。</p>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-code mr-2 text-blue-500"></i>
+                原图 2: 使用依赖计数器处理依赖的示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: 使用依赖计数器处理依赖的示例" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 使用依赖计数器处理具有可变延迟生产者的依赖的代码示例。显示了四个指令（三个加载和一个加法）及其相关编码。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-stopwatch mr-2"></i>固定延迟指令的依赖管理
+              </h5>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>使用<strong>Stall计数器</strong>处理生产者-消费者依赖</li>
+                <li>编译器设置此计数器为生产指令的延迟减去生产者和第一个消费者之间的指令数</li>
+                <li>每个warp的Stall计数器每周期减少1直到达到0</li>
+                <li>发射逻辑检查此计数器，在其值为零之前不考虑发射相同warp的另一条指令</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-random mr-2"></i>可变延迟指令的依赖管理
+              </h5>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>使用<strong>依赖计数器</strong>位处理依赖</li>
+                <li>每个warp有六个特殊寄存器存储这些计数器</li>
+                <li>生产者增加特定计数器，消费者等待此计数器为零</li>
+                <li>对于WAR危险，计数器在读取源操作数后减少</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">GPU核心微架构</h3>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+                原图 3: 现代NVIDIA GPU SM/核心设计
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: 现代NVIDIA GPU SM/核心设计" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> GPU核心微架构的主要组件，包括子核心、寄存器文件、内存单元等。
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-bold text-gray-800 mb-3">指令调度器</h4>
+          <p class="mb-4">作者发现现代NVIDIA GPU使用<strong>编译器引导的贪心然后最年轻（CGGTY）</strong>策略。调度器尝试从同一warp发射指令如果满足资格标准。当切换到不同warp时，选择满足资格标准的最年轻warp。</p>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+                原图 4: 来自四个不同warp的指令发射时间线
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="论文图4: 来自四个不同warp的指令发射时间线" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 当四个warp在同一子核心中执行的三个不同情况下指令发射的时间线。
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-bold text-gray-800 mb-3">寄存器文件</h4>
+          <p class="mb-4">现代NVIDIA GPU有各种寄存器文件：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="space-y-3">
+              <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                <h5 class="font-bold text-blue-700 text-sm">常规寄存器文件</h5>
+                <p class="text-xs">每个SM有65536个32位寄存器，用于存储线程操作的值</p>
+              </div>
+              <div class="bg-green-50 p-3 rounded border border-green-200">
+                <h5 class="font-bold text-green-700 text-sm">统一寄存器</h5>
+                <p class="text-xs">每个warp有64个私有32位寄存器，存储warp所有线程共享的值</p>
+              </div>
+              <div class="bg-purple-50 p-3 rounded border border-purple-200">
+                <h5 class="font-bold text-purple-700 text-sm">谓词寄存器</h5>
+                <p class="text-xs">每个warp有八个32位寄存器，每个位由warp的不同线程使用</p>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
+                <h5 class="font-bold text-yellow-700 text-sm">SB寄存器</h5>
+                <p class="text-xs">每个warp有六个寄存器，称为依赖计数器，用于跟踪可变延迟依赖</p>
+              </div>
+              <div class="bg-red-50 p-3 rounded border border-red-200">
+                <h5 class="font-bold text-red-700 text-sm">B寄存器</h5>
+                <p class="text-xs">每个warp至少有16个B寄存器，用于管理控制流重新收敛</p>
+              </div>
+              <div class="bg-indigo-50 p-3 rounded border border-indigo-200">
+                <h5 class="font-bold text-indigo-700 text-sm">特殊寄存器</h5>
+                <p class="text-xs">各种其他寄存器用于存储特殊值，如线程或块ID</p>
+              </div>
+            </div>
+          </div>
+          
+          <h4 class="text-lg font-bold text-gray-800 mb-3">寄存器文件缓存</h4>
+          <p class="mb-4">GPU有一个寄存器文件缓存，用于节省能量并减少寄存器文件读取端口的争用。此结构由软件管理，通过向每个源操作数添加一个控制位——<strong>重用位</strong>，该位指示硬件是否缓存寄存器的内容。</p>
+          
+          <h4 class="text-lg font-bold text-gray-800 mb-3">内存流水线</h4>
+          <p class="mb-4">现代NVIDIA GPU中的内存流水线在每个子核心中有一些初始阶段，而执行内存访问的最后阶段由四个子核心共享，因为数据缓存和共享内存由它们共享。</p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-bold text-gray-700 mb-3">内存流水线关键发现</h5>
+            <ul class="list-disc list-inside space-y-2 text-sm">
+              <li>每个子核心可以缓冲最多五个连续指令而不停顿</li>
+              <li>全局结构可以从任何子核心每两个周期接收一个内存请求</li>
+              <li>每个子核心中完成的地址计算吞吐量为每四个周期一条指令</li>
+              <li>每个子核心中的内存队列大小估计为四</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">性能准确性</h3>
+          <p class="mb-4">作者通过比较模拟器版本的结果与真实GPU中获得的硬件计数器指标来验证提出的GPU核心的准确性。使用了四个不同的Ampere GPU，其规格如表4所示。</p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              表4: GPU规格和性能准确性
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">GPU型号</th>
+                    <th class="py-2 px-4 border-b text-left">核心时钟</th>
+                    <th class="py-2 px-4 border-b text-left"># SM</th>
+                    <th class="py-2 px-4 border-b text-left">我们的模型MAPE</th>
+                    <th class="py-2 px-4 border-b text-left">Accel-sim MAPE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">RTX 3080</td>
+                    <td class="py-2 px-4 border-b">1710 MHz</td>
+                    <td class="py-2 px-4 border-b">68</td>
+                    <td class="py-2 px-4 border-b">17.15%</td>
+                    <td class="py-2 px-4 border-b">27.95%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">RTX 3080 Ti</td>
+                    <td class="py-2 px-4 border-b">1365 MHz</td>
+                    <td class="py-2 px-4 border-b">80</td>
+                    <td class="py-2 px-4 border-b">18%</td>
+                    <td class="py-2 px-4 border-b">28.19%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">RTX 3090</td>
+                    <td class="py-2 px-4 border-b">1395 MHz</td>
+                    <td class="py-2 px-4 border-b">82</td>
+                    <td class="py-2 px-4 border-b">17.93%</td>
+                    <td class="py-2 px-4 border-b">28.5%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">RTX A6000</td>
+                    <td class="py-2 px-4 border-b">1800 MHz</td>
+                    <td class="py-2 px-4 border-b">84</td>
+                    <td class="py-2 px-4 border-b">13.98%</td>
+                    <td class="py-2 px-4 border-b">32.22%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">作者的新模型在所有评估的GPU中明显比Accel-sim更准确，对于最大的GPU NVIDIA RTX A6000，MAPE不到Accel-sim的一半。</p>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+                原图 5: 每个基准测试的NVIDIA RTX A6000百分比绝对误差
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig5.png" alt="论文图5: 每个基准测试的NVIDIA RTX A6000百分比绝对误差" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 每个基准测试的NVIDIA RTX A6000百分比绝对误差。基准测试在每个配置中按误差升序排序。
+            </div>
+          </div>
+          
+          <p class="mb-4">作者的新模型在所有应用程序中始终具有比Accel-sim更低的绝对百分比误差，对于一半的应用程序差异相当显著。Accel-sim有10个应用程序的绝对百分比误差大于或等于100%，在最坏情况下达到543%，而作者的新模型绝对百分比误差从未超过62%。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">指令预取的敏感性分析</h3>
+          <p class="mb-4">流缓冲区指令预取器的特性对全局模型准确性有高影响。作者分析了不同配置的误差，包括禁用预取器、具有完美指令缓存，以及具有1、2、4、8、16和32个条目的流缓冲区预取器。</p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              表5: NVIDIA RTX A6000中不同预取器配置的MAPE和相对于禁用预取的加速比
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">配置</th>
+                    <th class="py-2 px-4 border-b text-left">MAPE</th>
+                    <th class="py-2 px-4 border-b text-left">加速比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">禁用</td>
+                    <td class="py-2 px-4 border-b">56.61%</td>
+                    <td class="py-2 px-4 border-b">1</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小1</td>
+                    <td class="py-2 px-4 border-b">43.94%</td>
+                    <td class="py-2 px-4 border-b">1.08x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小2</td>
+                    <td class="py-2 px-4 border-b">28.59%</td>
+                    <td class="py-2 px-4 border-b">1.2x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小4</td>
+                    <td class="py-2 px-4 border-b">18.55%</td>
+                    <td class="py-2 px-4 border-b">1.33x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小8</td>
+                    <td class="py-2 px-4 border-b">14.67%</td>
+                    <td class="py-2 px-4 border-b">1.42x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小16</td>
+                    <td class="py-2 px-4 border-b">13.98%</td>
+                    <td class="py-2 px-4 border-b">1.47x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">流缓冲区大小32</td>
+                    <td class="py-2 px-4 border-b">14.35%</td>
+                    <td class="py-2 px-4 border-b">1.46x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">完美指令缓存</td>
+                    <td class="py-2 px-4 border-b">15.2%</td>
+                    <td class="py-2 px-4 border-b">1.58x</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">最佳准确性是通过大小为16的流缓冲区获得的。作者得出结论，在GPU中，简单的预取器（如流缓冲区）在模拟准确性和性能方面表现良好，接近完美指令缓存。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">寄存器文件架构的敏感性分析</h3>
+          <p class="mb-4">作者研究了寄存器文件缓存的存在和每个存储体增加的寄存器文件读取端口数量对模拟准确性和性能的影响。</p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              表6: NVIDIA RTX A6000中不同RF配置的MAPE和相对于基线（1个读取端口和RFC启用）的加速比
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">配置</th>
+                    <th class="py-2 px-4 border-b text-left">MAPE</th>
+                    <th class="py-2 px-4 border-b text-left">加速比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">1R RFC on</td>
+                    <td class="py-2 px-4 border-b">13.98%</td>
+                    <td class="py-2 px-4 border-b">1x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">1R RFC off</td>
+                    <td class="py-2 px-4 border-b">16.05%</td>
+                    <td class="py-2 px-4 border-b">0.984x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">2R RFC off</td>
+                    <td class="py-2 px-4 border-b">13.38%</td>
+                    <td class="py-2 px-4 border-b">1.012x</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Ideal</td>
+                    <td class="py-2 px-4 border-b">13.57%</td>
+                    <td class="py-2 px-4 border-b">1.013x</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">寄存器文件架构（包括其缓存）对个别基准测试有重要影响，因此其准确模型很重要。每个存储体单个端口加上简单缓存的平均性能接近具有无限数量端口的寄存器文件，但对于某些个别基准测试差距显著，这表明这可能是一个有趣的研究领域。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">依赖管理机制分析</h3>
+          <p class="mb-4">作者分析了本文解释的软件-硬件依赖处理机制对性能和面积的影响，并将它们与早期GPU使用的传统记分牌方法进行比较。</p>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              表7: 不同依赖管理机制的加速比、面积开销和MAPE
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">机制</th>
+                    <th class="py-2 px-4 border-b text-left">加速比</th>
+                    <th class="py-2 px-4 border-b text-left">面积开销</th>
+                    <th class="py-2 px-4 border-b text-left">MAPE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">控制位</td>
+                    <td class="py-2 px-4 border-b">1</td>
+                    <td class="py-2 px-4 border-b">0.09%</td>
+                    <td class="py-2 px-4 border-b">13.98%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">记分牌（最多63个消费者）</td>
+                    <td class="py-2 px-4 border-b">0.97x</td>
+                    <td class="py-2 px-4 border-b">5.32%</td>
+                    <td class="py-2 px-4 border-b">14.87%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">记分牌（无限消费者）</td>
+                    <td class="py-2 px-4 border-b">0.97x</td>
+                    <td class="py-2 px-4 border-b">-</td>
+                    <td class="py-2 px-4 border-b">14.87%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">基于控制位的依赖管理机制在性能和面积方面都优于传统记分牌方法，同时保持相似的模拟准确性。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">模型可移植性</h3>
+          <p class="mb-4">作者证明他们的模型可以无缝适应其他NVIDIA架构，如Turing。对于NVIDIA RTX 2080 Ti（Turing），他们的模型实现了19.73%的MAPE，而Accel-sim为26.67%。</p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h5 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>评估总结
+            </h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>新模型在所有测试的GPU上显著优于Accel-sim</li>
+              <li>对于NVIDIA RTX A6000，MAPE从32.22%提高到13.98%</li>
+              <li>大小为16的流缓冲区预取器提供最佳准确性</li>
+              <li>基于控制位的依赖管理机制在性能和面积方面优于传统记分牌</li>
+              <li>模型可成功应用于其他NVIDIA架构，如Turing</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本文通过在真实硬件上逆向工程揭示了工业界现代NVIDIA GPU微架构。作者剖析了发射阶段逻辑，包括分析warp就绪条件并发现warp之间的发射调度器遵循CGGTY策略。此外，作者揭示了寄存器文件的不同细节，如端口数量及其宽度。作者还揭示了寄存器文件缓存的工作原理。</p>
+          
+          <p class="mb-4">此外，本文展示了内存流水线的一些重要特性，如加载/存储队列的大小、子核心之间的争用，以及延迟如何受内存指令粒度访问的影响。此外，作者分析了取指阶段并提出了一个满足现代NVIDIA GPU要求的阶段。</p>
+          
+          <p class="mb-4">此外，本文通过组织、详细解释和扩展来汇编先前关于控制位的公共信息。</p>
+          
+          <p class="mb-4">此外，作者在模拟器中建模了所有这些细节，并将此新模型与真实硬件进行比较，证明它比先前模型更接近现实，将其在周期方面的准确性提高了18.24%以上。</p>
+          
+          <p class="mb-4">此外，作者证明了在GPU中使用简单流缓冲区进行指令预取在模拟准确性和性能方面表现良好，接近完美指令缓存。作者还展示了现代NVIDIA GPU中使用的基于控制位的依赖管理机制优于其他替代方案，如传统记分牌。</p>
+          
+          <p class="mb-4">最后，作者研究了寄存器文件缓存和寄存器文件读取端口数量如何影响模拟准确性和性能。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>主要见解
+            </h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>GPU是硬件-编译器协同设计，编译器指导硬件处理依赖并引入可以提高性能和能量的提示</li>
+              <li>现代NVIDIA GPU使用基于控制位的依赖管理而不是传统记分牌</li>
+              <li>指令调度器使用CGGTY策略，编译器通过控制位辅助调度器</li>
+              <li>寄存器文件缓存由编译器管理，通过重用位控制</li>
+              <li>简单的流缓冲区预取器在GPU中表现良好，接近完美指令缓存</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mt-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>论文局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-sm">
+              <li>逆向工程方法可能无法揭示所有微架构细节</li>
+              <li>实验仅限于作者可以访问的特定GPU型号</li>
+              <li>某些组件（如精确的指令预取器设计）无法完全确认</li>
+              <li>warp间交互分析仅限于同一CTA内的warp</li>
+              <li>某些内存指令的延迟数据是近似值</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>
