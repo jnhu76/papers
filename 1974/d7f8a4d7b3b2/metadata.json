@@ -1,0 +1,10 @@
+{
+  "id": "d7f8a4d7b3b2",
+  "title": "The UNIX Time-Sharing System",
+  "authors": ["Dennis M. Ritchie", "Ken Thompson"],
+  "year": 1974,
+  "conference": "CACM",
+  "category": "操作系统",
+  "keywords": ["UNIX", "文件系统", "进程管理", "Shell", "时间共享系统", "PDP-11", "操作系统设计"],
+  "abstract": "UNIX is a general-purpose, multi-user, interactive operating system for the Digital Equipment Corporation PDP-11/40 and 11/45 computers. It offers a number of features seldom found even in larger operating systems, including: (1) a hierarchical file system incorporating demountable volumes; (2) compatible file, device, and inter-process i/o; (3) the ability to initiate asynchronous processes; (4) system command language selectable on a per-user basis; and (5) over 100 subsystems including a dozen languages. This paper discusses the nature and implementation of the file system and of the user command interface."
+}

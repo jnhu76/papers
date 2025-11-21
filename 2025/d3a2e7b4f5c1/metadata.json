@@ -1,0 +1,10 @@
+{
+  "id": "d3a2e7b4f5c1",
+  "title": "DeepAgent: A General Reasoning Agent with Scalable Toolsets",
+  "authors": ["Xiaoxi Li", "Wenxiang Jiao", "Jiarui Jin", "Guanting Dong", "Jiajie Jin", "Yinuo Wang", "Hao Wang", "Yutao Zhu", "Ji-Rong Wen", "Yuan Lu", "Zhicheng Dou"],
+  "year": 2025,
+  "conference": "arXiv",
+  "category": "人工智能",
+  "keywords": ["推理智能体", "工具使用", "记忆机制", "强化学习", "大规模工具集", "自主思考", "ToolPO"],
+  "abstract": "Large reasoning models have demonstrated strong problem-solving abilities, yet real-world tasks often require external tools and long-horizon interactions. Existing agent frameworks typically follow predefined workflows, which limit autonomous and global task completion. In this paper, we introduce **DeepAgent**, an end-to-end deep reasoning agent that performs autonomous thinking, tool discovery, and action execution within a single, coherent reasoning process. To address the challenges of long-horizon interactions, particularly the context length explosion from multiple tool calls and the accumulation of interaction history, we introduce an autonomous memory folding mechanism that compresses past interactions into structured episodic, working, and tool memories, reducing error accumulation while preserving critical information. To teach general-purpose tool use efficiently and stably, we develop an end-to-end reinforcement learning strategy, namely ToolPO, that leverages LLM-simulated APIs and applies tool-call advantage attribution to assign fine-grained credit to the tool invocation tokens. Extensive experiments on eight benchmarks, including general tool-use tasks (ToolBench, API-Bank, TMDB, Spotify, Tool-Hop) and downstream applications (ALFWorld, WebShop, GAIA, HLE), demonstrate that DeepAgent consistently outperforms baselines across both labeled-tool and open-set tool retrieval scenarios. This work takes a step toward more general and capable agents for real-world applications. The code and demo are available at https://github.com/RUC-NLPIR/DeepAgent."
+}

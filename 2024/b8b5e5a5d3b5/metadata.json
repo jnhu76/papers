@@ -1,0 +1,10 @@
+{
+  "id": "b8b5e5a5d3b5",
+  "title": "Cloud abstractions for AI workloads",
+  "authors": ["Marco Canini", "Theophilus A. Benson", "Ricardo Bianchini", "Inigo Goiri", "Dejan Kostic", "Peter Pietzuch", "Simon Peter"],
+  "year": 2024,
+  "conference": "arXiv",
+  "category": "云计算系统",
+  "keywords": ["云计算", "AI工作负载", "跨层优化", "租户-提供商协作", "HarmonAIze", "抽象设计", "性能优化"],
+  "abstract": "AI workloads, often hosted in multi-tenant cloud environments, require vast computational resources but suffer inefficiencies due to limited tenant-provider coordination. Tenants lack infrastructure insights, while providers lack workload details to optimize tasks like partitioning, scheduling, and fault tolerance. We propose HarmonAIze to redefine cloud abstractions, enabling cooperative optimization for improved performance, efficiency, resiliency, and sustainability. We outline key opportunities and challenges this vision faces."
+}
