@@ -1,0 +1,10 @@
+{
+  "id": "a7c3e9b12f8d",
+  "title": "Cuckoo Filter: Practically Better Than Bloom",
+  "authors": ["Bin Fan", "David G. Andersen", "Michael Kaminsky", "Michael D. Mitzenmacher"],
+  "year": 2014,
+  "conference": "CoNEXT",
+  "category": "数据结构与算法",
+  "keywords": ["Cuckoo Filter", "Bloom Filter", "集合成员测试", "删除支持", "空间效率", "部分键Cuckoo哈希", "近似数据结构"],
+  "abstract": "In many networking systems, Bloom filters are used for high-speed set membership tests. They permit a small fraction of false positive answers with very good space efficiency. However, they do not permit deletion of items from the set, and previous attempts to extend \"standard\" Bloom filters to support deletion all degrade either space or performance.\nWe propose a new data structure called the _cuckoo filter_ that can replace Bloom filters for approximate set membership tests. Cuckoo filters support adding and removing items dynamically while achieving even higher performance than Bloom filters. For applications that store many items and target moderately low false positive rates, cuckoo filters have lower space overhead than space-optimized Bloom filters. Our experimental results also show that cuckoo filters outperform previous data structures that extend Bloom filters to support deletions substantially in both time and space."
+}
