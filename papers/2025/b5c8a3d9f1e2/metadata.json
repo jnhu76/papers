@@ -1,0 +1,10 @@
+{
+  "id": "b5c8a3d9f1e2",
+  "title": "FlacIO: Flat and Collective I/O for Container Image Service",
+  "authors": ["Yubo Liu", "Hongbo Li", "Mingrui Liu", "Rui Jing", "Jian Guo", "Bo Zhang", "Hanjun Guo", "Yuxin Ren", "Ning Jia"],
+  "year": 2025,
+  "conference": "FAST",
+  "category": "存储系统",
+  "keywords": ["容器镜像服务", "冷启动加速", "运行时镜像", "运行时页缓存", "I/O优化", "扁平化I/O", "聚合I/O"],
+  "abstract": "This paper examines the I/O bottlenecks in the container image service. With a comprehensive analysis of existing solutions, we reveal that they suffer from high I/O amplification and excessive network traffic. Furthermore, we identify that the root cause of these problems lies in the storage-oriented and global-oriented container image abstraction. This work proposes a memory-oriented and service-oriented image abstraction, called runtime image, which represents the memory state of the root file system of the container service. The runtime image enables efficient network transfer and fast root file system construction. We design and implement FlacIO, an I/O accelerator based on the runtime image for container image service. FlacIO introduces an efficient runtime image structure that works in conjunction with a runtime page cache on a host node to achieve efficient image service. Our evaluation shows that FlacIO reduces the container cold startup latency by up to 23 and 4.6 times compared to existing full image and lazy loading solutions, respectively. In real-world applications, FlacIO achieves up to 2.25 and 1.7 times performance speedup over other systems in the object storage and machine learning training scenarios, respectively."
+}
