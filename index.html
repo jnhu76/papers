@@ -8,14 +8,12 @@
     <meta http-equiv="Expires" content="0">
     <title>学术论文库 | Academic Papers</title>
     
-    <!-- 统一CDN加载 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- 添加 FlexSearch -->
     <script src="https://cdn.jsdelivr.net/npm/flexsearch/dist/flexsearch.bundle.js"></script>
     
     <link rel="preload" href="./papers_data.json" as="fetch" crossorigin="anonymous" type="application/json">
@@ -241,7 +239,6 @@
     </style>
 </head>
 <body class="text-gray-800">
-    <!-- 导航栏 -->
     <nav class="glass-card mx-4 mt-4 md:mx-8 lg:mx-16 sticky top-4 z-10">
         <div class="px-4 py-3">
             <div class="flex flex-col md:flex-row md:justify-between md:items-center">
@@ -269,9 +266,7 @@
         </div>
     </nav>
 
-    <!-- 主要内容区 -->
     <div class="px-4 md:px-8 lg:px-16 py-8">
-        <!-- 搜索区域 -->
         <div class="glass-card p-6 mb-8">
             <div class="text-center mb-6">
                 <h2 class="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">探索学术论文</h2>
@@ -280,17 +275,16 @@
             
             <div class="max-w-3xl mx-auto">
                 <div class="relative search-box">
-                    <input type="text" id="searchInput" placeholder="搜索标题、作者、关键词、会议..." class="w-full px-6 py-4 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg bg-white/80">
+                    <input type="text" id="searchInput" placeholder="搜索标题、摘要、会议、年份..." class="w-full px-6 py-4 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg bg-white/80">
                     <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
                 <div class="mt-2 text-sm text-gray-500 flex justify-between">
-                    <span>支持中文分词、模糊搜索、多字段搜索</span>
+                    <span>支持中文分词、模糊搜索、多字段搜索 (标题/摘要/会议/年份)</span>
                     <span id="searchStats" class="text-blue-600 font-medium"></span>
                 </div>
             </div>
         </div>
 
-        <!-- 加载状态 -->
         <div id="loading" class="glass-card p-12 text-center">
             <div class="flex flex-col items-center">
                 <i class="fas fa-spinner fa-spin text-3xl text-blue-600 mb-4"></i>
@@ -299,7 +293,6 @@
             </div>
         </div>
         
-        <!-- 无结果状态 -->
         <div id="noResults" class="glass-card p-12 text-center hidden">
             <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
             <h3 class="text-xl font-semibold text-gray-700 mb-2">未找到相关论文</h3>
@@ -309,9 +302,7 @@
             </button>
         </div>
         
-        <!-- 论文列表容器 -->
         <div id="papersContainer" class="hidden">
-            <!-- 列表头部信息 -->
             <div class="flex justify-between items-center mb-6">
                 <div class="text-sm text-gray-600">
                     显示 <span id="currentRange">0-0</span> 条，共 <span id="totalPapers">0</span> 篇论文
@@ -328,30 +319,22 @@
                 </div>
             </div>
             
-            <!-- 论文列表 -->
             <div id="papersList" class="space-y-4 mb-8">
-                <!-- 论文项将通过JavaScript动态生成 -->
-            </div>
+                </div>
             
-            <!-- 分页控件 -->
             <div id="paginationContainer" class="flex justify-center items-center space-x-2">
-                <!-- 分页将通过JavaScript动态生成 -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- 返回顶部按钮 -->
     <button id="backToTop" class="fixed text-blue-600 p-4 rounded-full shadow-lg opacity-0 z-10">
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
 
-    <!-- 底部标识容器 -->
     <div class="footer-notices">
-        <!-- AI数据标识 -->
         <div class="ai-notice">
             <i class="fas fa-robot"></i>AI生成数据
         </div>
-        <!-- 联系标识 -->
         <div class="contact-notice">
             <a href="mailto:me@hoooo.org">
                 <i class="fas fa-envelope"></i>问题反馈
@@ -562,12 +545,13 @@
             searchDocuments = papers.map((paper, id) => {
                 // 为不同字段设置不同权重
                 const searchableText = [
-                    paper.title.repeat(3),           // 标题权重最高
-                    paper.authors.join(' ').repeat(2), // 作者权重次之
-                    paper.keywords.join(' ').repeat(2), // 关键词权重次之
-                    paper.abstract,                  // 摘要权重默认
-                    paper.category,                  // 分类权重默认
-                    paper.conference                 // 会议权重默认
+                    paper.title.repeat(3),             // 标题权重最高
+                    paper.abstract.repeat(2),          // 摘要权重次之 (新增强)
+                    paper.conference.repeat(2),        // 会议权重次之 (新增强)
+                    paper.year.toString().repeat(2),   // 年份权重次之 (新增强)
+                    paper.authors.join(' ').repeat(1), // 作者权重默认
+                    paper.keywords.join(' ').repeat(1),// 关键词权重默认
+                    paper.category                     // 分类权重默认
                 ].join(' ');
                 
                 return {
@@ -644,7 +628,8 @@
                 (paper.keywords && Array.isArray(paper.keywords) && paper.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))) ||
                 (paper.conference && paper.conference.toLowerCase().includes(lowerQuery)) ||
                 (paper.abstract && paper.abstract.toLowerCase().includes(lowerQuery)) ||
-                (paper.category && paper.category.toLowerCase().includes(lowerQuery))
+                (paper.category && paper.category.toLowerCase().includes(lowerQuery)) ||
+                (paper.year && paper.year.toString().includes(lowerQuery)) // 确保年份也被搜索
             );
         }
 
