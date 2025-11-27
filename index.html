@@ -277,11 +277,9 @@
             <div class="max-w-3xl mx-auto">
                 <div class="flex search-box space-x-2">
                     <select id="searchFieldSelect" class="flex-shrink-0 px-4 py-4 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base bg-white/80">
-                        <option value="fuzzy">模糊搜索 (全部)</option>
-                        <option value="conference">会议 (模糊)</option>
-                        <option value="year">年份 (精确)</option>
-                        <option value="title">标题 (模糊)</option>
-                        <option value="abstract">摘要 (模糊)</option>
+                        <option value="fuzzy_all">全部</option>
+                        <option value="conference_strict">会议</option>
+                        <option value="year_strict">年份</option>
                     </select>
 
                     <div class="relative flex-grow">
@@ -291,7 +289,7 @@
                 </div>
                 
                 <div class="mt-2 text-sm text-gray-500 flex justify-between">
-                    <span id="searchTip">当前模式：模糊搜索（标题/摘要/会议/年份加权）</span>
+                    <span id="searchTip">当前模式：全部（标题/摘要/会议/年份等加权模糊搜索）</span>
                     <span id="searchStats" class="text-blue-600 font-medium"></span>
                 </div>
             </div>
@@ -364,10 +362,8 @@
         let paperDatabase = null;
         let autoUpdater = null;
         
-        // Fuse.js 实例
-        let fuseSearch = null;
-        // 当前选择的搜索字段
-        let currentSearchField = 'fuzzy'; 
+        // ⚠️ 修正：使用 Fuse.js 实例
+        let fuseSearch = null; 
 
         // IndexedDB 数据库类 (保持不变)
         class PaperDatabase {
@@ -494,7 +490,8 @@
                             }
                         });
                         
-                        resolve();
+                        transaction.oncomplete = () => resolve();
+                        transaction.onerror = (event) => reject(event.target.error);
                     };
                     
                     clearRequest.onerror = () => reject(clearRequest.error);
@@ -515,7 +512,7 @@
             }
         }
 
-        // 初始化 Fuse.js 搜索索引 (保持不变)
+        // ⚠️ 修正：使用 Fuse.js 初始化搜索索引
         function initSearchIndex(papers) {
             console.log('🔍 初始化 Fuse.js 搜索索引...');
             
@@ -533,7 +530,7 @@
                 includeScore: true,
                 includeMatches: true, 
                 ignoreLocation: true, 
-                threshold: 0.3, 
+                threshold: 0.3, // 模糊度
                 isCaseSensitive: false, 
             };
 
@@ -543,9 +540,10 @@
             console.log('✅ Fuse.js 搜索索引初始化完成，共索引', papers.length, '篇论文');
         }
 
-        // 高性能搜索函数 (保持不变)
+        // ⚠️ 修正：使用 Fuse.js 和原生 JS 过滤器实现 performSearch
         function performSearch(query) {
             const startTime = performance.now();
+            const searchField = document.getElementById('searchFieldSelect').value;
             
             if (!query.trim()) {
                 filteredPapers = [...allPapers];
@@ -553,28 +551,28 @@
             } else {
                 try {
                     const trimmedQuery = query.toString().trim();
+                    const lowerQuery = trimmedQuery.toLowerCase(); 
 
-                    if (currentSearchField === 'year') {
+                    if (searchField === 'year_strict') {
                         // 年份模式：严格的精确匹配
+                        const year = trimmedQuery;
                         filteredPapers = allPapers.filter(paper => 
-                            paper.year && paper.year.toString() === trimmedQuery
+                            paper.year && paper.year.toString() === year
                         );
-                    } else {
-                        // 其他模式：使用 Fuse.js
-                        let searchOptions = {
+                    } else if (searchField === 'conference_strict') {
+                        // ⚠️ 会议模式：严格的字符串包含匹配，仅限 conference 字段
+                        filteredPapers = allPapers.filter(paper => 
+                            paper.conference && paper.conference.toLowerCase().includes(lowerQuery)
+                        );
+                    } else { // fuzzy_all 模式：使用 Fuse.js
+                        const searchOptions = {
                             limit: 1000, 
+                            // fuzzy_all 使用 Fuse.js 初始化时的默认多字段配置
                         };
-                        
-                        if (currentSearchField === 'fuzzy') {
-                            // 模糊模式：使用全局设置（多字段加权，threshold: 0.3）
-                        } else {
-                            // 单字段模式：搜索特定字段 (conference, title, abstract)
-                            searchOptions.keys = [currentSearchField];
-                            searchOptions.threshold = 0.2; // 略微收紧阈值，提升单字段精准度
-                        }
 
                         const searchResults = fuseSearch.search(trimmedQuery, searchOptions);
                         
+                        // Fuse.js 返回 {item: paperData, score: ...} 数组
                         filteredPapers = searchResults.map(result => result.item);
                     }
                     
@@ -584,10 +582,11 @@
                     document.getElementById('searchStats').textContent = 
                         `找到 ${filteredPapers.length} 篇论文 (${searchTime}ms)`;
                     
-                    console.log(`🔍 搜索 "${trimmedQuery}" (字段: ${currentSearchField})：找到 ${filteredPapers.length} 篇论文，耗时 ${searchTime}ms`);
+                    console.log(`🔍 搜索 "${trimmedQuery}" (字段: ${searchField})：找到 ${filteredPapers.length} 篇论文，耗时 ${searchTime}ms`);
                     
                 } catch (error) {
                     console.error('搜索错误:', error);
+                    // 降级到基本包含搜索
                     fallbackSearch(query);
                 }
             }
@@ -625,23 +624,20 @@
             }
         }
 
-        // ⚠️ 修复点 1: 移除查询参数式的缓存破坏
         async function fetchLatestPapersFile() {
             try {
-                // 仅使用路径，依赖请求头进行缓存控制
                 const path = './papers_data.json'; 
                 
                 console.log('🌐 开始请求JSON文件...');
                 const response = await fetch(path, {
                     method: 'GET',
                     headers: {
-                        // 强制不缓存
                         'Cache-Control': 'no-cache, no-store, must-revalidate',
                         'Pragma': 'no-cache',
                         'Expires': '0',
                         'DNT': '1'
                     },
-                    cache: 'no-store', // 强制不缓存
+                    cache: 'no-store', 
                     credentials: 'same-origin'
                 });
                 
@@ -665,7 +661,6 @@
                 };
             } catch (error) {
                 console.error('❌ 获取论文文件失败:', error);
-                // 确保在失败时返回 null，以便 loadPapers 可以尝试使用缓存
                 return null; 
             }
         }
@@ -709,7 +704,7 @@
                                 allPapers = result.papers.map(fixPaperPaths);
                                 filteredPapers = [...allPapers];
                                 
-                                initSearchIndex(allPapers);
+                                initSearchIndex(allPapers); // 重新初始化 Fuse.js
                                 
                                 renderPapers();
                                 this.showUpdateNotification();
@@ -874,26 +869,8 @@
             return colors[category] || 'bg-gray-100 text-gray-800';
         }
 
-        // ⚠️ 修复点 2: 移除 loadPapers 中 Service Worker 的强制更新逻辑
         async function loadPapers() {
             try {
-                // 移除 Service Worker 强制更新代码，避免启动时阻塞
-                /*
-                if ('serviceWorker' in navigator) {
-                    try {
-                        const registrations = await navigator.serviceWorker.getRegistrations();
-                        for (let registration of registrations) {
-                            registration.update();
-                            if (registration.waiting) {
-                                registration.waiting.postMessage({type: 'SKIP_WAITING'});
-                            }
-                        }
-                    } catch (error) {
-                        console.warn('Service Worker更新失败:', error);
-                    }
-                }
-                */
-                
                 updateLoadingStatus('初始化数据库...');
                 
                 paperDatabase = new PaperDatabase();
@@ -911,7 +888,6 @@
                 const networkResult = await fetchLatestPapersFile();
                 
                 if (networkResult && networkResult.papers) {
-                    // ... (保持不变)
                     const needsUpdate = await paperDatabase.needsUpdate(networkResult.papers, networkResult.timestamp);
                     
                     if (stats.isCached && needsUpdate) {
@@ -953,7 +929,7 @@
                 
                 updateLoadingStatus('初始化搜索索引 (Fuse.js)...');
                 
-                // 初始化 Fuse.js 索引
+                // ⚠️ 修正：初始化 Fuse.js 索引
                 initSearchIndex(allPapers);
                 
                 updateLoadingStatus('初始化界面...');
@@ -980,14 +956,12 @@
         }
 
         function updatePaperCount() {
-            // ... (保持不变)
             document.getElementById('paperCount').textContent = allPapers.length;
             document.getElementById('mobilePaperCount').textContent = allPapers.length;
             document.getElementById('totalPapers').textContent = filteredPapers.length;
         }
 
         function showError() {
-            // ... (保持不变)
             document.getElementById('loading').innerHTML = `
                 <div class="text-red-600">
                     <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
@@ -1001,7 +975,6 @@
         }
 
         function applySorting() {
-            // ... (保持不变)
             const [field, order] = currentSort.split('-');
             
             filteredPapers.sort((a, b) => {
@@ -1027,7 +1000,6 @@
         }
 
         function setupPagination() {
-            // ... (保持不变)
             const totalPages = Math.ceil(filteredPapers.length / papersPerPage);
             const paginationContainer = document.getElementById('paginationContainer');
             
@@ -1117,7 +1089,6 @@
         }
 
         function setupBackToTop() {
-            // ... (保持不变)
             const backToTopBtn = document.getElementById('backToTop');
             
             window.addEventListener('scroll', () => {
@@ -1146,29 +1117,23 @@
             };
         }
         
-        // 根据选择器更新搜索提示 (保持不变)
+        // 搜索模式提示更新函数
         function updateSearchTip() {
             const select = document.getElementById('searchFieldSelect');
             const tipElement = document.getElementById('searchTip');
             
             if (!select || !tipElement || select.selectedIndex === -1) return;
 
-            const selectedText = select.options[select.selectedIndex].text;
+            const selectedValue = select.value;
             
-            let tip = `当前模式：${selectedText}`;
+            let tip = '';
 
-            currentSearchField = select.value;
-
-            if (currentSearchField === 'fuzzy') {
-                tip = '当前模式：模糊搜索（标题/摘要/会议/年份加权）';
-            } else if (currentSearchField === 'year') {
-                tip = '当前模式：年份（精确匹配，例如 2023）';
-            } else if (currentSearchField === 'conference') {
-                tip = '当前模式：会议（单字段模糊匹配，例如 FAST）';
-            } else if (currentSearchField === 'title') {
-                tip = '当前模式：标题（单字段模糊匹配）';
-            } else if (currentSearchField === 'abstract') {
-                tip = '当前模式：摘要（单字段模糊匹配）';
+            if (selectedValue === 'conference_strict') {
+                tip = '当前模式：会议（精确包含匹配，只搜索会议名。如搜索"vldb"可找到"PVLDB"）';
+            } else if (selectedValue === 'year_strict') {
+                tip = '当前模式：年份（精确数字匹配，如搜索"2023"）';
+            } else { // fuzzy_all
+                tip = '当前模式：全部（标题/摘要/会议/年份等加权模糊搜索）';
             }
             tipElement.textContent = tip;
         }
@@ -1180,12 +1145,9 @@
         }, 300));
         
         document.getElementById('searchFieldSelect').addEventListener('change', (e) => {
-            currentSearchField = e.target.value;
             updateSearchTip();
-            const query = document.getElementById('searchInput').value.trim();
-            if (query) {
-                performSearch(query);
-            }
+            // 切换搜索模式后，立即用当前输入框内容进行搜索
+            performSearch(document.getElementById('searchInput').value);
         });
 
         document.getElementById('resetSearch').addEventListener('click', () => {
