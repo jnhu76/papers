@@ -3,286 +3,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastLanes 论文解析：使用标量代码每秒解码超千亿整数</title>
+    <title>FastLanes 论文解析：使用标量代码每秒解码>1000亿整数</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af',
+                        accent: '#60a5fa',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        html {
             scroll-behavior: smooth;
         }
-        .section-card {
+        .section-anchor {
+            scroll-margin-top: 80px;
+        }
+        .nav-active {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s, transform 0.6s;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .floating-btn {
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.1);
+        }
+        .card-hover {
             transition: transform 0.3s, box-shadow 0.3s;
         }
-        .section-card:hover {
+        .card-hover:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .back-to-top {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
+        .image-modal {
             display: none;
+            position: fixed;
             z-index: 1000;
-        }
-        .nav-link {
-            position: relative;
-        }
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -5px;
             left: 0;
-            background-color: #3b82f6;
-            transition: width 0.3s;
-        }
-        .nav-link:hover::after {
+            top: 0;
             width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
         }
-        .ai-disclaimer {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            margin-top: 2%;
         }
-        .figure-placeholder {
-            background: linear-gradient(45deg, #f3f4f6 25%, #e5e7eb 25%, #e5e7eb 50%, #f3f4f6 50%, #f3f4f6 75%, #e5e7eb 75%, #e5e7eb);
-            background-size: 20px 20px;
-            border: 2px dashed #9ca3af;
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6b7280;
-            font-style: italic;
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="font-sans bg-gray-50 text-gray-800">
     <!-- 导航栏 -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4">
+    <nav class="fixed top-0 w-full bg-white shadow-md z-50">
+        <div class="container mx-auto px-4">
             <div class="flex justify-between items-center py-4">
-                <div class="font-semibold text-xl text-blue-600">FastLanes 论文解析</div>
-                <div class="flex space-x-6">
-                    <a href="#overview" class="nav-link text-gray-600 hover:text-blue-600">概览</a>
-                    <a href="#core-problem" class="nav-link text-gray-600 hover:text-blue-600">核心问题</a>
-                    <a href="#contributions" class="nav-link text-gray-600 hover:text-blue-600">核心贡献</a>
-                    <a href="#methodology" class="nav-link text-gray-600 hover:text-blue-600">方法原理</a>
-                    <a href="#experiments" class="nav-link text-gray-600 hover:text-blue-600">实验评估</a>
-                    <a href="#conclusion" class="nav-link text-gray-600 hover:text-blue-600">结论</a>
+                <div class="text-xl font-bold text-primary">FastLanes 论文解析</div>
+                <div class="hidden md:flex space-x-6">
+                    <a href="#overview" class="hover:text-primary transition">概述</a>
+                    <a href="#problem" class="hover:text-primary transition">核心问题</a>
+                    <a href="#contributions" class="hover:text-primary transition">贡献</a>
+                    <a href="#method" class="hover:text-primary transition">方法</a>
+                    <a href="#results" class="hover:text-primary transition">实验结果</a>
+                    <a href="#conclusion" class="hover:text-primary transition">结论</a>
+                </div>
+                <div class="md:hidden flex overflow-x-auto space-x-4 py-2">
+                    <a href="#overview" class="whitespace-nowrap hover:text-primary transition">概述</a>
+                    <a href="#problem" class="whitespace-nowrap hover:text-primary transition">核心问题</a>
+                    <a href="#contributions" class="whitespace-nowrap hover:text-primary transition">贡献</a>
+                    <a href="#method" class="whitespace-nowrap hover:text-primary transition">方法</a>
+                    <a href="#results" class="whitespace-nowrap hover:text-primary transition">结果</a>
+                    <a href="#conclusion" class="whitespace-nowrap hover:text-primary transition">结论</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- 标题区 -->
-    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <h1 class="text-4xl font-bold mb-4">FastLanes 压缩布局</h1>
-            <p class="text-xl mb-6">使用标量代码每秒解码超千亿整数</p>
-            <div class="flex flex-wrap justify-center gap-4 text-sm">
-                <span class="bg-blue-500 px-3 py-1 rounded-full">Azim Afroozeh</span>
-                <span class="bg-blue-500 px-3 py-1 rounded-full">Peter Boncz</span>
-                <span class="bg-indigo-500 px-3 py-1 rounded-full">PVLDB 2023</span>
-                <span class="bg-indigo-500 px-3 py-1 rounded-full">列式存储</span>
-                <span class="bg-indigo-500 px-3 py-1 rounded-full">数据压缩</span>
+    <header class="pt-24 pb-16 bg-gradient-to-r from-primary to-secondary text-white">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">FastLanes 压缩布局：使用标量代码每秒解码>1000亿整数</h1>
+            <div class="flex flex-wrap items-center text-lg">
+                <div class="mr-6 mb-2">
+                    <i class="fas fa-user mr-2"></i>Azim Afroozeh, Peter Boncz
+                </div>
+                <div class="mr-6 mb-2">
+                    <i class="fas fa-university mr-2"></i>CWI, Netherlands
+                </div>
+                <div class="mb-2">
+                    <i class="fas fa-book mr-2"></i>PVLDB, 16(9): 2132-2144, 2023
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- 内容区 -->
-    <main class="max-w-4xl mx-auto px-4 py-8">
-        <!-- AI声明 -->
-        <div class="ai-disclaimer rounded-lg p-4 mb-8 text-center">
-            <i class="fas fa-robot mr-2"></i>
-            <span>本内容基于AI对论文的解析生成，旨在帮助理解论文核心思想</span>
-        </div>
-
-        <!-- 概览 -->
-        <section id="overview" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>
-                    论文概览
-                </h2>
-                <p class="text-gray-600 mb-4">
-                    FastLanes 是一个开源项目，旨在通过重新设计压缩布局来加速大数据格式（如Parquet、ORC和列式数据库格式）的解码性能。
-                </p>
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                    <p class="text-blue-700">
-                        <strong>核心创新：</strong>通过两种主要思想显著加速所有常见轻量级压缩方案（DICT、FOR、DELTA和RLE）的解码：
-                    </p>
-                    <ol class="list-decimal ml-5 mt-2 text-blue-700">
-                        <li>针对虚拟1024位SIMD寄存器，泛化位打包基本操作中的值交错技术</li>
-                        <li>在所有列中以相同的统一转置布局重新排序元组，实现最大独立工作</li>
-                    </ol>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h3 class="font-semibold text-gray-700 mb-2">解决的问题</h3>
-                        <ul class="list-disc ml-5 text-gray-600">
-                            <li>硬件多样性带来的软件开发挑战</li>
-                            <li>SIMD指令集的技术债务</li>
-                            <li>解码性能瓶颈</li>
-                        </ul>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h3 class="font-semibold text-gray-700 mb-2">关键技术</h3>
-                        <ul class="list-disc ml-5 text-gray-600">
-                            <li>虚拟1024位SIMD寄存器</li>
-                            <li>统一转置布局</li>
-                            <li>标量代码自动向量化</li>
-                        </ul>
-                    </div>
-                </div>
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 py-12">
+        <!-- 摘要 -->
+        <section id="overview" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">论文摘要</h2>
+                <p class="mb-4">FastLanes项目旨在通过更好的数据并行性显著加速所有常见轻量压缩方案（DICT、FOR、DELTA和RLE）的解码。论文通过两种主要思想重新设计压缩布局：</p>
+                <ol class="list-decimal pl-6 mb-4 space-y-2">
+                    <li>在位打包基本操作中泛化值交错技术，以虚拟1024位SIMD寄存器为目标</li>
+                    <li>将所有表的元组按相同的统一转置布局重新排序，将元组块置于共同的"04261537"顺序中</li>
+                </ol>
+                <p class="mb-4">这种方法通过定义由所有SIMD方言支持的简单操作符组成的虚拟1024位指令集，解决了硬件多样性增加带来的软件开发、维护和未来验证挑战。交错和元组重排序的布局实际上使标量解码更快，从当今宽发射CPU中提取更多数据并行性。</p>
+                <p>在Intel、AMD、Apple和AWS CPU上的微基准测试显示，FastLanes将解码加速了数倍（每CPU周期解码>40个值）。FastLanes可以使查询更快，因为压缩数据减少了带宽需求，而解码几乎是免费的。</p>
             </div>
         </section>
 
         <!-- 核心问题 -->
-        <section id="core-problem" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-question-circle text-blue-500 mr-2"></i>
-                    核心问题
-                </h2>
-                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                    <p class="text-red-700 font-semibold">如何在异构硬件环境下实现高效、可移植的轻量级压缩数据解码，同时避免SIMD指令集带来的技术债务？</p>
+        <section id="problem" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">核心问题</h2>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 text-secondary">唯一关键问题</h3>
+                    <p class="mb-4">如何在异构硬件环境下实现高效的数据并行轻量压缩解码？</p>
                 </div>
                 
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">现有方法的局限性</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-700 mb-2">硬件多样性挑战</h4>
-                        <ul class="list-disc ml-5 text-gray-600">
-                            <li>SIMD宽度不断增加（64位→128位→256位→512位）</li>
-                            <li>多种指令集架构（x86, ARM, POWER, RISC-V）</li>
-                            <li>SIMD指令子集不兼容</li>
-                        </ul>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-700 mb-2">技术债务问题</h4>
-                        <ul class="list-disc ml-5 text-gray-600">
-                            <li>平台特定的SIMD内部函数</li>
-                            <li>代码维护复杂</li>
-                            <li>未来硬件兼容性差</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">真实世界痛点</h3>
-                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4">
-                    <ul class="list-disc ml-5 text-yellow-700">
-                        <li>数据分析系统中压缩数据解码成为性能瓶颈</li>
-                        <li>云环境中硬件平台多样化</li>
-                        <li>维护多平台优化代码成本高昂</li>
-                        <li>顺序依赖（DELTA、RLE）限制数据并行性</li>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 text-secondary">现有方法的局限性</h3>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>现有压缩布局针对特定SIMD宽度优化，无法适应不断变化的硬件环境</li>
+                        <li>不同SIMD指令集存在不对称性，导致代码难以跨平台移植</li>
+                        <li>压缩算法中的顺序依赖（如DELTA、RLE）难以在SIMD中高效处理</li>
+                        <li>不同列的数据类型宽度不同，需要统一的布局方案</li>
                     </ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 text-secondary">真实世界痛点</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">硬件多样性</h4>
+                            <p>现代CPU SIMD宽度从64位发展到512位，ARM架构在服务器和终端设备中日益普及</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">性能瓶颈</h4>
+                            <p>传统压缩解码方法无法充分利用现代CPU的数据并行能力</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">技术债务</h4>
+                            <p>特定SIMD指令集代码导致维护成本高昂和未来验证困难</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">系统复杂性</h4>
+                            <p>不同列需要不同车道宽度但需统一排序，增加了系统设计复杂度</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 核心贡献 -->
-        <section id="contributions" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-trophy text-blue-500 mr-2"></i>
-                    核心贡献（4C模型）
-                </h2>
+        <!-- 贡献 -->
+        <section id="contributions" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">核心贡献 (4C模型)</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Concept -->
-                    <div class="bg-blue-50 p-5 rounded-lg">
-                        <h3 class="text-xl font-semibold text-blue-700 mb-3 flex items-center">
-                            <i class="fas fa-lightbulb text-blue-500 mr-2"></i>
-                            Concept（新概念）
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg">
+                        <h3 class="text-xl font-semibold mb-3 text-secondary flex items-center">
+                            <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>Concept (新概念)
                         </h3>
-                        <ul class="list-disc ml-5 text-blue-600">
-                            <li><strong>虚拟1024位SIMD寄存器（FLMM1024）</strong> - 抽象硬件指令集</li>
-                            <li><strong>统一转置布局</strong> - 适用于所有车道宽度的数据重排方案</li>
-                            <li><strong>标量友好的数据并行性</strong> - 通过数据布局而非指令实现并行</li>
-                            <li><strong>FastLanes-RLE</strong> - 基于DELTA和DICT的新型RLE编码</li>
+                        <ul class="list-disc pl-5 space-y-2">
+                            <li><strong>虚拟1024位SIMD寄存器(FLMM1024)</strong>：抽象硬件无关的SIMD计算模型</li>
+                            <li><strong>统一转置布局</strong>：适用于所有车道宽度的数据重排序方案</li>
+                            <li><strong>FastLanes-RLE</strong>：将RLE编码映射到DELTA编码的新方法</li>
                         </ul>
                     </div>
                     
-                    <!-- Challenge -->
-                    <div class="bg-green-50 p-5 rounded-lg">
-                        <h3 class="text-xl font-semibold text-green-700 mb-3 flex items-center">
-                            <i class="fas fa-exclamation-triangle text-green-500 mr-2"></i>
-                            Challenge（解决的难题）
+                    <div class="bg-gradient-to-br from-green-50 to-teal-50 p-5 rounded-lg">
+                        <h3 class="text-xl font-semibold mb-3 text-secondary flex items-center">
+                            <i class="fas fa-tasks mr-2 text-green-500"></i>Challenge (解决的难题)
                         </h3>
-                        <ul class="list-disc ml-5 text-green-600">
-                            <li><strong>SIMD宽度多样性</strong> - 25年间SIMD宽度增加了8倍</li>
-                            <li><strong>指令集异构性</strong> - x86、ARM、POWER、RISC-V多平台支持</li>
-                            <li><strong>解码依赖关系</strong> - DELTA和RLE编码中的顺序依赖</li>
-                            <li><strong>代码可移植性</strong> - 避免平台特定的SIMD内部函数</li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Construction -->
-                    <div class="bg-purple-50 p-5 rounded-lg">
-                        <h3 class="text-xl font-semibold text-purple-700 mb-3 flex items-center">
-                            <i class="fas fa-cogs text-purple-500 mr-2"></i>
-                            Construction（方法设计）
-                        </h3>
-                        <ul class="list-disc ml-5 text-purple-600">
-                            <li><strong>1024位交错位打包</strong> - 值循环分布到128个8位车道</li>
-                            <li><strong>统一转置布局</strong> - "04261537"顺序组织8×16转置块</li>
-                            <li><strong>简单指令集设计</strong> - 仅使用基本操作</li>
-                            <li><strong>标量代码路径</strong> - 使用uint64寄存器模拟SIMD操作</li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Claim -->
-                    <div class="bg-indigo-50 p-5 rounded-lg">
-                        <h3 class="text-xl font-semibold text-indigo-700 mb-3 flex items-center">
-                            <i class="fas fa-chart-line text-indigo-500 mr-2"></i>
-                            Claim（性能提升）
-                        </h3>
-                        <ul class="list-disc ml-5 text-indigo-600">
-                            <li><strong>解码速度</strong> - >1000亿整数/秒（单核）</li>
-                            <li><strong>每周期处理值</strong> - 最高70个值/周期（8位类型）</li>
-                            <li><strong>端到端查询加速</strong> - 压缩数据扫描更快</li>
-                            <li><strong>自动向量化</strong> - 标量代码性能与显式SIMD相当</li>
+                        <ul class="list-disc pl-5 space-y-2">
+                            <li>多种SIMD宽度（25年增长8倍）</li>
+                            <li>异构ISA（x86、ARM、POWER、RISC-V）</li>
+                            <li>解码依赖（DELTA和RLE中的顺序依赖）</li>
+                            <li>布局与车道宽度依赖</li>
+                            <li>代码可移植性</li>
+                            <li>LOAD/STORE瓶颈</li>
                         </ul>
                     </div>
                 </div>
                 
-                <div class="mt-6 bg-gray-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">挑战与解决方案总结</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg">
+                        <h3 class="text-xl font-semibold mb-3 text-secondary flex items-center">
+                            <i class="fas fa-cogs mr-2 text-purple-500"></i>Construction (方法设计)
+                        </h3>
+                        <ul class="list-disc pl-5 space-y-2">
+                            <li>1024位交错位解包</li>
+                            <li>简单FLMM1024指令集</li>
+                            <li>列重排序（转置）打破数据依赖</li>
+                            <li>04261537块顺序的统一转置布局</li>
+                            <li>标量代码自动向量化</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-red-50 to-orange-50 p-5 rounded-lg">
+                        <h3 class="text-xl font-semibold mb-3 text-secondary flex items-center">
+                            <i class="fas fa-chart-line mr-2 text-red-500"></i>Claim (性能提升)
+                        </h3>
+                        <ul class="list-disc pl-5 space-y-2">
+                            <li>解码速度<strong>>1000亿整数/秒</strong></li>
+                            <li>单核<strong>70值/周期</strong>（1400亿值/秒@2GHz）</li>
+                            <li>相比传统方法加速<strong>3-40倍</strong></li>
+                            <li>标量代码性能接近显式SIMD内部函数</li>
+                            <li>查询端到端性能提升<strong>高达7倍</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 方法原理解析 -->
+        <section id="method" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">方法原理解析</h2>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">1024位交错位解包</h3>
+                    <p class="mb-4">将逻辑上连续的位打包值轮询分布到128个8位车道，最大化解码性能。</p>
+                    
+                    <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                        <h4 class="font-semibold mb-2">伪代码示例 (W=3, T=8)</h4>
+                        <pre class="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto">
+FLMM1024 r0, r1;
+r0 = LOAD<8>(in+0);
+r1 = AND_RSHIFT<8>(r0, 0, MASK3); STORE<8>(out+0, r1);
+r1 = AND_RSHIFT<8>(r0, 3, MASK3); STORE<8>(out+1, r1);
+r1 = AND_RSHIFT<8>(r0, 6, MASK2);
+r0 = LOAD<8>(in+1); 
+STORE(out+2, OR<8>(r1, AND_RSHIFT<8>(r0, 2, MASK1)));
+// ... 继续处理剩余值</pre>
+                    </div>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图1: 1024位交错布局示意图</p>
+                            <img src="./images/fig1.png" alt="1024位交错布局" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">统一转置布局设计</h3>
+                    <p class="mb-4">将1024个值组织为8个8×16的转置块，按"04261537"顺序排列，确保所有车道宽度（8/16/32/64位）都能获得最大数据并行性。</p>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图6: 统一转置布局示意图</p>
+                            <img src="./images/fig6.png" alt="统一转置布局" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                        <h4 class="font-semibold mb-2">值排序结果</h4>
+                        <p>0,64,...,960,32,96,...,992,...,63,127,...,1023</p>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">FastLanes-RLE创新</h3>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-red-700">传统RLE问题</h4>
+                            <ul class="list-disc pl-5">
+                                <li>嵌套循环（元组迭代+长度迭代）</li>
+                                <li>短长度时的分支预测失败</li>
+                                <li>SIMD加速仅限于长运行长度</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-green-700">FastLanes-RLE方案</h4>
+                            <ul class="list-disc pl-5">
+                                <li>将RLE映射到DELTA编码</li>
+                                <li>使用16位或8位索引向量</li>
+                                <li>对索引向量进行DELTA编码（仅需1位/值）</li>
+                                <li>平均运行长度≤12时压缩比比传统RLE更好</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图7: FastLanes-RLE示意图</p>
+                            <img src="./images/fig7.png" alt="FastLanes-RLE" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">与相关工作对比</h3>
+                    
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">挑战</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FastLanes解决方案</th>
+                        <table class="min-w-full bg-white border border-gray-300">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="py-2 px-4 border-b text-left">方法</th>
+                                    <th class="py-2 px-4 border-b text-left">位打包布局</th>
+                                    <th class="py-2 px-4 border-b text-left">DELTA解码</th>
+                                    <th class="py-2 px-4 border-b text-left">特点</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody>
                                 <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">多种SIMD宽度</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">针对虚拟FastLanes FLMM1024 SIMD寄存器</td>
+                                    <td class="py-2 px-4 border-b">水平布局 (Zukowski等)</td>
+                                    <td class="py-2 px-4 border-b">顺序存储</td>
+                                    <td class="py-2 px-4 border-b">数据依赖</td>
+                                    <td class="py-2 px-4 border-b">需要PERMUTE指令</td>
+                                </tr>
+                                <tr class="bg-gray-50">
+                                    <td class="py-2 px-4 border-b">4路垂直布局 (Lemire等)</td>
+                                    <td class="py-2 px-4 border-b">4路交错</td>
+                                    <td class="py-2 px-4 border-b">D4/DVI</td>
+                                    <td class="py-2 px-4 border-b">针对128位SSE优化</td>
                                 </tr>
                                 <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">异构指令集</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">FLMM1024使用简单运算符，存在于所有ISA中</td>
+                                    <td class="py-2 px-4 border-b">8路/16路垂直布局 (Habich等)</td>
+                                    <td class="py-2 px-4 border-b">8路/16路交错</td>
+                                    <td class="py-2 px-4 border-b">-</td>
+                                    <td class="py-2 px-4 border-b">针对AVX2/AVX512优化</td>
                                 </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">解码依赖</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">重新排序（转置）列以打破依赖</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">每个车道宽度的布局</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">所有车道宽度的相同统一转置布局</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">保持代码可移植</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">无内部函数：使用标量代码和自动向量化</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">LOAD/STORE限制</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">向量化执行和融合解包+解码</td>
+                                <tr class="bg-blue-50 font-semibold">
+                                    <td class="py-2 px-4 border-b">FastLanes</td>
+                                    <td class="py-2 px-4 border-b">1024位交错</td>
+                                    <td class="py-2 px-4 border-b">统一转置布局</td>
+                                    <td class="py-2 px-4 border-b">硬件无关，自动向量化</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -291,400 +370,284 @@
             </div>
         </section>
 
-        <!-- 方法原理 -->
-        <section id="methodology" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-cogs text-blue-500 mr-2"></i>
-                    方法原理
-                </h2>
+        <!-- 实验结果 -->
+        <section id="results" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">实验结果与分析</h2>
                 
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">隐含假设</h3>
-                <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                    <ul class="list-disc ml-5 text-gray-600">
-                        <li>分析工作负载主要是顺序扫描而非随机访问</li>
-                        <li>关系代数操作是集合式的，不依赖元组顺序</li>
-                        <li>现代CPU具有宽发射能力和指令级并行性</li>
-                        <li>编译器能够有效自动向量化规则的数据访问模式</li>
-                    </ul>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">工作流程</h3>
-                <div class="bg-blue-50 p-4 rounded-lg mb-6">
-                    <div class="text-center text-blue-700 font-medium py-2">
-                        原始数据 → 统一转置布局重排 → 轻量级压缩编码 → 1024位交错位打包 → 标量/SIMD解码 → 查询管道处理
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">1024位交错布局</h3>
-                <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                    <p class="text-gray-600 mb-4">
-                        在3位编码的示例中，FastLanes使用最小的适合车道宽度（8位），因此在FLMM1024字中有128个车道（1024/8=128）。逻辑上连续的3位编码值被循环分布到这些车道中。
-                    </p>
-                    <div class="figure-placeholder my-4">
-                        <img src="./images/fig1.png" alt="Figure 1: 1024位交错布局示意图" class="max-w-full h-auto">
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">统一转置布局</h3>
-                <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                    <p class="text-gray-600 mb-4">
-                        为了解决不同列的数据类型宽度不同的问题，FastLanes设计了统一转置布局，使用"04261537"顺序组织8个8×16转置块。
-                    </p>
-                    <div class="figure-placeholder my-4">
-                        <img src="./images/fig6.png" alt="Figure 6: 统一转置布局示意图" class="max-w-full h-auto">
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div class="bg-white p-3 rounded border">
-                            <h4 class="font-semibold text-gray-700 mb-2">布局生成算法</h4>
-                            <ol class="list-decimal ml-5 text-gray-600 text-sm">
-                                <li>将1024个值划分为8个8×16的块</li>
-                                <li>按"04261537"顺序排列这些块</li>
-                                <li>根据数据类型宽度调整处理顺序</li>
-                            </ol>
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">关键实验指标</h3>
+                    <div class="grid md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-blue-700">周期/值</div>
+                            <div class="text-sm text-gray-600">解码单个值所需的CPU周期数</div>
                         </div>
-                        <div class="bg-white p-3 rounded border">
-                            <h4 class="font-semibold text-gray-700 mb-2">处理顺序</h4>
-                            <ul class="list-disc ml-5 text-gray-600 text-sm">
-                                <li>64位类型: 0→1→...→7</li>
-                                <li>32位类型: 04→15→26→37</li>
-                                <li>16位类型: 0426→1537</li>
-                                <li>8位类型: 04261537</li>
+                        <div class="bg-green-50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-green-700">值/周期</div>
+                            <div class="text-sm text-gray-600">单个周期内解码的值数量</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-purple-700">端到端查询性能</div>
+                            <div class="text-sm text-gray-600">压缩扫描与未压缩扫描的对比</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">位解包性能结果</h3>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图8: 位解包性能对比</p>
+                            <img src="./images/fig8.png" alt="位解包性能" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-green-700">关键发现</h4>
+                            <ul class="list-disc pl-5">
+                                <li>SIMD实现比标量快<strong>40-70倍</strong>（8位类型）</li>
+                                <li>标量_T64比朴素标量快<strong>8倍</strong></li>
+                                <li>编译器自动向量化与显式SIMD内部函数性能相当</li>
+                                <li>最高性能：<strong>70值/周期</strong>（8位类型，W=1）</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-blue-700">平台表现</h4>
+                            <ul class="list-disc pl-5">
+                                <li>Graviton CPU SIMD性能较弱</li>
+                                <li>Apple M1具有更多指令级并行性(ILP)</li>
+                                <li>Zen4支持AVX512但不比Zen3快（使用两个AVX2单元）</li>
                             </ul>
                         </div>
                     </div>
                 </div>
                 
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">DELTA解码算法</h3>
-                <div class="bg-green-50 p-4 rounded-lg mb-6">
-                    <pre class="bg-gray-800 text-green-300 p-4 rounded overflow-x-auto text-sm">
-// 伪代码：DELTA解码算法
-输入: 统一转置布局的位打包DELTA值 + 基值
-输出: 解码后的值向量
-
-1. 加载基值到SIMD寄存器
-2. 对于每个SIMD车道位置i并行执行:
-   - 从位打包数据中解包DELTA值
-   - 执行前缀和: value[i] = base + cumulative_sum(deltas[0..i])
-3. 存储解码后的值
-                    </pre>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">FastLanes-RLE编码</h3>
-                <div class="bg-purple-50 p-4 rounded-lg">
-                    <p class="text-purple-700 mb-4">
-                        FastLanes-RLE将传统RLE映射到DELTA编码，支持在统一转置布局中存储。
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white p-3 rounded border">
-                            <h4 class="font-semibold text-gray-700 mb-2">传统RLE</h4>
-                            <ul class="list-disc ml-5 text-gray-600 text-sm">
-                                <li>格式: (value, length) 对</li>
-                                <li>需要嵌套循环解码</li>
-                                <li>短长度时分支预测错误率高</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-3 rounded border">
-                            <h4 class="font-semibold text-gray-700 mb-2">FastLanes-RLE</h4>
-                            <ul class="list-disc ml-5 text-gray-600 text-sm">
-                                <li>字典: 运行值向量（可能包含重复）</li>
-                                <li>索引向量: 单调递增，新运行时增加1</li>
-                                <li>对索引向量应用1位DELTA编码</li>
-                                <li>使用统一转置布局存储</li>
-                            </ul>
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">DELTA解码性能</h3>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图10: DELTA解码性能</p>
+                            <img src="./images/fig10.png" alt="DELTA解码性能" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
                         </div>
                     </div>
-                    <div class="figure-placeholder my-4">
-                        <img src="./images/fig7.png" alt="Figure 7: FastLanes-RLE示意图" class="max-w-full h-auto">
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图15: DELTA解码方法对比</p>
+                            <img src="./images/fig15.png" alt="DELTA解码方法对比" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
+                        </div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 实验评估 -->
-        <section id="experiments" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-flask text-blue-500 mr-2"></i>
-                    实验评估
-                </h2>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">实验平台</h3>
-                <div class="bg-gray-50 p-4 rounded-lg mb-6">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">架构</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标量ISA</th>
-                                    <th class="px-4py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最佳SIMD ISA</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU型号</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">频率</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Intel Ice Lake</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">x86_64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AVX512</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">8375C</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">3.5 GHz</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AMD Zen3</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">x86_64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AVX2 (256位)</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">EPYC 7R13</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">3.6 GHz</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AMD Zen4</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">x86_64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AVX512</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Ryzen9 7950X</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">4.5 GHz</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Apple M1</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">ARM64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">NEON (128位)</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Apple M1</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">3.2 GHz</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AWS Graviton2</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">ARM64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">NEON (128位)</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Neoverse-N1</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">2.5 GHz</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">AWS Graviton3</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">ARM64</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">NEON (128位) / SVE</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">Neoverse-V1</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">2.6 GHz</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">关键实验结果</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-blue-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-blue-700 mb-2">位解包性能</h4>
-                        <ul class="list-disc ml-5 text-blue-600">
-                            <li>在Intel Ice Lake上达到70值/周期（8位类型）</li>
-                            <li>Scalar_T64比原生Scalar快8倍（8位类型）</li>
-                            <li>编译器自动向量化效果与显式SIMD相当</li>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg mb-4">
+                        <h4 class="font-semibold mb-2 text-yellow-700">性能亮点</h4>
+                        <ul class="list-disc pl-5">
+                            <li>统一转置布局比替代方案快<strong>3-40倍</strong></li>
+                            <li>8位DELTA解码<strong>>40值/周期</strong></li>
+                            <li>标量_T64从数据并行性中受益</li>
                         </ul>
-                        <div class="figure-placeholder my-4">
-                            <img src="./images/fig8.png" alt="Figure 8: 位解包性能图" class="max-w-full h-auto">
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">端到端查询性能</h3>
+                    
+                    <div class="flex justify-center my-4">
+                        <div class="bg-gray-200 p-4 rounded-lg text-center w-full">
+                            <p class="text-gray-600">图12: 端到端查询性能</p>
+                            <img src="./images/fig12.png" alt="端到端查询性能" class="mx-auto mt-2 cursor-pointer max-w-full h-auto" onclick="openModal(this)">
                         </div>
                     </div>
                     
                     <div class="bg-green-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-green-700 mb-2">DELTA解码性能</h4>
-                        <ul class="list-disc ml-5 text-green-600">
-                            <li>统一转置布局显著加速DELTA解码</li>
-                            <li>在较快平台上达到>40值/周期（8位DELTA）</li>
-                            <li>Scalar_T64从统一转置布局中的数据并行性受益</li>
+                        <h4 class="font-semibold mb-2 text-green-700">实际价值</h4>
+                        <ul class="list-disc pl-5">
+                            <li>FastLanes使交叉点从4倍压缩比移动到几乎任何数据</li>
+                            <li>8线程下比未压缩快<strong>7倍</strong>，比标量解码快<strong>4倍</strong></li>
+                            <li>减少RAM带宽需求，缓解内存瓶颈</li>
                         </ul>
-                        <div class="figure-placeholder my-4">
-                            <img src="./images/fig10.png" alt="Figure 10: DELTA解码性能图" class="max-w-full h-auto">
-                        </div>
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">端到端查询性能</h3>
-                <div class="bg-purple-50 p-4 rounded-lg mb-6">
-                    <p class="text-purple-700 mb-4">
-                        在Tectorwise向量化查询处理器中集成FastLanes，执行SELECT SUM(COL)查询，结果显示：
-                    </p>
-                    <ul class="list-disc ml-5 text-purple-600">
-                        <li>读取FastLanes压缩数据通常使查询<strong>更快</strong>，尽管需要解压缩</li>
-                        <li>并行执行增加RAM瓶颈：8线程时端到端性能比未压缩快7倍</li>
-                        <li>FastLanes将查询变快的交叉点从>4x压缩比（Scalar）移动到几乎任何数据</li>
-                    </ul>
-                    <div class="figure-placeholder my-4">
-                        <img src="./images/fig12.png" alt="Figure 12: 端到端查询性能图" class="max-w-full h-auto">
-                    </div>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">与相关工作对比</h3>
-                <div class="bg-yellow-50 p-4 rounded-lg">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方法</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIMD宽度适应性</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">依赖处理</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代码可移植性</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">性能</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">水平布局</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">固定宽度</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">顺序依赖</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">中等</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">低</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">4路垂直布局</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">128位优化</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">部分解决</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">低</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">中</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2 text-sm text-gray-700">D4/DVI</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">固定批次</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">批次依赖</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">低</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">中高</td>
-                                </tr>
-                                <tr class="bg-blue-50">
-                                    <td class="px-4 py-2 text-sm font-semibold text-blue-700">FastLanes</td>
-                                    <td class="px-4 py-2 text-sm font-semibold text-blue-700">所有宽度</td>
-                                    <td class="px-4 py-2 text-sm font-semibold text-blue-700">完全解决</td>
-                                    <td class="px-4 py-2 text-sm font-semibold text-blue-700">高</td>
-                                    <td class="px-4 py-2 text-sm font-semibold text-blue-700">非常高</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="figure-placeholder my-4">
-                        <img src="./images/fig13.png" alt="Figure 13: 4路布局与1024位交错布局对比图" class="max-w-full h-auto">
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- 结论 -->
-        <section id="conclusion" class="mb-12">
-            <div class="section-card bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-flag-checkered text-blue-500 mr-2"></i>
-                    结论与未来工作
-                </h2>
+        <section id="conclusion" class="section-anchor mb-16 fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-primary border-b pb-2">结论与未来工作</h2>
                 
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">主要结论</h3>
-                <div class="bg-green-50 p-4 rounded-lg mb-6">
-                    <ul class="list-disc ml-5 text-green-600">
-                        <li>FastLanes通过虚拟1024位SIMD寄存器和统一转置布局，在异构硬件环境下实现了高效、可移植的轻量级压缩数据解码</li>
-                        <li>标量代码通过自动向量化达到与显式SIMD内部函数相当的性能，提高了代码可移植性和未来兼容性</li>
-                        <li>统一转置布局通过打破顺序依赖，显著加速了DELTA和RLE等编码的解码性能</li>
-                        <li>在实际查询中，FastLanes压缩数据扫描可以比未压缩数据扫描更快，减少了内存带宽需求</li>
-                    </ul>
-                </div>
-
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">局限性</h3>
-                <div class="bg-orange-50 p-4 rounded-lg mb-6">
-                    <ul class="list-disc ml-5 text-orange-600">
-                        <li><strong>块大小限制</strong>：1024值的固定块大小可能对小数据集不够灵活，影响压缩率</li>
-                        <li><strong>顺序敏感查询</strong>：在需要保持原始顺序的查询中，需要维护选择向量，可能带来性能开销</li>
-                        <li><strong>随机访问性能</strong>：主要优化顺序扫描，随机访问模式可能无法充分发挥性能优势</li>
-                        <li><strong>异常值处理</strong>：当前异常处理机制（如Patching）可能不够完善，影响极端数据分布的压缩效果</li>
-                        <li><strong>硬件特性利用</strong>：虚拟1024位寄存器可能无法充分利用某些硬件的特定优化指令</li>
-                    </ul>
-                </div>
-                
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">未来工作方向</h3>
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <ul class="list-disc ml-5 text-blue-600">
-                        <li><strong>级联轻量级压缩</strong>：研究压缩方法的堆叠组合，减少对通用压缩方法（如zstd、Snappy、LZ4）的依赖</li>
-                        <li><strong>GPU/TPU支持</strong>：探索在众核硬件上的高效实现</li>
-                        <li><strong>完整系统集成</strong>：将FastLanes集成到完整的大数据文件格式中</li>
-                        <li><strong>异常处理机制</strong>：研究更复杂的异常值处理方案</li>
-                        <li><strong>压缩向量执行</strong>：研究在查询管道中利用部分压缩向量的优化机会</li>
-                    </ul>
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">证明的价值</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-green-700">技术突破</h4>
+                            <ul class="list-disc pl-5">
+                                <li>硬件无关的数据并行压缩解码可行且高效</li>
+                                <li>标量代码+自动向量化可替代平台特定SIMD代码</li>
+                                <li>统一转置布局有效解决顺序依赖问题</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-blue-700">实际影响</h4>
+                            <ul class="list-disc pl-5">
+                                <li>压缩扫描可在实际查询中提高性能</li>
+                                <li>减少技术债务，提高代码可维护性</li>
+                                <li>为未来硬件演进提供保障</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
                 
-                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">影响与意义</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-indigo-700 mb-2">技术影响</h4>
-                        <ul class="list-disc ml-5 text-indigo-600 text-sm">
-                            <li>为大数据格式提供了未来证明的压缩布局</li>
-                            <li>解决了硬件多样性带来的技术债务问题</li>
-                            <li>推动了标量代码自动向量化在数据库系统中的应用</li>
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">潜在局限</h3>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <ul class="list-disc pl-5">
+                            <li>1024值块大小可能影响压缩率（需要异常处理机制）</li>
+                            <li>在需要严格顺序的场景中可能需要选择向量</li>
+                            <li>实验主要在CPU上进行，GPU/TPU适配性待验证</li>
                         </ul>
                     </div>
-                    <div class="bg-purple-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-purple-700 mb-2">实际应用</h4>
-                        <ul class="list-disc ml-5 text-purple-600 text-sm">
-                            <li>可用于Parquet、ORC等列式存储格式的优化</li>
-                            <li>适用于云环境中多硬件平台的数据库系统</li>
-                            <li>为向量化查询执行引擎提供高效的压缩数据扫描</li>
-                        </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-secondary">未来工作方向</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-purple-700">技术扩展</h4>
+                            <ul class="list-disc pl-5">
+                                <li>级联轻量压缩方法组合</li>
+                                <li>GPU/TPU等广泛并行硬件适配</li>
+                                <li>压缩向量表示的查询操作符优化</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-indigo-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-indigo-700">系统集成</h4>
+                            <ul class="list-disc pl-5">
+                                <li>完整系统集成与端到端基准测试</li>
+                                <li>开源大数据文件格式实现</li>
+                                <li>递归压缩物理子列块设计</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- 返回顶部按钮 -->
-    <button id="backToTop" class="back-to-top bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-
     <!-- 页脚 -->
     <footer class="bg-gray-800 text-white py-8">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <p class="mb-4">FastLanes: The FastLanes Compression Layout: Decoding >100 Billion Integers per Second with Scalar Code</p>
-            <p class="text-gray-400 text-sm">Azim Afroozeh and Peter Boncz. PVLDB, 16(9): 2132-2144, 2023</p>
-            <p class="text-gray-400 text-sm mt-2">DOI: 10.14778/3598581.3598587 | Available at: https://github.com/cwida/FastLanes</p>
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <p class="text-lg font-semibold">FastLanes 论文解析</p>
+                    <p class="text-gray-400 text-sm">基于AI生成的内容，仅供参考学习</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="https://github.com/cwida/FastLanes" class="text-gray-400 hover:text-white transition">
+                        <i class="fab fa-github text-xl"></i>
+                    </a>
+                    <a href="https://doi.org/10.14778/3598581.3598587" class="text-gray-400 hover:text-white transition">
+                        <i class="fas fa-external-link-alt text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
+                <p>本解析基于论文 "The FastLanes Compression Layout: Decoding >100 Billion Integers per Second with Scalar Code" (PVLDB, 16(9): 2132-2144, 2023)</p>
+            </div>
         </div>
     </footer>
 
+    <!-- 返回顶部按钮 -->
+    <button id="backToTop" class="fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg floating-btn opacity-0 transition-opacity duration-300">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- 图片模态框 -->
+    <div id="imageModal" class="image-modal">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
     <script>
-        // 返回顶部按钮功能
+        // 返回顶部按钮
         const backToTopButton = document.getElementById('backToTop');
         
         window.addEventListener('scroll', () => {
             if (window.pageYOffset > 300) {
-                backToTopButton.style.display = 'block';
+                backToTopButton.classList.remove('opacity-0');
+                backToTopButton.classList.add('opacity-100');
             } else {
-                backToTopButton.style.display = 'none';
+                backToTopButton.classList.remove('opacity-100');
+                backToTopButton.classList.add('opacity-0');
             }
         });
         
         backToTopButton.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
         
-        // 导航链接高亮
-        const sections = document.querySelectorAll('section');
-        const navLinks = document.querySelectorAll('.nav-link');
-        
+        // 滚动时激活导航项
         window.addEventListener('scroll', () => {
-            let current = '';
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('nav a');
+            
+            let currentSection = '';
             
             sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.clientHeight;
-                if (pageYOffset >= sectionTop - 100) {
-                    current = section.getAttribute('id');
+                const sectionTop = section.offsetTop - 100;
+                if (window.pageYOffset >= sectionTop) {
+                    currentSection = section.getAttribute('id');
                 }
             });
             
             navLinks.forEach(link => {
-                link.classList.remove('text-blue-600');
-                link.classList.add('text-gray-600');
-                if (link.getAttribute('href').substring(1) === current) {
-                    link.classList.remove('text-gray-600');
-                    link.classList.add('text-blue-600');
+                link.classList.remove('nav-active');
+                if (link.getAttribute('href').substring(1) === currentSection) {
+                    link.classList.add('nav-active');
                 }
             });
         });
+        
+        // 淡入动画
+        const fadeElements = document.querySelectorAll('.fade-in');
+        
+        const fadeInObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        fadeElements.forEach(element => {
+            fadeInObserver.observe(element);
+        });
+        
+        // 图片模态框
+        function openModal(img) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'block';
+            modalImg.src = img.src;
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+        
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
