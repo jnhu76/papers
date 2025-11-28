@@ -1,0 +1,10 @@
+{
+  "id": "a1b2c3d4e5f62024AnIntro",
+  "title": "An Introduction to the Compute Express Link (CXL) Interconnect",
+  "authors": ["Debendra Das Sharma", "Robert Blankenship", "Daniel Berger"],
+  "year": 2024,
+  "conference": "ACM Comput. Surv.",
+  "category": "计算机体系结构",
+  "keywords": ["Compute Express Link", "CXL", "内存互连", "缓存一致性", "资源池化", "数据中心"],
+  "abstract": "The Compute Express Link (CXL) is an open industry-standard interconnect between processors and devices such as accelerators, memory buffers, smart network interfaces, persistent memory, and solid-state drives. CXL offers coherency and memory semantics with bandwidth that scales with PCIe bandwidth while achieving significantly lower latency than PCIe. All major CPU vendors, device vendors, and datacenter operators have adopted CXL as a common standard. This enables an inter-operable ecosystem that supports key computing use cases including highly efficient accelerators, server memory bandwidth and capacity expansion, multi-server resource pooling and sharing, and efficient peer-to-peer communication. This survey provides an introduction to CXL covering the standards CXL 1.0, CXL 2.0, and CXL 3.0. We further survey CXL implementations, discuss CXL’s impact on the datacenter landscape, and future directions."
+}
