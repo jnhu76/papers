@@ -1,0 +1,10 @@
+{
+  "id": "a1b2c3d4e5f62014Compreh",
+  "title": "Comprehensive Experimental Analyses of Automotive Attack Surfaces",
+  "authors": ["Stephen Checkoway", "Damon McCoy", "Brian Kantor", "Danny Anderson", "Hovav Shacham", "Stefan Savage", "Karl Koscher", "Alexei Czeskis", "Franziska Roesner", "Tadayoshi Kohno"],
+  "year": 2011,
+  "conference": "USENIX Security",
+  "category": "网络安全",
+  "keywords": ["汽车安全", "攻击面分析", "远程攻击", "漏洞利用", "车载网络", "ECU安全", "无线攻击"],
+  "abstract": "Modern automobiles are pervasively computerized, and hence potentially vulnerable to attack. However, while previous research has shown that the _internal_ networks within some modern cars are insecure, the associated threat model-- requiring _prior physical access_ --has justifiably been viewed as unrealistic. Thus, it remains an open question if automobiles can also be susceptible to _remote_ compromise. Our work seeks to put this question to rest by systematically analyzing the _external_ attack surface of a modern automobile. We discover that remote exploitation is feasible via a broad range of attack vectors (including mechanics tools, CD players, Bluetooth and cellular radio), and further, that wireless communications channels allow long distance vehicle control, location tracking, in-cabin audio exfiltration and theft. Finally, we discuss the structural characteristics of the automotive ecosystem that give rise to such problems and highlight the practical challenges in mitigating them."
+}
