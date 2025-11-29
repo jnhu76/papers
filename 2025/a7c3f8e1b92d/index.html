@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPHash: An Efficient Hash Index for GPU with Byte-Granularity Persistent Memory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .performance-bar {
+      transition: width 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          GPHash: An Efficient Hash Index for GPU with Byte-Granularity Persistent Memory
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Menglei Chen, Yu Hua*, Zhangyu Chen, Ming Zhang, Gen Dong</div>
+                <div class="text-sm text-gray-600 mt-1">Wuhan National Laboratory for Optoelectronics, School of Computer, Huazhong University of Science and Technology</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST'25), February 25–27, 2025, Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://www.usenix.org/conference/fast25/presentation/chen-menglei</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">GPU</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">持久内存</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">哈希索引</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">高性能</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>GPU感知和PM友好的哈希表结构</strong>：支持一次性warp访问，最小化非合并内存访问，同时保持高内存效率</li>
+          <li><strong>具有崩溃一致性保证的无锁并发控制</strong>：通过CAS原语和槽状态实现无锁和无日志操作，降低一致性保证开销</li>
+          <li><strong>基于冻结的桶缓存(BktCache)</strong>：通过桶粒度缓存减少PM访问，同时最小化缓存管理开销</li>
+          <li><strong>实际实现和广泛评估</strong>：在YCSB和真实工作负载上的实验表明，GPHash比现有方法性能提升高达27.62倍</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            具有持久内存的GPU(GPM)使得GPU驱动的应用程序能够以字节粒度直接管理持久内存中的数据。哈希索引已被广泛用于实现高效的数据管理。然而，由于warp无关的执行方式、高开销的一致性保证以及PM和GPU之间的显著带宽差距，传统哈希索引在GPM系统中变得低效。
+          </p>
+          <p class="mb-4">
+            作者提出了GPHash，一种用于GPM系统的高效哈希索引，具有高性能和一致性保证。为了充分利用GPU的并行性，GPHash以无锁和warp协作的方式执行所有索引操作。此外，通过使用CAS原语和槽状态，GPHash以低开销确保一致性保证。为了进一步弥合PM和GPU之间的带宽差距，GPHash将热点项缓存在GPU内存中，同时最小化缓存管理的开销。
+          </p>
+          <p>
+            在YCSB和真实工作负载上的广泛评估表明，GPHash比最先进的CPU辅助数据管理方法和GPM哈希索引性能提升高达27.62倍。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">GPU与持久内存(GPM)</h3>
+          <p class="mb-4">
+            随着计算吞吐量和内存带宽的显著增加，GPU已被广泛用于各种应用中加速计算，如深度神经网络训练/推理、数据库和科学计算。这些GPU驱动的应用程序处理大规模数据。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>GPU并行性
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>基本调度单位：warp（32个GPU线程）</li>
+                <li>warp发散：同一warp中的线程执行不同路径时被序列化</li>
+                <li>合并内存访问：同一缓存行的访问合并为单个缓存访问</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-memory mr-2"></i>持久内存(PM)
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>提供持久性、大容量、字节可寻址性</li>
+                <li>访问延迟是DRAM的3-10倍</li>
+                <li>带宽是DRAM的1/6</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">数据管理方法演进</h3>
+          
+          <!-- 原图占位符 - 图1 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: GPM系统模型概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: GPM系统模型概述" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> GPM系统模型概述，展示了CPU辅助数据管理和GPM数据管理的数据路径对比。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-desktop mr-2"></i>CPU辅助数据管理
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPU和CPU之间的数据传输耗时</li>
+                <li>引入额外的CPU消耗</li>
+                <li>干扰其他CPU应用程序</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>GPM数据管理
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPU直接访问PM，无需CPU介入</li>
+                <li>字节粒度访问</li>
+                <li>利用GPU的高并行性</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">哈希索引在GPM系统中的重要性</h3>
+          <p class="mb-4">
+            哈希索引支持对细粒度数据的并行访问，具有恒定规模的单点查询性能，因此被广泛用于实现高效的数据管理。GPM启用的哈希索引有望提升GPU驱动应用程序中的数据管理性能。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">
+            将现有哈希索引移植到GPM系统面临三个主要挑战：
+          </p>
+          
+          <div class="space-y-8">
+            <!-- 挑战1 -->
+            <div class="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+              <h3 class="text-xl font-bold text-red-700 mb-4 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>
+                挑战1: Warp无关执行方式导致性能下降
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">问题表现</h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>每个线程独立执行索引操作，不考虑warp特性</li>
+                    <li>严重的warp发散</li>
+                    <li>非合并内存访问</li>
+                    <li>锁设计加剧线程争用</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">影响</h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>GPU并行性无法充分利用</li>
+                    <li>内存访问效率低下</li>
+                    <li>线程争用导致性能下降</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 挑战2 -->
+            <div class="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500">
+              <h3 class="text-xl font-bold text-yellow-700 mb-4 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>
+                挑战2: 崩溃一致性保证的高开销
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">问题表现</h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>PM原子内存写入单元有限（如64位CPU为8字节）</li>
+                    <li>系统崩溃可能导致部分更新和数据不一致</li>
+                    <li>日志和写时复制技术引入额外写入开销</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">影响</h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>数据损坏风险</li>
+                    <li>一致性保证开销高</li>
+                    <li>性能下降</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 挑战3 -->
+            <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
+              <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>
+                挑战3: PM和GPU之间的巨大带宽差距
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">带宽对比</h4>
+                  <div class="space-y-3">
+                    <div>
+                      <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium">GPU内存带宽 (NVIDIA V100)</span>
+                        <span class="text-sm font-medium">900 GB/s</span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium">PM读取带宽 (6个Intel Optane DC PMM)</span>
+                        <span class="text-sm font-medium">39.6 GB/s</span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 4.4%"></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium">PM写入带宽 (6个Intel Optane DC PMM)</span>
+                        <span class="text-sm font-medium">13.8 GB/s</span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 1.5%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="font-bold text-gray-700 mb-2">影响</h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>带宽受限的PM无法高效处理GPU的大量并发访问</li>
+                    <li>GPU高并行性无法充分利用</li>
+                    <li>处理哈希冲突的额外PM访问进一步恶化带宽问题</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">GPHash哈希表结构</h3>
+          
+          <!-- 原图占位符 - 图2 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 2: GPHash的哈希表结构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: GPHash的哈希表结构" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> GPHash的哈希表结构（使用2个哈希位置和4级桶，4路关联性作为示例）。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-layer-group mr-2"></i>槽关联性
+              </h4>
+              <p class="text-sm text-gray-700">每个桶包含多个槽，每个槽存储一个键值项。支持并发访问多个槽。</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-share-alt mr-2"></i>层级间共享
+              </h4>
+              <p class="text-sm text-gray-700">非顶层桶由多个顶层桶共享，提高负载均衡和内存效率。</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-map-marker-alt mr-2"></i>多哈希位置
+              </h4>
+              <p class="text-sm text-gray-700">每个键有多个存储位置选择，指数级提高内存效率。</p>
+            </div>
+            
+            <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>一次性warp访问
+              </h4>
+              <p class="text-sm text-gray-700">32个线程在warp中并发访问候选桶的所有槽，充分利用GPU并行性。</p>
+            </div>
+            
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-key mr-2"></i>就地键放置
+              </h4>
+              <p class="text-sm text-gray-700">直接将键存储在槽中，促进合并内存访问，减少非合并访问。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">无锁并发控制与崩溃一致性保证</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-unlock mr-2"></i>Warp协作执行方式
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>在warp粒度执行索引操作</li>
+                <li>使用CUDA的warp级指令进行warp内通信</li>
+                <li>主动控制warp发散</li>
+                <li>有效利用warp并行性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>无锁和无日志操作
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>使用CAS原语确保原子性</li>
+                <li>槽状态（EMPTY/INSERT）指示槽状态</li>
+                <li>无需日志记录，降低开销</li>
+                <li>崩溃后易于恢复</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 原图占位符 - 图3 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 3: 无锁和无日志插入示意图
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: 无锁和无日志插入示意图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 无锁和无日志插入示意图（使用槽的逻辑结构以便理解）。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">基于冻结的桶缓存(BktCache)</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-database mr-2"></i>桶粒度缓存
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>同一桶中的项总是并发访问</li>
+                <li>减少缓存管理元数据的存储开销</li>
+                <li>记录桶之间的映射关系</li>
+              </ul>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-snowflake mr-2"></i>基于冻结的缓存设计
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>定期加载BktCache（加载阶段）</li>
+                <li>在加载阶段之间保持缓存桶成员不变（冻结阶段）</li>
+                <li>显著降低缓存管理开销</li>
+                <li>避免缓存抖动导致的性能下降</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 原图占位符 - 图4 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 4: 并发获取机制概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="论文图4: 并发获取机制概述" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 并发获取机制概述。
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-6">
+            <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-sync-alt mr-2"></i>并发加载方案
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>使用另一个GPU流并行获取不同桶</li>
+              <li>原子更新桶之间的映射关系</li>
+              <li>等待正在进行的操作完成后再更新桶</li>
+              <li>最小化对正在进行的索引操作的干扰</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-server mr-2"></i>硬件平台
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>两个Intel 26核Xeon Gold 6230R CPU</li>
+                <li>一个NVIDIA Tesla V100 GPU</li>
+                <li>192 GB DDR4 DRAM</li>
+                <li>768 GB Intel Optane DC PMM (6×128 GB PMM)</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-tasks mr-2"></i>工作负载
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>YCSB基准测试：微基准和宏基准</li>
+                <li>真实工作负载：DLRM和PageRank</li>
+                <li>默认Zipfian分布，偏斜度θ=0.99</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">整体性能</h3>
+          
+          <!-- 原图占位符 - 图5 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 5: 不同配置下各种索引操作的吞吐量和延迟
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig5.png" alt="论文图5: 不同配置下各种索引操作的吞吐量和延迟" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 不同配置下各种索引操作的吞吐量和延迟。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">搜索工作负载</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPHash比CPU辅助方法性能提升高达13.84倍</li>
+                <li>比SlabHash-GPM性能提升高达4.28倍</li>
+                <li>消除GPU和CPU之间的耗时传输</li>
+                <li>利用GPU高并行性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">插入工作负载</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPHash比其他方法性能提升高达5.79倍</li>
+                <li>一次性warp访问特性利用warp并行性</li>
+                <li>不引入额外数据移动</li>
+                <li>实现高效负载均衡</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">更新/删除工作负载</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPHash性能提升高达10.37倍</li>
+                <li>无日志和无锁操作降低开销</li>
+                <li>日志开销降低SlabHash-GPM性能</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 原图占位符 - 图6 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 6: 使用32字节键的YCSB工作负载下的吞吐量和延迟
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig6.png" alt="论文图6: 使用32字节键的YCSB工作负载下的吞吐量和延迟" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 使用32字节键的YCSB工作负载下的吞吐量和延迟。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">负载因子</h3>
+          
+          <!-- 原图占位符 - 图7 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 7: 不同哈希方案的负载因子
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig7.png" alt="论文图7: 不同哈希方案的负载因子" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 不同哈希方案的负载因子。
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2">负载因子对比</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-blue-600">92%</div>
+                <div class="text-sm text-gray-600">GPHash</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-green-600">85%</div>
+                <div class="text-sm text-gray-600">Clevel/Dash/SEPH</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-purple-600">82%</div>
+                <div class="text-sm text-gray-600">SlabHash-GPM</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-red-600">60%</div>
+                <div class="text-sm text-gray-600">传统哈希表</div>
+              </div>
+            </div>
+            <p class="mt-3 text-sm text-gray-700">
+              GPHash采用槽关联性、层级间共享和多哈希位置处理更多哈希冲突，实现更好的桶间负载均衡，提供高达92%的负载因子。
+            </p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">改进来源分析</h3>
+          
+          <!-- 原图占位符 - 图8 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 8: 不同哈希方案的延迟分解
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig8.png" alt="论文图8: 不同哈希方案的延迟分解" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 不同哈希方案的延迟分解。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2">CPU辅助方法</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>GPU和CPU之间的数据传输占端到端延迟的30.1%以上</li>
+                <li>引入额外CPU消耗</li>
+                <li>干扰其他CPU应用程序</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">GPHash优势</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>消除传输开销</li>
+                <li>warp协作执行方式避免warp发散</li>
+                <li>无日志操作避免日志开销（高达15.2%）</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">因素分析</h3>
+          
+          <!-- 原图占位符 - 图9 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 9: GPHash设计的因素分析
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig9.png" alt="论文图9: GPHash设计的因素分析" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> GPHash设计的因素分析。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">+ Warp协作执行方式</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>吞吐量提升高达104.1%</li>
+                <li>缓解warp发散问题</li>
+                <li>对混合操作工作负载特别重要</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">+ 就地键放置</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>吞吐量提升高达13.7%</li>
+                <li>促进合并内存访问</li>
+                <li>减少非合并访问</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">+ BktCache</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>偏斜工作负载吞吐量提升高达40.9%</li>
+                <li>均衡工作负载吞吐量提升7.6%</li>
+                <li>加速搜索和定位特定键</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">真实工作负载</h3>
+          
+          <!-- 原图占位符 - 图10 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 10: 真实工作负载下不同方案的吞吐量和延迟
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig10.png" alt="论文图10: 真实工作负载下不同方案的吞吐量和延迟" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 真实工作负载下不同方案的吞吐量和延迟。
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-2">真实工作负载性能</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">DLRM工作负载</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>使用Criteo-Kaggle CTR数据集生成</li>
+                  <li>包含超过4500万次点击反馈</li>
+                  <li>GPHash提供高达7.09倍更高吞吐量</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">PageRank工作负载</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>使用Twitter社交图生成</li>
+                  <li>包含4170万用户档案和15亿社交关系</li>
+                  <li>GPHash提供高达7.91倍更低延迟</li>
+                </ul>
+              </div>
+            </div>
+            <p class="mt-3 text-sm text-gray-700">
+              尽管工作负载不同，GPHash始终提供比其他方案更高的性能，展示了其在不同工作负载下的效率。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者设计、实现并评估了GPHash，这是一种用于GPM系统的高效哈希方案。GPHash的哈希表结构被设计为GPU感知和PM友好，实现了高性能和高内存效率。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>主要成就
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>GPU感知和PM友好的哈希表结构，支持一次性warp访问</li>
+                <li>warp协作执行方式缓解warp发散</li>
+                <li>无锁和无日志操作实现崩溃一致性保证</li>
+                <li>基于冻结的桶缓存(BktCache)减少PM访问</li>
+                <li>比现有方法性能提升高达27.62倍</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-rocket mr-2"></i>性能表现
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>负载因子高达92%</li>
+                <li>搜索工作负载性能提升高达13.84倍</li>
+                <li>插入工作负载性能提升高达5.79倍</li>
+                <li>更新/删除工作负载性能提升高达10.37倍</li>
+                <li>真实工作负载性能提升高达7.09倍</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>论文局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>变长键值对支持有限</strong>：虽然GPHash支持变长键值对，但高效的GPU分配器需要实现快速并发变长分配而不产生高内存碎片，这超出了本文的主要设计目标</li>
+              <li><strong>不支持并发调整大小</strong>：在重新哈希操作期间，哈希索引需要同时执行正在进行的索引操作和重新哈希的插入，这会干扰正在进行的索引操作，降低性能</li>
+              <li><strong>对特定工作负载优化</strong>：GPHash主要针对具有偏斜访问模式的工作负载进行了优化，对于完全均匀分布的工作负载，BktCache的收益有限</li>
+            </ul>
+          </div>
+          
+          <div class="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+            <h4 class="text-xl font-bold text-purple-700 mb-4 text-center">
+              <i class="fas fa-graduation-cap mr-2"></i>
+              教学要点总结
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">核心概念</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                  <li>GPM系统结合GPU并行性和PM持久性</li>
+                  <li>传统哈希索引在GPM系统中效率低下</li>
+                  <li>warp协作执行充分利用GPU并行性</li>
+                  <li>无锁和无日志操作降低一致性开销</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">关键技术</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                  <li>一次性warp访问候选桶的所有槽</li>
+                  <li>CAS原语和槽状态确保原子性</li>
+                  <li>基于冻结的桶缓存减少PM访问</li>
+                  <li>层级间共享和多哈希位置提高内存效率</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      setTimeout(() => {
+        document.querySelectorAll('.performance-bar').forEach(bar => {
+          bar.style.width = bar.style.width;
+        });
+      }, 500);
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

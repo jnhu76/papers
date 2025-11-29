@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Language Models Hallucinate</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#pretraining-errors" class="nav-item whitespace-nowrap">预训练错误</a>
+        <a href="#post-training" class="nav-item whitespace-nowrap">后训练与幻觉</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Why Language Models Hallucinate
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Adam Tauman Kalai, Ohr Nachum, Santosh S. Vempala, Edwin Zhang</div>
+                <div class="text-sm text-gray-600 mt-1">OpenAI, Georgia Tech</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv:2509.04664v1, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">语言模型</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">幻觉</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">预训练</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">后训练</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>揭示了语言模型幻觉的统计根源，将其与二元分类错误联系起来</li>
+          <li>分析了预训练阶段如何不可避免地导致错误生成</li>
+          <li>解释了为什么后训练无法消除幻觉，归因于评估方法的问题</li>
+          <li>提出了通过修改评估标准来减少幻觉的社会技术解决方案</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            像面对难题的学生一样，大型语言模型在不确定时有时会猜测，产生看似合理但错误的陈述，而不是承认不确定性。这种"幻觉"现象即使在最先进的系统中仍然存在，并削弱了信任。作者认为，语言模型产生幻觉是因为训练和评估过程奖励猜测而不是承认不确定性。
+          </p>
+          <p class="mb-4">
+            幻觉不必神秘——它们起源于简单的二元分类错误。如果错误陈述无法与事实区分开来，那么预训练语言模型中的幻觉将通过自然统计压力产生。作者进一步认为，幻觉持续存在是因为大多数评估的评分方式——语言模型被优化为优秀的应试者，在不确定时猜测可以提高测试性能。
+          </p>
+          <p>
+            这种惩罚不确定响应的"流行病"只能通过社会技术缓解措施来解决：修改主导排行榜但错位的现有基准的评分方式，而不是引入额外的幻觉评估。这种变化可能引导该领域朝着更可信的AI系统发展。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            语言模型已知会产生过度自信、看似合理的虚假信息，这降低了它们的实用性和可信度。这种错误模式被称为"幻觉"，尽管它与人类感知体验有根本不同。尽管取得了显著进展，幻觉仍然困扰着该领域，并存在于最新模型中。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>幻觉示例
+            </h5>
+            <p class="text-gray-700">
+              当被问及"Adam Tauman Kalai的生日是什么？如果你知道，只需用DD-MM格式回答"时，一个最先进的开源语言模型在三次独立尝试中输出了三个错误日期："03-07"、"15-06"和"01-01"，即使只要求在知道的情况下才回答。正确答案是在秋季。
+            </p>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-table mr-2 text-blue-500"></i>
+                表1: 三个流行语言模型对"Adam Kalai的论文题目是什么？"的回答摘录
+              </h5>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">模型</th>
+                    <th class="py-2 px-4 border-b text-left">回答</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">ChatGPT</td>
+                    <td class="py-2 px-4 border-b">"Boosting, Online Algorithms, and Other Topics in Machine Learning" (2002年于CMU)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">DeepSeek</td>
+                    <td class="py-2 px-4 border-b">"Algebraic Methods in Interactive Machine Learning" (2005年于哈佛大学)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Llama</td>
+                    <td class="py-2 px-4 border-b">"Efficient Algorithms for Learning and Playing Games" (2007年于MIT)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>说明:</strong> 没有一个模型生成了正确的标题或年份(Kalai, 2001)
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            作者使用计算学习理论分析语言模型的错误，考虑一般错误集，并分析这些错误的统计性质，然后将其应用于感兴趣的错误类型：称为幻觉的看似合理的虚假信息。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            语言模型幻觉问题具有多方面的挑战性，包括：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-brain mr-2"></i>内在幻觉
+              </h4>
+              <p class="text-gray-700">
+                与用户提示相矛盾的幻觉，例如当被问及"DEEPSEEK中有多少个D？如果你知道，只说数字不加评论"时，DeepSeek-V3在十次独立试验中返回"2"或"3"。
+              </p>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-globe mr-2"></i>外在幻觉
+              </h4>
+              <p class="text-gray-700">
+                与训练数据或外部现实相矛盾的幻觉，例如提供关于不存在的历史事件或科学事实的错误信息。
+              </p>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            即使训练数据没有错误，语言模型训练期间优化的目标也会导致生成错误。使用包含错误阴影的现实训练数据，可能会期望<strong>更高的错误率</strong>。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键洞察
+            </h5>
+            <p class="text-gray-700">
+              生成有效输出(即避免错误)比分类输出有效性更难，因为生成隐式要求对每个候选响应回答"这是有效的吗"。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 预训练错误 -->
+      <section id="pretraining-errors" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          预训练错误
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            在预训练期间，基础模型学习大型文本语料库中的语言分布。作者证明，即使使用无错误的训练数据，预训练期间最小化的统计目标也会导致生成错误的语言模型。
+          </p>
+          
+          <!-- 技术细节：IIV分类问题 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：IIV二元分类问题
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: Is-It-Valid (IIV) 二元分类问题
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: Is-It-Valid (IIV) 二元分类问题示意图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Is-It-Valid需要学习使用标记的±示例识别有效生成(左)。分类器(虚线)可能对某些概念如拼写(上)准确，但错误通常由于模型不佳(中)或数据中没有模式时的任意事实(下)而产生。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>IIV问题定义:</strong> 学习目标函数f:𝒳→{-,+}，其中f(x)=+当且仅当x∈𝒱</li>
+                  <li><strong>数据分布:</strong> D是来自p的有效示例和来自ℰ的均匀随机错误的50/50混合</li>
+                  <li><strong>分类器:</strong> 通过阈值化基础模型的概率构建IIV分类器</li>
+                  <li><strong>错误关系:</strong> 生成错误率 ≳ 2 × IIV误分类率</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">数学关系:</strong>
+                    <p>对于任何训练分布p和基础模型p̂，有 err ≥ 2·err<sub>IIV</sub> - |𝒱|/|ℰ| - δ</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">校准解释:</strong>
+                    <p>δ是损失函数相对于缩放因子s的导数幅度，在局部优化中应该很小</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">应用:</strong>
+                    <p>该分析表明，对于本质上不可学习的IIV事实，所有基础模型都会出错</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">错误因素分析</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-random mr-2"></i>任意事实幻觉
+              </h4>
+              <p class="text-sm text-gray-700">
+                当没有简洁模式解释目标函数时，存在认知不确定性，意味着必要知识缺失于训练数据中。
+              </p>
+            </div>
+            
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 mb-2 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>模型不佳
+              </h4>
+              <p class="text-sm text-gray-700">
+                当基础模型无法很好地表示概念时，如线性分离器近似圆形区域，或模型本身拟合不佳。
+              </p>
+            </div>
+            
+            <div class="bg-pink-50 p-4 rounded-lg border border-pink-200">
+              <h4 class="font-bold text-pink-700 mb-2 flex items-center">
+                <i class="fas fa-trash mr-2"></i>GIGO
+              </h4>
+              <p class="text-sm text-gray-700">
+                大型训练语料库通常包含许多事实错误，这些错误可能被基础模型复制。
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-table mr-2 text-blue-500"></i>
+                表2: 有效示例和错误示例对比
+              </h5>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">类别</th>
+                    <th class="py-2 px-4 border-b text-left">有效示例 (+)</th>
+                    <th class="py-2 px-4 border-b text-left">错误示例 (-)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b font-medium">拼写</td>
+                    <td class="py-2 px-4 border-b">Greetings.<br>How can I help?</td>
+                    <td class="py-2 px-4 border-b">Greatings.<br>How kan eye help?</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b font-medium">计数</td>
+                    <td class="py-2 px-4 border-b">There are 2 D's in LADDER.<br>There is 1 N in PIANO.</td>
+                    <td class="py-2 px-4 border-b">There are 3 L's in SPELL.<br>There is 1 G in CAT.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b font-medium">生日</td>
+                    <td class="py-2 px-4 border-b">Mia Holdner's birthday is 4/1.<br>I don't know Zdan's birthday.</td>
+                    <td class="py-2 px-4 border-b">Colin Merivale's birthday is 8/29.<br>Jago Pere's birthday is 8/21.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            作者的分析表明，对于本质上不可学习的IIV事实(如训练数据中缺失的生日)，所有基础模型都会出错，其中IIV误分类率必然很大。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 后训练与幻觉 -->
+      <section id="post-training" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          后训练与幻觉
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            第二阶段，后训练，通常以减少幻觉为目标改进基础模型。虽然预训练分析更普遍地涵盖了错误，但作者对后训练的分析侧重于为什么会产生过度自信的幻觉，而不是省略信息或表达不确定性如"我不知道"(IDK)。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>人类类比
+            </h5>
+            <p class="text-gray-700">
+              当不确定时，学生可能会在多项选择考试中猜测，甚至在书面考试中虚张声势，提交他们几乎没有信心的看似合理的答案。语言模型通过类似的测试进行评估。在这两种情况下，在不确定时猜测可以最大化二元0-1方案下的预期分数，该方案对正确答案奖励1分，对空白或IDK不给分。
+            </p>
+          </div>
+          
+          <!-- 技术细节：评估基准分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：评估基准分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    表2: 评估基准及其对弃权的处理总结
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/table2.png" alt="论文表2: 评估基准及其对弃权的处理总结" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原表说明:</strong> "二元评分"表示主要指标是严格的正确/错误准确率；"IDK积分"表示弃权是否能获得任何积分。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>问题识别:</strong> 现有主要评估绝大多数惩罚不确定性</li>
+                  <li><strong>根本问题:</strong> 存在大量不对齐的评估</li>
+                  <li><strong>模型对比:</strong> 对齐模型A正确表示不确定性且从不幻觉，而模型B从不表示不确定性且总是"猜测"</li>
+                  <li><strong>评估结果:</strong> 在0-1评分下，模型B将优于A，这是大多数当前基准的基础</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">明确置信度目标:</strong>
+                    <p>在指令中明确说明置信度阈值，例如"仅当置信度>t时回答，因为错误会惩罚t/(1-t)分，正确答案获得1分，'我不知道'回答获得0分"</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">阈值选择:</strong>
+                    <p>自然阈值包括t=0.5(惩罚1)、t=0.75(惩罚2)和t=0.9(惩罚9)</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">行为校准:</strong>
+                    <p>模型必须制定最有用的响应，其中它至少对t置信，而不是要求模型输出概率置信度</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">解决方案：明确置信度目标</h3>
+          
+          <p class="mb-4">
+            作者提出了在评估中明确说明置信度目标的解决方案。例如，可以在每个问题后附加如下声明：
+          </p>
+          
+          <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-blue-500 mb-6">
+            <p class="text-gray-700 font-mono">
+              "仅当置信度>t时回答，因为错误会惩罚t/(1-t)分，正确答案获得1分，'我不知道'回答获得0分。"
+            </p>
+          </div>
+          
+          <p class="mb-4">
+            这种惩罚在幻觉研究中已经得到充分研究。然而，作者提出了两个具有统计影响的微妙变化：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-bullhorn mr-2"></i>明确说明阈值
+              </h4>
+              <p class="text-gray-700">
+                在指令中明确说明置信度阈值，而不是省略提及置信度目标或惩罚。透明的规范支持客观评分，即使选择的特定阈值有些任意甚至是随机的。
+              </p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-tasks mr-2"></i>整合到主流评估
+              </h4>
+              <p class="text-gray-700">
+                将置信度目标整合到已建立的、已经在使用的主流评估中，而不是在定制的幻觉评估中引入隐式错误惩罚。
+              </p>
+            </div>
+          </div>
+          
+          <p>
+            通过明确置信度目标，有一种行为对所有目标同时是最优的——在其正确概率大于目标的示例中输出IDK。作者称之为行为校准，而不是要求模型输出概率置信度，它必须制定最有用的响应，其中它至少对t置信。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            本文揭示了现代语言模型中的幻觉现象，从它们在预训练期间的起源到它们在后训练中的持续存在。在预训练中，作者表明生成错误与监督学习中的误分类相似，这些错误并不神秘，并且由于交叉熵损失的最小化而自然产生。
+          </p>
+          
+          <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-6">
+            <h5 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键结论
+            </h5>
+            <p class="text-gray-700">
+              大多数主流评估奖励幻觉行为。对主流评估的简单修改可以重新调整激励，奖励适当表达不确定性而不是惩罚它们。这可以消除抑制幻觉的障碍，并为未来关于细致语言模型的工作打开大门。
+            </p>
+          </div>
+          
+          <p class="mb-4">
+            许多语言模型缺点可以通过单一评估来捕捉。例如，过度使用开场白"Certainly"可以通过单一的"Certainly"评估来解决，因为以"Certainly"开始响应不会显著影响其他评估。
+          </p>
+          
+          <p>
+            相比之下，作者认为大多数主流评估奖励幻觉行为。对主流评估的简单修改可以重新调整激励，奖励适当表达不确定性而不是惩罚它们。这可以消除抑制幻觉的障碍，并为未来关于细致语言模型的工作打开大门，例如具有更丰富的语用能力。
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

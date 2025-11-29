@@ -1,0 +1,10 @@
+{
+  "id": "8f3a7c1b9e2d",
+  "title": "Don’t Maintain Twice, It’s Alright: Merged Metadata Management in Deduplication File System with GOGETAFS",
+  "authors": ["Yanqi Pan", "Wen Xia", "Erci Xu", "Hao Huang", "Xiangyu Zou", "Shiyi Li"],
+  "year": 2025,
+  "conference": "FAST",
+  "category": "存储系统",
+  "keywords": ["去重文件系统", "元数据管理", "LFP映射", "崩溃一致性", "非加密哈希", "持久内存", "GogetaFS"],
+  "abstract": "Emerging storage technologies, such as persistent memory and ultra-low latency SSD, enable the deduplication file system (DedupFS) to use non-cryptographic hash for fast fingerprinting. However, we find that the accelerated computation exposes another major performance penalty: the seemingly innocuous in-storage deduplication metadata maintenance incurs up to 38% overhead in the I/O path.\nWe find the root cause is that DedupFSes maintain dedup-specific _fingerprint-to-physical_ mappings, which incurs additional crash consistency overheads. However, this overhead is unnecessary. Our insight is that the deduplication mapping can be merged with the file system _logical-to-physical_ mapping, forming a _logical-fingerprint-physical_ (LFP) mapping. Thus, we can persist deduplication metadata alongside file system metadata in a single I/O. We propose GogetaFS to realize the efficiency of LFP. Using a series of techniques to manage data and metadata atop LFP, GogetaFS achieves compatible, effective, and memory-efficient deduplication within the file system. Experiments across a range of workloads show that GogetaFS consistently outperforms existing DedupFSes and can minimize metadata maintenance overheads."
+}

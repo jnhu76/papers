@@ -1,0 +1,10 @@
+{
+  "id": "a7e3c9b1f2d8",
+  "title": "Comprehensive Review of Performance Optimization Strategies for Serverless Applications on AWS Lambda",
+  "authors": ["Mohamed Lemine El Bechir", "Cheikh Sad Bouh", "Abbbakr Shuwail"],
+  "year": 2024,
+  "conference": "arXiv",
+  "category": "云计算",
+  "keywords": ["Serverless Computing", "AWS Lambda", "Performance Optimization", "Resource Management", "Cost Efficiency", "Observability"],
+  "abstract": "This review paper synthesizes the latest research on performance optimization strategies for serverless applications deployed on AWS Lambda. By examining recent studies, we highlight the challenges, solutions, and best practices for enhancing the performance, cost-efficiency, and scalability of serverless applications. The review covers a range of optimization techniques including resource management, runtime selection, observability improvements, and workload-aware operations."
+}

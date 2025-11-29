@@ -1,0 +1,10 @@
+{
+  "id": "f7f6f5e0f4d3",
+  "title": "Cloud-Native Systems for Generative AI Applications: Current Trends and Open Challenges",
+  "authors": ["Minchen Yu", "Wei Wang", "Yue Cheng", "Hong Xu"],
+  "year": 2025,
+  "conference": "NeurIPS",
+  "category": "人工智能系统",
+  "keywords": ["生成式人工智能", "云原生系统", "模块化设计", "异构资源", "推理服务"],
+  "abstract": "In recent years, Generative Artificial Intelligence (GAI) has advanced rapidly and seen widespread adoption across a broad range of domains, placing unprecedented demands on cloud systems and infrastructure. We identify three key trends--spanning the model, application, and infrastructure levels--that are collectively driving a shift toward _modular design_ for GAI systems, akin to the microservice architecture widely used in cloud-native platforms. In this paradigm, GAI workloads are decomposed into specialized, fine-grained modules that can be deployed, managed, and scaled independently. This microservice-like modular approach enables precise resource allocation, efficient sharing of heterogeneous hardware, and improved scalability in response to dynamic workload characteristics and evolving application requirements. Building on this design principle, we outline several open challenges that warrant further investigation in future research."
+}

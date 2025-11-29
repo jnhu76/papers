@@ -1,0 +1,10 @@
+{
+  "id": "8a3b5c7d9e1f",
+  "title": "Track Join: Distributed Joins with Minimal Network Traffic",
+  "authors": ["Orestis Polychroniou", "Rajkumar Sen", "Kenneth A. Ross"],
+  "year": 2014,
+  "conference": "SIGMOD",
+  "category": "数据库系统",
+  "keywords": ["分布式连接", "网络通信优化", "Track Join", "查询处理", "并行数据库"],
+  "abstract": "Network communication is the slowest component of many operators in distributed parallel databases deployed for large-scale analytics. Whereas considerable work has focused on speeding up databases on modern hardware, communication reduction has received less attention. Existing parallel DBMSs rely on algorithms designed for disks with minor modifications for networks. A more complicated algorithm may burden the CPUs, but could avoid redundant transfers of tuples across the network. We introduce _track join_, a novel distributed join algorithm that minimizes network traffic by generating an optimal transfer schedule for each distinct join key. Track join extends the trade-off options between CPU and network. Our evaluation based on real and synthetic data shows that track join adapts to diverse cases and degrees of locality. Considering both network traffic and execution time, even with no locality, track join outperforms hash join on the most expensive queries of real workloads."
+}

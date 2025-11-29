@@ -1,0 +1,10 @@
+{
+  "id": "f7c4e8a3b5d1",
+  "title": "Defeating Nondeterminism in LLM Inference",
+  "authors": ["Horace He"],
+  "year": 2025,
+  "conference": "Blog",
+  "category": "自然语言处理",
+  "keywords": ["LLM推理", "非确定性", "批量不变性", "浮点非结合性", "可重现性"],
+  "abstract": "Reproducibility is a bedrock of scientific progress. However, it’s remarkably difficult to get reproducible results out of large language models. For example, you might observe that asking ChatGPT the same question multiple times provides different results. This by itself is not surprising, since getting a result from a language model involves \"sampling\", a process that converts the language model's output into a probability distribution and probabilistically selects a token. What might be more surprising is that even when we adjust the temperature down to 0 (thus making the sampling theoretically deterministic), LLM APIs are still not deterministic in practice. Even when running inference on your own hardware with an OSS inference library like vLLM or SGLang, sampling still isn't deterministic. In this post, we will explain why the \"concurrency + floating point\" hypothesis misses the mark, unmask the true culprit behind LLM inference nondeterminism, and explain how to defeat nondeterminism and obtain truly reproducible results in LLM inference."
+}
