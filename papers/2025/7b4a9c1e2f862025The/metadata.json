@@ -3,7 +3,7 @@
     "title": "The Streaming Batch Model for Efficient and Fault-Tolerant Heterogeneous Execution",
     "authors": ["Frank Sifei Luan", "Ron Yifeng Wang", "Yile Gu", "Ziming Mao", "Charlotte Lin", "Amog Kamsetty", "Hao Chen", "Cheng Su", "Balaji Veeramani", "Scott Lee", "SangBin Cho", "Clark Zinzow", "Eric Liang", "Ion Stoica", "Stephanie Wang"],
     "year": 2025,
-    "conference": "",
+    "conference": "arXiv",
     "category": "分布式系统与机器学习系统",
     "keywords": ["流式批处理模型", "异构计算", "分布式数据处理", "机器学习系统", "Ray Data", "资源弹性", "容错性"],
     "abstract": "While ML model training and inference are both GPU-intensive, CPU-based data processing is often the bottleneck. Distributed data processing systems based on the batch or stream processing models assume homogeneous resource requirements. They excel at CPU-based computation but either under-utilize heterogeneous resources or impose high overheads on failure and reconfiguration.\n\nWe introduce the _streaming batch_ model, a hybrid of batch and streaming that enables efficient and fault-tolerant heterogeneous execution. The key idea is to use _partitions_ as the unit of execution to achieve elasticity, but to allow partitions to be dynamically created and streamed between heterogeneous operators for memory-efficient pipelining. We present Ray Data, a streaming batch system that improves throughput on heterogeneous batch inference pipelines by 2.5-12× compared to traditional batch and stream processing systems. By leveraging heterogeneous clusters, Ray Data improves training throughput for multimodal models such as Stable Diffusion by 31% compared to single-node ML data loaders."
