@@ -1,0 +1,10 @@
+{
+    "id": "a12b34c56d782025Does",
+    "title": "Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor's Impact on Software Projects",
+    "authors": ["Hao He", "Courtney Miller", "Shyam Agarwal", "Christian Kästner", "Bogdan Vasilescu"],
+    "year": 2025,
+    "conference": "arXiv",
+    "category": "软件工程",
+    "keywords": ["AI辅助编程", "大语言模型", "软件开发速度", "软件质量", "双重差分法", "技术债", "Cursor"],
+    "abstract": "Large language models (LLMs) have demonstrated the promise to revolutionize the field of software engineering. Among other things, LLM agents are rapidly gaining momentum in their application to software development, with practitioners claiming a multifold productivity increase after adoption. Yet, empirical evidence is lacking around these claims. In this paper, we estimate the _causal_ effect of adopting a widely popular LLM agent assistant, namely Cursor, on _development velocity_ and _software quality_. The estimation is enabled by a state-of-the-art difference-in-differences design comparing Cursor-adopting GitHub projects with a matched control group of similar GitHub projects that do not use Cursor. We find that the adoption of Cursor leads to a significant, large, but transient increase in project-level development velocity, along with a significant and persistent increase in static analysis warnings and code complexity. Further panel generalized method of moments estimation reveals that the increase in static analysis warnings and code complexity acts as a major factor causing long-term velocity slowdown. Our study carries implications for software engineering practitioners, LLM agent assistant designers, and researchers."
+}
