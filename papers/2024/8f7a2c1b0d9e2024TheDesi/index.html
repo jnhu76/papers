@@ -22,6 +22,13 @@
         .modal-caption { margin: auto; display: block; width: 80%; text-align: center; color: #ccc; padding: 10px; }
         .code-block { background-color: #0f172a; color: #e2e8f0; border-radius: 0.5rem; }
         .back-to-top { position: fixed; bottom: 2rem; right: 2rem; z-index: 50; }
+        .figure-caption {
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
     </style>
 </head>
 <body class="pt-20 pb-32">
@@ -87,14 +94,14 @@
             <div class="space-y-6">
                 <div>
                     <h3 class="text-xl font-semibold text-gray-800 mb-2">唯一关键问题</h3>
-                    <p class="text-gray-700">如何阻止固态硬盘（SSD）因闪存单元老化而导致的“性能劣化”故障（Fail-slow），并在保证长期性能的前提下管理不可避免的闪存错误？</p>
+                    <p class="text-gray-700">如何阻止固态硬盘（SSD）因闪存单元老化而导致的"性能劣化"故障（Fail-slow），并在保证长期性能的前提下管理不可避免的闪存错误？</p>
                 </div>
                 <div>
                     <h3 class="text-xl font-semibold text-gray-800 mb-2">现有方法的不足</h3>
                     <ul class="list-disc pl-5 text-gray-700 space-y-2">
                         <li><strong>固定容量抽象是根源</strong>：系统假设容量不变，SSD被迫使用<strong>磨损均衡（WL）</strong>让所有块均匀老化，这本身就产生额外写入并加速整体老化。</li>
                         <li><strong>治标不治本</strong>：当块老化出错时，SSD进行<strong>数据重读、重写</strong>等纠错操作，直接造成I/O延迟飙升（Fail-slow）。</li>
-                        <li><strong>ML预测的局限</strong>：大规模系统用机器学习预测故障盘并替换，但需海量数据、成本高、模型易过时，且只处理“症状”而非“病因”。</li>
+                        <li><strong>ML预测的局限</strong>：大规模系统用机器学习预测故障盘并替换，但需海量数据、成本高、模型易过时，且只处理"症状"而非"病因"。</li>
                     </ul>
                 </div>
                 <div>
@@ -102,13 +109,10 @@
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <p class="text-gray-700 mb-4"><strong>图1</strong>展示了残酷的现实：一块企业级SSD在写入约9PB数据后，其<strong>读吞吐量下降了近40%</strong>。这种渐进式性能下降难以定位，却持续拖累整个系统。</p>
                         <div class="figure-container" onclick="openModal('fig1', '图1：企业级SSD随写入量增加的读吞吐量下降趋势 (来自原论文)')">
-                            <div class="bg-gray-200 h-48 flex items-center justify-center rounded-lg">
-                                <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图1：SSD性能随老化下降趋势图</p>
-                            </div>
-                            <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                            <img id="fig1" src="./images/fig1.png" alt="图1：企业级SSD随写入量增加的读吞吐量下降趋势" class="w-full h-auto rounded-lg">
                         </div>
-                        <img id="fig1" src="./images/fig1.png" alt="Figure 1 from the paper" class="hidden">
-                        <p class="text-gray-700 mt-4">在云存储、数据库等场景中，这种“慢故障”SSD不会被立刻踢出集群，却像“木桶的短板”一样，成为尾部延迟和性能抖动的罪魁祸首。</p>
+                        <p class="figure-caption">图1：企业级SSD随写入量增加的读吞吐量下降趋势 (来自原论文) - 点击查看大图</p>
+                        <p class="text-gray-700 mt-4">在云存储、数据库等场景中，这种"慢故障"SSD不会被立刻踢出集群，却像"木桶的短板"一样，成为尾部延迟和性能抖动的罪魁祸首。</p>
                     </div>
                 </div>
             </div>
@@ -120,7 +124,7 @@
             <div class="grid md:grid-cols-2 gap-6">
                 <div class="p-5 bg-green-50 rounded-xl">
                     <h3 class="text-lg font-bold text-gray-800 mb-2"><i class="fas fa-lightbulb text-green-600 mr-2"></i>Concept（新概念）</h3>
-                    <p class="text-gray-700"><strong>“容量可变存储系统”</strong>。打破“存储容量必须固定”的刚性抽象，允许SSD逻辑容量随内部闪存块老化而<strong>优雅缩减</strong>。用可牺牲的容量资源，换取更宝贵的持久性能和可靠性。</p>
+                    <p class="text-gray-700"><strong>"容量可变存储系统"</strong>。打破"存储容量必须固定"的刚性抽象，允许SSD逻辑容量随内部闪存块老化而<strong>优雅缩减</strong>。用可牺牲的容量资源，换取更宝贵的持久性能和可靠性。</p>
                 </div>
                 <div class="p-5 bg-yellow-50 rounded-xl">
                     <h3 class="text-lg font-bold text-gray-800 mb-2"><i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>Challenge（解决的难题）</h3>
@@ -133,7 +137,7 @@
                 <div class="p-5 bg-blue-50 rounded-xl">
                     <h3 class="text-lg font-bold text-gray-800 mb-2"><i class="fas fa-tools text-blue-600 mr-2"></i>Construction（设计与实现）</h3>
                     <ul class="list-disc pl-5 text-gray-700 text-sm">
-                        <li><strong>CV-SSD</strong>：放弃WL，按错误率管理块状态，实现“聚焦磨损”。</li>
+                        <li><strong>CV-SSD</strong>：放弃WL，按错误率管理块状态，实现"聚焦磨损"。</li>
                         <li><strong>CV-FS</strong>：基于F2FS，引入<strong>地址重映射（REMAP）</strong>实现极低开销的在线容量收缩。</li>
                         <li><strong>CV-Manager</strong>：监控与协调器，自动化容量管理流程。</li>
                     </ul>
@@ -156,30 +160,24 @@
 
             <div class="mb-10">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">核心理念对比：固定容量 vs. 容量可变</h3>
-                <p class="text-gray-700 mb-4">这是理解全文的钥匙。传统系统为了维持“固定容量”的假象（左图），不惜让性能和可靠性持续下降。CVSS则主动缩减容量（右图），以维持性能和可靠性。</p>
+                <p class="text-gray-700 mb-4">这是理解全文的钥匙。传统系统为了维持"固定容量"的假象（左图），不惜让性能和可靠性持续下降。CVSS则主动缩减容量（右图），以维持性能和可靠性。</p>
                 <div class="figure-container" onclick="openModal('fig3', '图3：传统固定容量系统(TrSS)与容量可变系统(CVSS)的对比 (来自原论文)')">
-                    <div class="bg-gray-200 h-64 flex items-center justify-center rounded-lg">
-                        <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图3：TrSS vs. CVSS 核心理念对比图</p>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                    <img id="fig3" src="./images/fig3.png" alt="图3：传统固定容量系统(TrSS)与容量可变系统(CVSS)的对比" class="w-full h-auto rounded-lg">
                 </div>
-                <img id="fig3" src="./images/fig3.png" alt="Figure 3 from the paper" class="hidden">
+                <p class="figure-caption">图3：传统固定容量系统(TrSS)与容量可变系统(CVSS)的对比 (来自原论文) - 点击查看大图</p>
             </div>
 
             <div class="mb-10">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">CVSS 三大组件架构</h3>
                 <p class="text-gray-700 mb-4">CVSS由三个协同工作的组件构成，其关系如下图所示：</p>
                 <div class="figure-container" onclick="openModal('fig4', '图4：容量可变系统(CVSS)三大组件架构图 (来自原论文)')">
-                    <div class="bg-gray-200 h-64 flex items-center justify-center rounded-lg">
-                        <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图4：CVSS 三大组件架构图 (CV-FS, CV-SSD, CV-Manager)</p>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                    <img id="fig4" src="./images/fig4.png" alt="图4：容量可变系统(CVSS)三大组件架构图" class="w-full h-auto rounded-lg">
                 </div>
-                <img id="fig4" src="./images/fig4.png" alt="Figure 4 from the paper" class="hidden">
+                <p class="figure-caption">图4：CVSS 三大组件架构图 (CV-FS, CV-SSD, CV-Manager) (来自原论文) - 点击查看大图</p>
                 <ul class="list-disc pl-5 text-gray-700 mt-4 space-y-2">
                     <li><strong>CV-FS (文件系统)</strong>：基于F2FS，负责向应用提供文件接口，并管理一个可弹性伸缩的逻辑地址空间。</li>
                     <li><strong>CV-SSD (SSD设备)</strong>：负责物理存储，管理闪存块状态，并执行容量缩减的底层操作。</li>
-                    <li><strong>CV-Manager (协调器)</strong>：作为“大脑”，监控SSD状态，决策何时及如何缩减容量，并协调上下两层。</li>
+                    <li><strong>CV-Manager (协调器)</strong>：作为"大脑"，监控SSD状态，决策何时及如何缩减容量，并协调上下两层。</li>
                 </ul>
             </div>
 
@@ -187,12 +185,9 @@
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">关键技术1：在线、低开销的容量收缩（CV-FS）</h3>
                 <p class="text-gray-700 mb-4">如何在不搬迁数据、不阻塞I/O的情况下缩小文件系统管理的逻辑容量？论文对比了三种方案，并选择了最优的<strong>地址重映射（Address Remapping）</strong>。</p>
                 <div class="figure-container" onclick="openModal('fig5', '图5：实现容量可变的三种方法对比 (来自原论文)')">
-                    <div class="bg-gray-200 h-48 flex items-center justify-center rounded-lg">
-                        <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图5：三种容量缩减方法：(a)非连续地址, (b)数据搬迁, (c)地址重映射</p>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                    <img id="fig5" src="./images/fig5.png" alt="图5：实现容量可变的三种方法对比" class="w-full h-auto rounded-lg">
                 </div>
-                <img id="fig5" src="./images/fig5.png" alt="Figure 5 from the paper" class="hidden">
+                <p class="figure-caption">图5：三种容量缩减方法：(a)非连续地址, (b)数据搬迁, (c)地址重映射 (来自原论文) - 点击查看大图</p>
                 <ul class="list-disc pl-5 text-gray-700 mt-4 space-y-2">
                     <li><strong>(a) 非连续地址空间</strong>：简单但导致严重碎片化，后续性能差（图6显示性能下降13%-50%）。</li>
                     <li><strong>(b) 数据搬迁</strong>：保持地址连续，但需物理读写数据，开销大（收缩1GiB需4.5秒）。</li>
@@ -203,18 +198,15 @@
                     <p class="text-gray-700 mb-2">命令格式：<code class="bg-gray-800 text-yellow-300 px-2 py-1 rounded">REMAP(dstLPN, srcLPN, dstLength, srcLength)</code></p>
                     <p class="text-gray-700 text-sm">例如，将逻辑页LPN5的数据（当前映射到物理页PPN6）重映射到LPN3：<code class="bg-gray-800 text-yellow-300 px-2 py-1 rounded text-sm">REMAP(LPN3, LPN5, 1, 1)</code>。FTL收到命令后，只需将LPN3指向PPN6，并作废LPN5的旧映射即可。下图清晰展示了这一过程：</p>
                     <div class="figure-container mt-3" onclick="openModal('fig7', '图7：REMAP命令工作流程示意图 (来自原论文)')">
-                        <div class="bg-gray-200 h-32 flex items-center justify-center rounded-lg">
-                            <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图7：REMAP命令工作流程</p>
-                        </div>
-                        <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                        <img id="fig7" src="./images/fig7.png" alt="图7：REMAP命令工作流程示意图" class="w-full h-auto rounded-lg">
                     </div>
-                    <img id="fig7" src="./images/fig7.png" alt="Figure 7 from the paper" class="hidden">
+                    <p class="figure-caption">图7：REMAP命令工作流程示意图 (来自原论文) - 点击查看大图</p>
                 </div>
             </div>
 
             <div class="mb-10">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">关键技术2：聚焦磨损与新的SSD管理策略（CV-SSD）</h3>
-                <p class="text-gray-700 mb-4">CV-SSD放弃了传统SSD追求“均匀磨损”的目标，转而追求<strong>“聚焦磨损”（Wear Focusing）</strong>——让一小部分块优先老化、退休，从而保护大部分块的状态。这需要全新的块状态管理和垃圾回收策略。</p>
+                <p class="text-gray-700 mb-4">CV-SSD放弃了传统SSD追求"均匀磨损"的目标，转而追求<strong>"聚焦磨损"（Wear Focusing）</strong>——让一小部分块优先老化、退休，从而保护大部分块的状态。这需要全新的块状态管理和垃圾回收策略。</p>
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
                         <h4 class="font-bold text-gray-800 mb-2">块状态管理</h4>
@@ -226,13 +218,11 @@
                     </div>
                     <div>
                         <h4 class="font-bold text-gray-800 mb-2">传统策略的问题</h4>
-                        <p class="text-gray-700 text-sm">传统的“最年轻块优先分配”和“基于成本效益的垃圾回收”旨在均匀磨损，但会导致大量块几乎同时达到寿命终点，引发<strong>容量断崖式下跌</strong>（如图8所示）。</p>
+                        <p class="text-gray-700 text-sm">传统的"最年轻块优先分配"和"基于成本效益的垃圾回收"旨在均匀磨损，但会导致大量块几乎同时达到寿命终点，引发<strong>容量断崖式下跌</strong>（如图8所示）。</p>
                         <div class="figure-container mt-2" onclick="openModal('fig8', '图8：传统策略下SSD块的磨损集中分布问题 (来自原论文)')">
-                            <div class="bg-gray-200 h-32 flex items-center justify-center rounded-lg">
-                                <p class="text-gray-500 text-xs"><i class="fas fa-image mr-1"></i>图8：传统策略导致磨损集中</p>
-                            </div>
+                            <img id="fig8" src="./images/fig8.png" alt="图8：传统策略下SSD块的磨损集中分布问题" class="w-full h-auto rounded-lg">
                         </div>
-                        <img id="fig8" src="./images/fig8.png" alt="Figure 8 from the paper" class="hidden">
+                        <p class="figure-caption text-xs mt-1">图8：传统策略导致磨损集中 (来自原论文) - 点击查看大图</p>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -248,7 +238,7 @@
                         </ul>
                         <p class="text-gray-300 mt-2">默认权重：W<sub>invalidity</sub>=0.4, W<sub>aging</sub>=0.3, W<sub>read</sub>=0.3</p>
                     </div>
-                    <p class="text-gray-700 text-sm mt-2">这个公式是CV-SSD智能管理的核心，它确保垃圾回收不仅考虑空间回收效率，还主动管理数据的“温度”和块的“年龄”。</p>
+                    <p class="text-gray-700 text-sm mt-2">这个公式是CV-SSD智能管理的核心，它确保垃圾回收不仅考虑空间回收效率，还主动管理数据的"温度"和块的"年龄"。</p>
                 </div>
             </div>
 
@@ -257,7 +247,7 @@
                 <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
                     <ol class="list-decimal pl-5 space-y-3 text-gray-700">
                         <li><strong>SSD物理老化</strong>：CV-SSD内部闪存块错误率（RBER）随着写入和读取逐渐上升。</li>
-                        <li><strong>块退休</strong>：当某块的RBER超过阈值（如5%），CV-SSD将其标记为“退休”，其物理空间不再可用。<strong>物理容量减少</strong>。</li>
+                        <li><strong>块退休</strong>：当某块的RBER超过阈值（如5%），CV-SSD将其标记为"退休"，其物理空间不再可用。<strong>物理容量减少</strong>。</li>
                         <li><strong>事件上报</strong>：CV-SSD通知CV-Manager物理容量已减少。</li>
                         <li><strong>决策与请求</strong>：CV-Manager计算出推荐的新逻辑容量，并通过系统调用请求CV-FS缩减容量。</li>
                         <li><strong>执行缩减</strong>：CV-FS检查自身状态（非只读、非冻结），然后对即将被裁减的逻辑地址空间内的有效数据，发起一系列<strong>REMAP命令</strong>，将其逻辑地址重映射到剩余空间的低地址区域。</li>
@@ -278,23 +268,16 @@
                 <p class="text-gray-700 mb-4">在多种负载（FIO, Filebench, Twitter生产痕迹）下，CVSS相比传统系统（TrSS）和两种先进对比方案（AutoStream, ttFlash），都能显著维持更高的吞吐量和更低的延迟。</p>
                 <div class="grid md:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <p class="text-gray-700 text-sm mb-2"><strong>图10：FIO Zipfian负载下的读吞吐量</strong>。随着写入量（TBW）增加，TrSS性能持续下降，而CVSS通过缩减容量（绿色虚线）维持了稳定的性能水平。竖线表示触发<code>CV_degraded</code>模式。</p>
                         <div class="figure-container" onclick="openModal('fig10', '图10：FIO Zipfian负载下，CVSS与TrSS读吞吐量对比 (来自原论文)')">
-                            <div class="bg-gray-200 h-40 flex items-center justify-center rounded-lg">
-                                <p class="text-gray-500 text-xs"><i class="fas fa-image mr-1"></i>图10：FIO Zipfian 读吞吐量对比</p>
-                            </div>
+                            <img id="fig10" src="./images/fig10.png" alt="图10：FIO Zipfian负载下的读吞吐量" class="w-full h-auto rounded-lg">
                         </div>
-                        <img id="fig10" src="./images/fig10.png" alt="Figure 10 from the paper" class="hidden">
+                        <p class="figure-caption text-sm mt-1">图10：FIO Zipfian负载下，CVSS与TrSS读吞吐量对比 (来自原论文) - 点击查看大图</p>
                     </div>
                     <div>
-                        <p class="text-gray-700 text-sm mb-2"><strong>图12d：Filebench Varmail负载下，被读重试阻塞的I/O比例</strong>。这是Fail-slow的直接体现。TrSS中有超过20%的I/O被SSD内部纠错操作阻塞，而CVSS将此比例控制在5%以下。</p>
                         <div class="figure-container" onclick="openModal('fig12d', '图12d：被读重试阻塞的I/O请求比例对比 (来自原论文)')">
-                            <div class="bg-gray-200 h-40 flex items-center justify-center rounded-lg">
-                                <p class="text-gray-500 text-xs"><i class="fas fa-image mr-1"></i>图12d：被读重试阻塞的I/O比例</p>
-                            </div>
+                            <img id="fig12d" src="./images/fig12d.png" alt="图12d：被读重试阻塞的I/O请求比例对比" class="w-full h-auto rounded-lg">
                         </div>
-                        <!-- 注：原论文图12是a,b,c,d四个子图，此处我们假设fig12d是独立的 -->
-                        <img id="fig12d" src="./images/fig12d.png" alt="Figure 12d from the paper" class="hidden">
+                        <p class="figure-caption text-sm mt-1">图12d：被读重试阻塞的I/O请求比例对比 (来自原论文) - 点击查看大图</p>
                     </div>
                 </div>
                 <p class="text-gray-700"><strong>结论</strong>：CVSS通过提前移除易出错块，从根本上减少了昂贵的纠错操作，从而有效缓解了Fail-slow症状。</p>
@@ -302,14 +285,11 @@
 
             <div class="mb-8">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">关键发现2：CVSS大幅延长SSD有效寿命</h3>
-                <p class="text-gray-700 mb-4">寿命不仅指“用坏为止”，更指“在满足一定性能要求的前提下能工作多久”。图15展示了在不同性能要求下（横轴），系统在性能跌破要求前所能承受的总写入量（TBW，纵轴）。</p>
+                <p class="text-gray-700 mb-4">寿命不仅指"用坏为止"，更指"在满足一定性能要求的前提下能工作多久"。图15展示了在不同性能要求下（横轴），系统在性能跌破要求前所能承受的总写入量（TBW，纵轴）。</p>
                 <div class="figure-container mb-4" onclick="openModal('fig15', '图15：在不同性能要求下，CVSS、TrSS和AutoStream的寿命（TBW）对比 (来自原论文)')">
-                    <div class="bg-gray-200 h-48 flex items-center justify-center rounded-lg">
-                        <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图15：寿命（TBW）对比图</p>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2 text-center">（点击查看大图）</p>
+                    <img id="fig15" src="./images/fig15.png" alt="图15：在不同性能要求下，CVSS、TrSS和AutoStream的寿命（TBW）对比" class="w-full h-auto rounded-lg">
                 </div>
-                <img id="fig15" src="./images/fig15.png" alt="Figure 15 from the paper" class="hidden">
+                <p class="figure-caption">图15：在不同性能要求下，CVSS、TrSS和AutoStream的寿命（TBW）对比 (来自原论文) - 点击查看大图</p>
                 <p class="text-gray-700"><strong>核心数据</strong>：在要求保持初始性能80%的高标准下，CVSS的寿命平均是TrSS的<strong>1.68倍</strong>，是AutoStream的<strong>1.57倍</strong>。在低利用率场景下，优势更明显（可达2.8倍）。这意味着数据中心可以显著延长SSD的替换周期，降低成本。</p>
             </div>
 
@@ -317,11 +297,9 @@
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">关键发现3：CVSS允许使用更简单的纠错机制</h3>
                 <p class="text-gray-700 mb-4">由于易出错块被提前排除，CVSS对纠错码（ECC）强度的依赖降低。图18表明，使用较弱ECC（50位纠错能力）的CVSS，其触发的读重试次数与使用极强ECC（90位纠错能力）的传统SSD相当。</p>
                 <div class="figure-container" onclick="openModal('fig18', '图18：不同ECC强度下，平均每GiB读操作触发的读重试次数 (来自原论文)')">
-                    <div class="bg-gray-200 h-40 flex items-center justify-center rounded-lg">
-                        <p class="text-gray-500"><i class="fas fa-image mr-2"></i>图18：ECC强度与读重试关系</p>
-                    </div>
+                    <img id="fig18" src="./images/fig18.png" alt="图18：不同ECC强度下，平均每GiB读操作触发的读重试次数" class="w-full h-auto rounded-lg">
                 </div>
-                <img id="fig18" src="./images/fig18.png" alt="Figure 18 from the paper" class="hidden">
+                <p class="figure-caption">图18：不同ECC强度下，平均每GiB读操作触发的读重试次数 (来自原论文) - 点击查看大图</p>
                 <p class="text-gray-700 mt-2"><strong>启示</strong>：对于SSD厂商，CVSS架构可以简化FTL设计和纠错硬件，降低成本和功耗，或在相同成本下提升其他方面的性能。</p>
             </div>
 
@@ -352,7 +330,7 @@
                 <div>
                     <h3 class="text-xl font-semibold text-gray-800 mb-4 text-red-600"><i class="fas fa-exclamation-circle mr-2"></i>存在的局限性</h3>
                     <ul class="list-disc pl-5 text-gray-700 space-y-2">
-                        <li><strong>用户心理与接口接受度</strong>：“容量越来越小”需要新的用户教育和系统管理范式。</li>
+                        <li><strong>用户心理与接口接受度</strong>："容量越来越小"需要新的用户教育和系统管理范式。</li>
                         <li><strong>生态壁垒</strong>：依赖新的<code>REMAP</code>等NVMe命令，需要SSD厂商、操作系统、文件系统生态的广泛支持。</li>
                         <li><strong>当前不支持RAID</strong>：RAID要求成员盘容量对称，CVSS的不对称容量特性与之冲突。论文将此列为未来工作。</li>
                         <li><strong>极端写负载</strong>：对于写极度密集、完全随机的负载，聚焦磨损策略可能导致过早进入降级模式。</li>

@@ -22,6 +22,17 @@
         .fig-container { cursor: pointer; border: 1px solid #e5e7eb; border-radius: 0.5rem; overflow: hidden; }
         .fig-container img { width: 100%; height: auto; display: block; }
         .katex { font-size: 1.1em; }
+        
+        /* 新增：优化图片题注样式 */
+        .fig-caption {
+            text-align: center;
+            font-size: 0.875rem; /* 小字 */
+            color: #6b7280; /* 灰色 */
+            padding: 0.75rem 1rem;
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -87,8 +98,7 @@
                                     <p class="text-sm">查询都由源处理，迁移时间长，最终仍需暂停服务同步“脏数据”。</p>
                                 </div>
                                 <div class="p-4 border rounded-lg bg-yellow-50">
-                                    <h4 class="font-bold text-yellow-800 mb-2">基于目标的方法</h4>
-                                    <p class="text-sm">查询立刻转到目标，但数据未到时需回源拉取，导致<strong>高查询延迟</strong>。</p>
+                                    <h4 class="font-bold text-yellow-800 mb-2">基于目标的方法</h4                                    <p class="text-sm">查询立刻转到目标，但数据未到时需回源拉取，导致<strong>高查询延迟</strong>。</p>
                                 </div>
                                 <div class="p-4 border rounded-lg bg-green-50">
                                     <h4 class="font-bold text-green-800 mb-2">混合方法</h4>
@@ -121,7 +131,7 @@
                         <div class="space-y-6">
                             <div class="p-5 border border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-white">
                                 <h3 class="text-xl font-bold text-blue-800 mb-2"><i class="fas fa-lightbulb mr-2"></i>Concept（新概念）</h3>
-                                <p><strong>NetMigrate</strong>：利用可编程网络数据平面（交换机）作为<strong>迁移状态跟踪与查询路由中枢</strong>的在线迁移框架。首次将交换机变为迁移的“智能大脑”。</p>
+                                <p><strong>NetMigrate</strong>：利用可编程网络数据平面（交换机）作为<strong>迁移状态跟踪与查询路由中枢</strong>的在线迁移框架。首次将交换机变为迁移的"智能大脑"。</p>
                             </div>
                             <div class="p-5 border border-yellow-200 rounded-xl bg-gradient-to-br from-yellow-50 to-white">
                                 <h3 class="text-xl font-bold text-yellow-800 mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Challenge（解决的难题）</h3>
@@ -171,7 +181,7 @@
                         <p class="text-gray-700 mb-6">NetMigrate 的核心思想是将可编程交换机置于迁移协调的中心位置。图1展示了其整体架构，包括ToR交换机、控制器、客户端和服务器。</p>
                         <div class="fig-container">
                             <img src="./images/fig1.png" alt="Figure 1: NetMigrate system architecture." onclick="openModal(this)">
-                            <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图1：NetMigrate 系统架构。交换机包含迁移状态表、路由模块和迁移实例表。</p>
+                            <div class="fig-caption">图1：NetMigrate 系统架构。交换机包含迁移状态表、路由模块和迁移实例表。</div>
                         </div>
                     </div>
 
@@ -180,16 +190,16 @@
                         <p class="text-gray-700 mb-6">图2描绘了完整的迁移过程，从初始化、数据迁移与状态跟踪，到查询处理和最终终止。</p>
                         <div class="fig-container">
                             <img src="./images/fig2.png" alt="Figure 2: NetMigrate migration workflow." onclick="openModal(this)">
-                            <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图2：NetMigrate 迁移工作流程。交换机通过控制包更新状态，并基于状态路由客户端查询。</p>
+                            <div class="fig-caption">图2：NetMigrate 迁移工作流程。交换机通过控制包更新状态，并基于状态路由客户端查询。</div>
                         </div>
                     </div>
 
                     <div class="mb-10">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">迁移状态跟踪与查询路由状态机</h3>
-                        <p class="text-gray-700 mb-4">这是NetMigrate的核心逻辑。交换机使用混合布隆过滤器跟踪每个键值“组”的三种状态，并据此做出路由决策。图3详细展示了状态转换和对应的查询处理规则。</p>
+                        <p class="text-gray-700 mb-4">这是NetMigrate的核心逻辑。交换机使用混合布隆过滤器跟踪每个键值"组"的三种状态，并据此做出路由决策。图3详细展示了状态转换和对应的查询处理规则。</p>
                         <div class="fig-container">
                             <img src="./images/fig3.png" alt="Figure 3: NetMigrate migration state tracking and query handling state machine." onclick="openModal(this)">
-                            <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图3：迁移状态跟踪与查询处理状态机。基于BF和CBF的查询结果，决定路由到源(S)、目标(D)或双读(S+D)。</p>
+                            <div class="fig-caption">图3：迁移状态跟踪与查询处理状态机。基于BF和CBF的查询结果，决定路由到源(S)、目标(D)或双读(S+D)。</div>
                         </div>
                         <div class="mt-6 p-5 bg-gray-100 rounded-lg">
                             <h4 class="font-bold text-gray-800 mb-3">状态解释与路由策略：</h4>
@@ -207,7 +217,7 @@
                         <p class="text-gray-700 mb-6">表1总结了各类迁移方法的特性，清晰地展示了NetMigrate的综合优势。</p>
                         <div class="fig-container">
                             <img src="./images/table1.png" alt="Table 1: Overview of live migration approaches." onclick="openModal(this)">
-                            <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">表1：在线迁移方法概览。NetMigrate在多个维度上取得了最佳平衡。</p>
+                            <div class="fig-caption">表1：在线迁移方法概览。NetMigrate在多个维度上取得了最佳平衡。</div>
                         </div>
                     </div>
 
@@ -255,7 +265,7 @@
                             <p class="text-gray-700 mb-4">图4展示了NetMigrate在不同配置下与基线方法的吞吐量对比。NetMigrate在迁移期间能实现更高的吞吐量，并且吞吐量曲线呈现先升后降的趋势，这是因为迁移初期源节点服务大部分查询，后期目标节点逐步分担负载。</p>
                             <div class="fig-container">
                                 <img src="./images/fig4.png" alt="Figure 4: Comparing Rocksteady, Fulva, Source-based protocol, and NetMigrate on query throughput." onclick="openModal(this)">
-                                <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图4：查询吞吐量对比（YCSB-B, 5%写, 100% CPU预算）。NetMigrate吞吐量更高，且可调整迁移时间策略（短/中/长）。</p>
+                                <div class="fig-caption">图4：查询吞吐量对比（YCSB-B, 5%写, 100% CPU预算）。NetMigrate吞吐量更高，且可调整迁移时间策略（短/中/长）。</div>
                             </div>
                         </div>
 
@@ -265,11 +275,11 @@
                             <div class="grid md:grid-cols-2 gap-4">
                                 <div class="fig-container">
                                     <img src="./images/fig5.png" alt="Figure 5: Median latency comparison." onclick="openModal(this)">
-                                    <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图5：中位数延迟对比。</p>
+                                    <div class="fig-caption">图5：中位数延迟对比。</div>
                                 </div>
                                 <div class="fig-container">
                                     <img src="./images/fig6.png" alt="Figure 6: 99%-tail latency comparison." onclick="openModal(this)">
-                                    <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">图6：99%尾部延迟对比。</p>
+                                    <div class="fig-caption">图6：99%尾部延迟对比。</div>
                                 </div>
                             </div>
                         </div>
@@ -279,7 +289,7 @@
                             <p class="text-gray-700 mb-4">表2显示了调整布隆过滤器大小对性能的影响。使用较小的片上内存（如512KB BF + 64B CBF）即可获得极低的假阳性率（0.26%）和优秀的性能，证明了设计的资源高效性。</p>
                             <div class="fig-container">
                                 <img src="./images/table2.png" alt="Table 2: Impact on migration when tuning BF and CBF sizes." onclick="openModal(this)">
-                                <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">表2：调整BF和CBF大小对迁移的影响。8-bit-per-element设置提供了最佳性能平衡。</p>
+                                <div class="fig-caption">表2：调整BF和CBF大小对迁移的影响。8-bit-per-element设置提供了最佳性能平衡。</div>
                             </div>
                         </div>
 
@@ -288,7 +298,7 @@
                             <p class="text-gray-700 mb-4">表4对比了不同方法的额外带宽开销。NetMigrate在客户端和服务器端的开销都<strong>可忽略不计</strong>（客户端<0.05%，服务器端<4e-5%），远低于混合方法Fulva（>35%）和基于目标的方法Rocksteady。</p>
                             <div class="fig-container">
                                 <img src="./images/table4.png" alt="Table 4: Extra bandwidth usage." onclick="openModal(this)">
-                                <p class="text-center text-sm text-gray-500 p-2 bg-gray-100">表4：额外带宽使用情况对比。NetMigrate的开销极低。</p>
+                                <div class="fig-caption">表4：额外带宽使用情况对比。NetMigrate的开销极低。</div>
                             </div>
                         </div>
                     </div>
@@ -324,7 +334,7 @@
                                 <li><strong>显著提升迁移期间的查询性能</strong>（吞吐↑，延迟↓）。</li>
                                 <li><strong>开销极低</strong>，资源利用高效。</li>
                                 <li><strong>设计灵活</strong>，支持多种迁移策略和目标。</li>
-                                <li>开辟了“<strong>以网络为中心的系统设计</strong>”新思路。</li>
+                                <li>开辟了"<strong>以网络为中心的系统设计</strong>"新思路。</li>
                             </ul>
                         </div>
                         <div class="p-5 border border-yellow-300 rounded-xl bg-yellow-50">
