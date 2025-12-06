@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuckoo Filter: Practically Better Than Bloom</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Cuckoo Filter: Practically Better Than Bloom
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Bin Fan, David G. Andersen, Michael Kaminsky, Michael D. Mitzenmacher</div>
+                <div class="text-sm text-gray-600 mt-1">Carnegie Mellon University, Intel Labs, Harvard University</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>CoNEXT 2014</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Cuckoo Hashing</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Bloom Filters</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Compression</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献突出显示 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-6">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-3 text-gray-700">
+            <li>支持动态添加和删除项目的近似集合成员测试数据结构</li>
+            <li>比传统Bloom过滤器更高的查找性能，即使接近满载时</li>
+            <li>比商过滤器等替代方案更容易实现</li>
+            <li>在目标误判率ε低于3%时，比Bloom过滤器使用更少的空间</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">在许多网络系统中，Bloom过滤器用于高速集合成员测试。它们允许一小部分误判答案，同时具有很好的空间效率。然而，它们不支持从集合中删除项目，之前扩展"标准"Bloom过滤器以支持删除的尝试都会降低空间或性能。</p>
+          
+          <p class="mb-4">作者提出了一种称为<strong>布谷鸟过滤器</strong>的新数据结构，可以替代Bloom过滤器进行近似集合成员测试。布谷鸟过滤器支持动态添加和删除项目，同时实现比Bloom过滤器更高的性能。对于存储许多项目且目标误判率适中的应用，布谷鸟过滤器比空间优化的Bloom过滤器具有更低的空间开销。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>简单理解
+            </h5>
+            <p class="text-gray-700">Bloom过滤器就像一个只能回答"可能在里面"或"肯定不在里面"的智能名单，但不能删除名字。布谷鸟过滤器就像一个更聪明的名单，既能回答同样的问题，还能让你删除名字，而且占用的空间更小。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Bloom过滤器及其局限性</h3>
+          <p class="mb-4">Bloom过滤器是广泛使用的近似集合成员测试数据结构，具有内存效率高的特点。它已应用于：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>减少概率路由表中的空间需求</li>
+            <li>加速IP地址的最长前缀匹配</li>
+            <li>改善网络状态管理和监控</li>
+            <li>在数据包中编码多播转发信息</li>
+          </ul>
+          
+          <p class="mb-4">标准Bloom过滤器的一个限制是，如果不重建整个过滤器（或可能引入通常不太理想的漏报），就无法删除现有项目。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">现有支持删除的Bloom过滤器变体</h3>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">过滤器类型</th>
+                  <th class="py-2 px-4 border-b text-left">空间成本</th>
+                  <th class="py-2 px-4 border-b text-left">每次查找的缓存未命中</th>
+                  <th class="py-2 px-4 border-b text-left">删除支持</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">Bloom</td>
+                  <td class="py-2 px-4 border-b">1×</td>
+                  <td class="py-2 px-4 border-b">k</td>
+                  <td class="py-2 px-4 border-b">否</td>
+                </tr>
+                <tr class="bg-blue-50">
+                  <td class="py-2 px-4 border-b">blocked Bloom</td>
+                  <td class="py-2 px-4 border-b">1×</td>
+                  <td class="py-2 px-4 border-b">1</td>
+                  <td class="py-2 px-4 border-b">否</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">counting Bloom</td>
+                  <td class="py-2 px-4 border-b">3×~4×</td>
+                  <td class="py-2 px-4 border-b">k</td>
+                  <td class="py-2 px-4 border-b">是</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">d-left counting Bloom</td>
+                  <td class="py-2 px-4 border-b">1.5×~2×</td>
+                  <td class="py-2 px-4 border-b">d</td>
+                  <td class="py-2 px-4 border-b">是</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">quotient</td>
+                  <td class="py-2 px-4 border-b">1×~1.2×</td>
+                  <td class="py-2 px-4 border-b">≥1</td>
+                  <td class="py-2 px-4 border-b">是</td>
+                </tr>
+                <tr class="bg-green-50 font-semibold">
+                  <td class="py-2 px-4 border-b">cuckoo</td>
+                  <td class="py-2 px-4 border-b">≤1×</td>
+                  <td class="py-2 px-4 border-b">2</td>
+                  <td class="py-2 px-4 border-b">是</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-4">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>关键问题
+            </h5>
+            <p class="text-gray-700">现有的支持删除的Bloom过滤器变体要么需要更多空间（计数Bloom过滤器需要3-4倍空间），要么性能较差（商过滤器在哈希表占用率超过75%时性能显著下降）。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">布谷鸟哈希的基础知识</h3>
+          <p class="mb-4">基本的布谷鸟哈希表由一个桶数组组成，其中每个项目有两个候选桶，由哈希函数h₁(x)和h₂(x)确定。查找过程检查这两个桶，看是否包含该项目。</p>
+          
+          <!-- 布谷鸟哈希示意图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图1 - 布谷鸟哈希示意图
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 布谷鸟哈希示意图
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 布谷鸟哈希插入过程示意图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 布谷鸟哈希插入过程的示例。插入新项目x时，如果两个候选桶都已满，则选择一个桶踢出现有项目，并将被踢出的项目重新插入到其备用位置。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>双候选桶:</strong> 每个项目有两个候选存储位置，由两个独立的哈希函数确定</li>
+                  <li><strong>踢出机制:</strong> 如果两个候选桶都已满，随机选择一个桶踢出现有项目</li>
+                  <li><strong>递归重定位:</strong> 被踢出的项目被重新插入到其备用位置，可能触发进一步的踢出操作</li>
+                  <li><strong>终止条件:</strong> 插入过程直到找到空桶或达到最大重定位次数为止</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">布谷鸟过滤器面临的挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>挑战1：仅存储指纹
+              </h4>
+              <p class="text-gray-700">布谷鸟过滤器只存储指纹（通过哈希函数从项目派生的位串），而不是键值对。这意味着无法恢复原始键来重新计算备用位置。</p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>挑战2：平衡空间与性能
+              </h4>
+              <p class="text-gray-700">每个项目与哈希表中的多个可能位置相关联提高了表占用率，但为了在每次查找探测更多可能位置时保持相同的误判率，需要更长的指纹占用更多空间。</p>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>简单理解
+            </h5>
+            <p class="text-gray-700">想象一下，你有一个只能存储人名的缩写（指纹）而不是全名的通讯录。当你需要调整通讯录时，你无法通过缩写找到这个人的完整信息来计算他应该在的其他位置。这就是布谷鸟过滤器面临的核心挑战。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">部分键布谷鸟哈希</h3>
+          <p class="mb-4">为了解决仅存储指纹的挑战，作者提出了<strong>部分键布谷鸟哈希</strong>技术，基于指纹推导项目的备用位置。</p>
+          
+          <div class="bg-gray-100 p-4 rounded-lg mb-4 font-mono text-sm">
+            <p>h₁(x) = hash(x)</p>
+            <p>h₂(x) = h₁(x) ⊕ hash(x的指纹)</p>
+          </div>
+          
+          <p class="mb-4">这个XOR操作确保了一个重要属性：也可以使用相同的公式从h₂(x)和指纹计算h₁(x)。换句话说，要移动原本在桶i中的键（无论i是h₁(x)还是h₂(x)），我们可以直接通过以下公式从当前桶索引i和存储在此桶中的指纹计算其备用桶j：</p>
+          
+          <div class="bg-gray-100 p-4 rounded-lg mb-4 font-mono text-sm">
+            <p>j = i ⊕ hash(指纹)</p>
+          </div>
+          
+          <p class="mb-4">因此，插入只使用表中的信息，永远不需要检索原始项目x。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">布谷鸟过滤器算法</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-plus-circle mr-2"></i>插入操作
+              </h4>
+              <p class="text-sm text-gray-700">计算项目的指纹和两个候选桶。如果任一桶有空位，直接插入；否则，踢出现有指纹并递归重定位。</p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-search mr-2"></i>查找操作
+              </h4>
+              <p class="text-sm text-gray-700">计算项目的指纹和两个候选桶。检查这两个桶中是否有匹配的指纹。如果没有漏报，只要桶不溢出。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i>删除操作
+              </h4>
+              <p class="text-sm text-gray-700">检查项目的两个候选桶。如果任一桶中有匹配的指纹，删除该指纹的一个副本。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">空间优化</h3>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-compress-arrows-alt mr-2"></i>半排序桶节省空间
+            </h4>
+            <p class="text-gray-700 mb-4">对于每个桶有4个条目的布谷鸟过滤器，可以通过对桶内的指纹进行排序然后编码排序后的指纹序列来压缩每个桶。</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">未压缩桶</h5>
+                <div class="bg-gray-200 p-3 rounded text-center">
+                  <p>4条目 × 4位 = 16位</p>
+                </div>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">压缩后</h5>
+                <div class="bg-green-200 p-3 rounded text-center">
+                  <p>12位索引（节省1位/指纹）</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 指纹大小与负载因子关系图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图2 - 指纹大小与负载因子关系
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 使用f位指纹的部分键布谷鸟哈希实现的负载因子α
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 不同大小表中使用f位指纹的部分键布谷鸟哈希实现的负载因子α" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用f位指纹的部分键布谷鸟哈希在不同大小表（m=2¹⁵, 2²⁰, 2²⁵和2³⁰个桶）中实现的负载因子α。短指纹足以接近使用两个完全独立哈希函数实现的最优负载因子。α=0表示空，1表示完全满。每个点是在10次独立运行中看到的最小负载因子。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>指纹长度影响:</strong> 指纹长度f影响哈希表可以达到的负载因子α</li>
+                  <li><strong>桶大小优势:</strong> 较大的桶大小（b=4或8）可以在较短的指纹长度下实现较高的负载因子</li>
+                  <li><strong>表规模影响:</strong> 较大的表需要稍长的指纹来保持高负载因子</li>
+                  <li><strong>实际可行性:</strong> 即使对于包含40亿项的大表，6位指纹也足以实现95%的负载因子</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>通过实验确定不同配置下（指纹长度f、桶大小b、桶数量m）的布谷鸟过滤器可以达到的负载因子。使用随机64位键插入空过滤器，直到单个插入在找到空条目之前重定位现有指纹超过500次。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择(2,4)-布谷鸟过滤器作为默认配置（每个项目有两个候选桶，每个桶最多有四个指纹），因为它在大多数实际应用可能感兴趣的误判率范围内实现了最佳或接近最佳的空间效率。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          <p class="mb-4">作者实现了布谷鸟过滤器（CF）、带半排序的布谷鸟过滤器（ss-CF），并与以下过滤器进行比较：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>标准Bloom过滤器（BF）</li>
+            <li>分块Bloom过滤器（blk-BF）</li>
+            <li>商过滤器（QF）</li>
+            <li>d-left计数Bloom过滤器（dl-CBF）</li>
+          </ul>
+          
+          <p class="mb-4">所有过滤器配置为相同大小（192MB），使用随机生成的64位整数作为测试数据。</p>
+          
+          <!-- 空间效率和构建速度表 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>技术细节：表3 - 空间效率和构建速度
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原表 3: 空间效率和构建速度
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 表格展示 -->
+                <div class="overflow-x-auto bg-white p-4 rounded-lg border border-gray-300">
+                  <table class="min-w-full bg-white">
+                    <thead class="bg-gray-100">
+                      <tr>
+                        <th class="py-2 px-4 border-b text-left">指标</th>
+                        <th class="py-2 px-4 border-b text-left">CF</th>
+                        <th class="py-2 px-4 border-b text-left">ss-CF</th>
+                        <th class="py-2 px-4 border-b text-left">BF</th>
+                        <th class="py-2 px-4 border-b text-left">blk-BF</th>
+                        <th class="py-2 px-4 border-b text-left">QF</th>
+                        <th class="py-2 px-4 border-b text-left">dl-CBF</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="py-2 px-4 border-b">项目数量（百万）</td>
+                        <td class="py-2 px-4 border-b">127.78</td>
+                        <td class="py-2 px-4 border-b font-semibold bg-green-50">128.04</td>
+                        <td class="py-2 px-4 border-b">123.89</td>
+                        <td class="py-2 px-4 border-b">123.89</td>
+                        <td class="py-2 px-4 border-b">120.80</td>
+                        <td class="py-2 px-4 border-b">103.82</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">每项目位数</td>
+                        <td class="py-2 px-4 border-b">12.60</td>
+                        <td class="py-2 px-4 border-b font-semibold bg-green-50">12.58</td>
+                        <td class="py-2 px-4 border-b">13.00</td>
+                        <td class="py-2 px-4 border-b">13.00</td>
+                        <td class="py-2 px-4 border-b">13.33</td>
+                        <td class="py-2 px-4 border-b">15.51</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">误判率</td>
+                        <td class="py-2 px-4 border-b">0.19%</td>
+                        <td class="py-2 px-4 border-b font-semibold bg-green-50">0.09%</td>
+                        <td class="py-2 px-4 border-b">0.19%</td>
+                        <td class="py-2 px-4 border-b">0.43%</td>
+                        <td class="py-2 px-4 border-b">0.18%</td>
+                        <td class="py-2 px-4 border-b">0.76%</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">构建速度（百万键/秒）</td>
+                        <td class="py-2 px-4 border-b">5.00</td>
+                        <td class="py-2 px-4 border-b">3.13</td>
+                        <td class="py-2 px-4 border-b">3.91</td>
+                        <td class="py-2 px-4 border-b font-semibold bg-green-50">7.64</td>
+                        <td class="py-2 px-4 border-b">1.91</td>
+                        <td class="py-2 px-4 border-b">4.78</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>空间效率:</strong> 带半排序的布谷鸟过滤器（ss-CF）实现了最低的每项目位数（12.58位）</li>
+                  <li><strong>误判率:</strong> ss-CF实现了最低的误判率（0.09%），比标准Bloom过滤器低2倍</li>
+                  <li><strong>构建速度:</strong> 分块Bloom过滤器（blk-BF）构建速度最快，但误判率最高</li>
+                  <li><strong>综合优势:</strong> 布谷鸟过滤器在空间效率和误判率方面表现最佳，构建速度也较快</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">查找性能</h3>
+          <p class="mb-4">布谷鸟过滤器在不同工作负载和不同占用率水平下都能确保高且稳定的查找性能。</p>
+          
+          <!-- 查找性能图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图5 - 查找性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: 过滤器达到容量时的查找性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: 过滤器达到容量时的查找性能" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 过滤器达到容量时的查找性能。每个点是10次运行的平均值。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: Intel Xeon L5640@2.27GHz, 12MB L3缓存</li>
+                      <li>软件栈: C++实现，CityHash哈希函数</li>
+                      <li>工作负载: 随机64位整数，不同正查询比例</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能稳定: CF和ss-CF在不同工作负载下性能稳定</li>
+                      <li>缓存效率: CF始终获取两个桶，最多两次缓存未命中</li>
+                      <li>工作负载影响: blk-BF在全部负查询时性能最佳，但随着正查询增加性能下降</li>
+                      <li>QF性能: QF性能最差，因为需要搜索长条目链并解码每个条目</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">插入和删除性能</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-plus-circle mr-2"></i>插入性能
+              </h4>
+              <p class="text-gray-700">布谷鸟过滤器的插入吞吐量随着填充程度增加而下降，因为可能需要递归移动现有键。但总体构建速度仍然高于除分块Bloom过滤器外的其他过滤器。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i>删除性能
+              </h4>
+              <p class="text-gray-700">布谷鸟过滤器在支持删除的过滤器中实现了最高的删除吞吐量，且在整个过程中提供稳定的性能。</p>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-4">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-trophy mr-2"></i>评估总结
+            </h5>
+            <p class="text-gray-700">布谷鸟过滤器在不同工作负载和不同占用率水平下都能确保高且稳定的查找性能。其插入吞吐量随着过滤器填充程度增加而下降，但总体构建速度仍然快于除分块Bloom过滤器外的其他过滤器。启用半排序使布谷鸟过滤器比空间优化的Bloom过滤器更空间高效，虽然使查找、插入和删除变慢，但仍然比传统Bloom过滤器快。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4"><strong>布谷鸟过滤器</strong>是一种用于近似集合成员查询的新数据结构，可用于许多以前使用Bloom过滤器解决的网络问题。布谷鸟过滤器在三个方面改进了Bloom过滤器：</p>
+          
+          <ol class="list-decimal list-inside space-y-3 mb-6">
+            <li><strong>支持动态删除项目</strong></li>
+            <li><strong>更好的查找性能</strong></li>
+            <li><strong>对于需要低误判率（ε<3%）的应用，更好的空间效率</strong></li>
+          </ol>
+          
+          <p class="mb-4">布谷鸟过滤器基于布谷鸟哈希存储一组项目的指纹，从而实现高空间占用率。作为一个进一步的关键贡献，作者应用了<strong>部分键布谷鸟哈希</strong>，这使得布谷鸟过滤器通过允许仅基于存储的指纹进行重定位而显著更高效。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">论文的不足之处</h3>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-red-700 mb-4 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>局限性分析
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white p-4 rounded-lg border border-red-200">
+                <h5 class="font-bold text-red-700 mb-2">理论局限性</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                  <li>指纹大小下限随过滤器大小缓慢增长（Ω(log n)）</li>
+                  <li>部分键布谷鸟哈希的完整理论分析仍然开放</li>
+                  <li>插入新项目的成本界限尚未证明</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-red-200">
+                <h5 class="font-bold text-red-700 mb-2">实践局限性</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                  <li>有负载阈值，超过后插入可能失败</li>
+                  <li>如果支持删除，必须存储相同项目的多个副本</li>
+                  <li>插入相同项目kb+1次会导致插入失败</li>
+                  <li>半排序优化需要额外的编码/解码表</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+            <h5 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-rocket mr-2"></i>未来方向
+            </h5>
+            <p class="text-gray-700">虽然作者期望布谷鸟过滤器的进一步扩展和优化是可能的，并将进一步推动它们的使用，但所描述的数据结构已经是一个快速高效的构建块，非常适合网络和分布式系统的实际需求。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e5e5;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

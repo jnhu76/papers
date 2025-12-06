@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make LLM Inference Affordable to Everyone: Augmenting GPU Memory with NDP-DIMM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      @apply p-4 rounded-lg border transition-transform duration-300 hover:scale-[1.02];
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Make LLM Inference Affordable to Everyone: Augmenting GPU Memory with NDP-DIMM
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Lian Liu<sup>†</sup>, Shixin Zhao<sup>†</sup>, Bing Li, Haimeng Ren, Zhaohui Xu, Mengdi Wang, Xiaowei Li, Yinhe Han, Ying Wang<sup>✉</sup></div>
+                <div class="text-sm text-gray-600 mt-1">中国科学院计算技术研究所<sup>1</sup>，中国科学院大学<sup>2</sup>，中关村实验室<sup>3</sup>，中国科学院微电子研究所<sup>4</sup>，上海科技大学信息科学与技术学院<sup>5</sup></div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">通讯作者</strong>
+                <div class="text-sm">Ying Wang (wangying2009@ict.ac.cn)</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">LLM推理</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">NDP-DIMM</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">激活稀疏性</span>
+                  <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">异构计算</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">技术领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">计算机体系结构</span>
+                  <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">深度学习系统</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">内存处理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 mb-2 flex items-center">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-1 text-gray-700">
+          <li><strong>Hermes系统</strong>：提出了首个使用NDP-DIMM增强消费级GPU进行高效、低成本LLM推理的系统。</li>
+          <li><strong>热/冷神经元划分</strong>：利用LLM激活的稀疏性（80/20规律），将参数划分为计算密集型的热神经元和存储密集型的冷神经元，分别卸载到GPU和NDP-DIMM。</li>
+          <li><strong>轻量级预测器与调度器</strong>：提出了基于令牌相似性和层间相关性的轻量级在线预测器，以及基于窗口的在线调度策略，实现动态神经元划分和NDP-DIMM间的负载均衡。</li>
+          <li><strong>显著性能提升</strong>：相比现有基于卸载的推理系统FlexGen和Deja Vu，平均分别实现了148.98倍和75.24倍的加速，能以约2500美元的成本（对比TensorRT-LLM的5万美元）部署LLaMA2-70B模型。</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p><strong>问题：</strong>大规模语言模型（LLM）推理通常需要昂贵的服务器级GPU和大容量HBM。现有基于卸载的方案将参数转移到主机内存，但受限于PCIe带宽，性能低下。</p>
+          <p><strong>观察：</strong>LLM中存在固有的<strong>激活稀疏性</strong>（例如ReLU函数）。作者观察到，约20%的神经元（<strong>热神经元</strong>）承担了80%的计算，而80%的神经元（<strong>冷神经元</strong>）仅承担20%的计算。计算强度相差16倍。</p>
+          <p><strong>解决方案 - Hermes：</strong> 一个低成本的推理系统，利用商用DRAM DIMM中的<strong>近数据处理（NDP）</strong>单元来增强单个消费级GPU。将热神经元存储在GPU内存中计算，而将冷神经元卸载到具有大内存但计算能力有限的NDP-DIMM中进行计算。</p>
+          <p><strong>关键技术：</strong>
+            <ul class="list-disc list-inside pl-5 space-y-2">
+              <li>利用激活稀疏性的输入特定性，设计<strong>轻量级预测器</strong>进行实时的热/冷神经元划分与迁移。</li>
+              <li>提出<strong>基于窗口的在线调度机制</strong>，在多个NDP-DIMM模块间重映射冷神经元以实现负载均衡。</li>
+            </ul>
+          </p>
+          <p><strong>效果：</strong> Hermes能以13.75 tokens/s的速度在消费级硬件上部署LLaMA2-70B模型，相比现有最优的基于卸载的推理系统，平均实现了<strong>75.24倍</strong>的加速。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-robot mr-2 text-purple-500"></i>LLM推理的挑战
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="tech-card bg-blue-50 border-blue-200">
+                <h4 class="font-bold text-blue-700 text-lg mb-2">
+                  <i class="fas fa-server mr-2"></i>高成本部署
+                </h4>
+                <p class="text-gray-700">例如，部署LLaMA2-70B需要5个NVIDIA A100 GPU，成本超过5万美元。消费级GPU（如RTX 4090）计算能力强但显存有限。</p>
+              </div>
+              <div class="tech-card bg-red-50 border-red-200">
+                <h4 class="font-bold text-red-700 text-lg mb-2">
+                  <i class="fas fa-traffic-cone mr-2"></i>PCIe带宽瓶颈
+                </h4>
+                <p class="text-gray-700">现有卸载方案（如FlexGen, Deja Vu）将参数存储在主机内存，需要频繁通过PCIe传输数据，其带宽远低于GPU内部内存（>15倍差距），导致99%的推理时间花在数据传输上。</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-brain mr-2 text-green-500"></i>激活稀疏性：一个关键特性
+            </h3>
+            <div class="space-y-4">
+              <p>LLM中（如ReLU）等激活函数会产生大量零值，导致对应的神经元无需被加载和计算。</p>
+              <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg">
+                <h5 class="font-semibold text-gray-800 mb-2">关键观察（80/20规律）：</h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="text-center p-3 bg-red-50 rounded-lg">
+                    <i class="fas fa-fire text-red-500 text-2xl mb-2"></i>
+                    <p class="font-bold text-red-700">热神经元 (~20%)</p>
+                    <p class="text-sm">承担<strong>80%</strong>的计算负载</p>
+                    <p class="text-xs mt-1">计算强度高，适合GPU</p>
+                  </div>
+                  <div class="text-center p-3 bg-blue-50 rounded-lg">
+                    <i class="fas fa-snowflake text-blue-500 text-2xl mb-2"></i>
+                    <p class="font-bold text-blue-700">冷神经元 (~80%)</p>
+                    <p class="text-sm">承担<strong>20%</strong>的计算负载</p>
+                    <p class="text-xs mt-1">计算强度低，适合大容量存储</p>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 mt-3 text-center"><strong>计算强度差异：16倍</strong></p>
+              </div>
+              <p>这为异构计算提供了天然契机：将热神经元（计算密集）放在高性能GPU上，将冷神经元（存储密集）放在大容量但计算能力有限的NDP-DIMM上。</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-microchip mr-2 text-orange-500"></i>为什么选择NDP-DIMM？
+            </h3>
+            <ul class="list-disc list-inside space-y-2 pl-5 text-gray-700">
+              <li><strong>成本低廉：</strong> 相较于昂贵的高性能HBM-PIM，商用DRAM DIMM是经济实惠的主机内存解决方案。</li>
+              <li><strong>近数据处理：</strong> NDP单元可以直接在内存中处理数据，避免了将冷神经元数据移动到GPU的开销。</li>
+              <li><strong>带宽优势：</strong> NDP-DIMM的内部带宽远高于PCIe，甚至高于CPU访问DRAM的带宽（例如89.6 GB/s）。</li>
+            </ul>
+          </div>
+
+          <!-- 图1占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图1 - 现有卸载方案与Hermes方案对比
+            </summary>
+            <div class="mt-6 space-y-6">
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: (a) 现有卸载方案将主机内存视为扩展内存，导致PCIe上繁重的数据传输。(b) Hermes分层划分权重矩阵，利用NDP-DIMM处理计算强度低的部分。
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 左右对比图。左图展示传统卸载方案中GPU通过PCIe频繁访问主机内存中的权重，数据传输负担重。右图展示Hermes方案，GPU处理热神经元，NDP-DIMM处理冷神经元，仅需交换少量计算结果，数据传输开销可忽略。" class="max-w-full h-auto rounded-lg">
+                </div>
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (a) Existing offloading solutions view host memory as the augmented memory, but cause burdensome data transfer on PCIe. (b) Partitioning the weight matrix in each layer, and utilizing NDP-DIMMs to handle poor computation intensity parts, only introduces negligible data transfer.
+                </div>
+              </div>
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>问题核心（左图）：</strong> 传统卸载方案中，LLM的所有参数都存储在主机内存中，GPU需要不断通过PCIe总线加载当前层所需的权重。由于PCIe带宽（如64 GB/s）远低于GPU内存带宽（如936 GB/s），数据传输成为主要瓶颈。</li>
+                  <li><strong>Hermes方案（右图）：</strong> 利用激活稀疏性，将每层权重矩阵划分为热（红色）和冷（蓝色）神经元。热神经元存储在GPU内存中并由GPU计算，冷神经元存储在NDP-DIMM中并由其NDP单元计算。最后，GPU和NDP-DIMM的计算结果在NDP-DIMM端合并。由于结果数据量很小（KB级别），步骤②的数据传输开销可忽略不计。</li>
+                  <li><strong>创新点：</strong> 将“存储扩展”转变为“存储与计算协同扩展”，从根本上避免了大规模权重参数的移动。</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md: mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">挑战一：确定最优的神经元划分</h3>
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+              <p class="text-gray-700">由于激活稀疏性是<strong>输入特定</strong>的，无法在离线阶段完全确定热/冷神经元的划分。固定划分会导致性能下降。</p>
+              <ul class="list-disc list-inside pl-5 mt-2 space-y-1 text-gray-700">
+                <li><strong>问题：</strong> 在LLaMA2-70B上评估发现，约52%的初始化热神经元在推理过程中激活状态会发生变化。</li>
+                <li><strong>影响：</strong> 若采用固定的热/冷划分，性能会比理论最优方案下降<strong>1.63倍</strong>。</li>
+                <li><strong>需求：</strong> 需要一个<strong>轻量、准确</strong>的在线预测器，能实时调整神经元划分，且迁移成本要低。</li>
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">挑战二：充分利用多个NDP-DIMM有限的计算能力</h3>
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+              <p class="text-gray-700">单个NDP-DIMM的计算能力（数百GFLOPS）远低于GPU（数百TFLOPS）。当使用多个NDP-DIMM存储LLM参数时，计算负载可能严重不均衡。</p>
+              <ul class="list-disc list-inside pl-5 mt-2 space-y-1 text-gray-700">
+                <li><strong>问题：</strong> 由于激活神经元的动态性，某些NDP-DIMM可能过载，而其他则闲置。</li>
+                <li><strong>数据：</strong> 对于LLaMA-13B，负载最重的NDP-DIMM的计算量是其他DIMM的<strong>1.2-2.5倍</strong>。</li>
+                <li><strong>需求：</strong> 需要一个在线的调度策略，能够在多个NDP-DIMM间动态<strong>重映射冷神经元</strong>，以实现负载均衡。</li>
+                <li><strong>额外需求：</strong> 需要高效的DIMM间数据传输通路（如DIMM-link）来支持神经元的重新映射。</li>
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-2 text-purple-500"></i>利用分布模式设计轻量级预测器
+            </h3>
+            <p class="text-gray-700 mb-4">作者发现了激活稀疏性在LLM推理中的两个关键分布模式，可用于设计高效的预测器：</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-stream mr-2"></i>令牌间相似性
+                </h5>
+                <p class="text-sm text-gray-700">相邻令牌的激活神经元分布高度相似（>90%）。随着令牌距离增加，相似性下降，但超过一定窗口（如25）后趋于稳定。这表明存在<strong>时间局部性</strong>。</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-layer-group mr-2"></i>层间相关性
+                </h5>
+                <p class="text-sm text-gray-700">相邻层的激活神经元分布高度相关。例如，如果layer-30的第6个神经元被激活，那么layer-31的第0和第5个神经元被激活的概率超过90%。这可用于<strong>跨层预测</strong>。</p>
+              </div>
+            </div>
+            <p class="text-gray-700 mt-4">基于这两个模式，可以设计一个远轻于传统MLP预测器的方案。</p>
+          </div>
+
+          <!-- 图4占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图4 - 激活稀疏性的分布模式
+            </summary>
+            <div class="mt-6 space-y-6">
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 激活稀疏性的分布模式。(a) 不同模型和数据集上，相邻令牌的激活神经元具有高相似性。(b) 连续层间的激活神经元高度相关。
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: (a) 折线图，显示LLaMA-13B和Falcon-40B在不同数据集上，令牌间距离与激活神经元分布相似度的关系，相邻令牌相似度>90%。(b) 示意图，显示LLaMA-13B中layer-30的神经元6被激活时，layer-31的神经元0和5有高概率被激活。" class="max-w-full h-auto rounded-lg">
+                </div>
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Distribution patterns for activation sparsity. (a) The adjacent tokens enjoy high similarity on activated neurons for various models and datasets. (b) The activated neurons between consecutive layers are highly correlated.
+                </div>
+              </div>
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>令牌间相似性（图4a）：</strong> 这个观察是设计预测器的核心。因为LLM在生成文本时具有连贯性，相邻令牌（词）在语义和语法上高度相关，导致它们激活的神经元集合也高度重叠。这为使用<strong>有限状态机</strong>或<strong>历史信息</strong>进行预测提供了理论基础。</li>
+                  <li><strong>层间相关性（图4b）：</strong> 这反映了Transformer架构中信息的逐层传播特性。某一层中特定神经元的激活，会强烈影响下一层中与之功能相关的神经元的激活状态。这允许使用前一层的激活信息来预测当前层的激活模式。</li>
+                  <li><strong>预测器设计启示：</strong> 结合这两个模式，可以构建一个非常轻量的预测器，它不需要像MLP那样学习复杂的全局映射，而是基于局部历史和相邻层信息进行高效推断。</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <div class="space-y-10">
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">IV. Hermes系统概述</h3>
+            <p class="text-gray-700 mb-6">Hermes系统由三个核心部分组成：<strong>消费级GPU</strong>、<strong>多个NDP-DIMM</strong>和运行在主机CPU上的<strong>调度器</strong>。</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div class="tech-card bg-blue-50 border-blue-200">
+                <h4 class="font-bold text-blue-700 text-lg mb-2 flex items-center">
+                  <i class="fas fa-gamepad mr-2"></i>消费级GPU
+                </h4>
+                <ul class="list-disc list-inside pl-2 text-sm text-gray-700 space-y-1">
+                  <li><strong>角色：</strong> 处理热神经元。</li>
+                  <li><strong>示例：</strong> NVIDIA RTX 4090 (24GB GDDR6, 82.6 TFLOPS)。</li>
+                  <li><strong>优势：</strong> 强大的并行计算能力（Tensor Cores）。</li>
+                </ul>
+              </div>
+              <div class="tech-card bg-purple-50 border-purple-200">
+                <h4 class="font-bold text-purple-700 text-lg mb-2 flex items-center">
+                  <i class="fas fa-memory mr-2"></i>NDP-DIMM
+                </h4>
+                <ul class="list-disc list-inside pl-2 text-sm text-gray-700 space-y-1">
+                  <li><strong>角色：</strong> 存储并处理冷神经元。</li>
+                  <li><strong>关键单元：</strong> GEMV单元（计算）、激活单元（非线性函数）、DIMM-link（DIMM间通信）。</li>
+                  <li><strong>优势：</strong> 大容量、高内部带宽、近数据处理。</li>
+                </ul>
+              </div>
+              <div class="tech-card bg-green-50 border-green-200">
+                <h4 class="font-bold text-green-700 text-lg mb-2 flex items-center">
+                  <i class="fas fa-tasks mr-2"></i>调度器
+                </h4>
+                <ul class="list-disc list-inside pl-2 text-sm text-gray-700 space-y-1">
+                  <li><strong>角色：</strong> 协调GPU和NDP-DIMM，负责预测和调度。</li>
+                  <li><strong>组件：</strong> 轻量级预测器、神经元映射器、监控器、指令队列。</li>
+                  <li><strong>功能：</strong> 实时划分热/冷神经元，平衡NDP-DIMM负载。</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 图5占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-sitemap mr-2"></i>技术细节：图5 - Hermes系统架构总览
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 5: Hermes系统总览。(a) Hermes使用NDP-DIMM增强GPU内存，并利用调度器控制推理工作流。(b) 多个NDP-DIMM连接以支持LLM推理和DIMM间通信。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig5.png" alt="论文图5: (a) 系统架构图，显示主机CPU上的调度器通过PCIe连接一个消费级GPU和多个NDP-DIMM。调度器包含预测器和映射器。(b) 多个NDP-DIMM通过DIMM-link互连，每个DIMM包含DRAM阵列、中心缓冲区和NDP核心（GEMV单元、激活单元）。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> Overview of our proposed Hermes System. (a) Hermes augments GPU memory with NDP-DIMMs, and utilizes a scheduler to control the inference workflow. (b) Multiple NDP-DIMMs are connected to support LLM inference and inter-DIMM communication.
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>中心化调度（图5a）：</strong> 调度器是系统的大脑，运行在主机CPU上。它不直接参与计算，而是根据预测结果，将计算任务（即哪些神经元在哪计算）分发给GPU和各个NDP-DIMM。它通过PCIe向GPU发送CUDA内核启动指令，并通过内存命令接口向NDP-DIMM发送MAC等命令。</li>
+                    <li><strong>基于中心缓冲区的NDP-DIMM设计（图5b）：</strong> 这是关键硬件创新。NDP核心（GEMV单元、激活单元）可以高效访问其所属DIMM中的所有数据。中心缓冲区设计确保了NDP功能不会干扰DIMM作为普通内存的正常访问。</li>
+                    <li><strong>DIMM-link：</strong> 为了实现负载均衡，冷神经元可能需要在DIMM间迁移。通过专用的DIMM-link（带宽25 GB/s）进行点对点传输，比通过主机CPU进行数据移动快62倍以上，将OPT-66B的迁移开销从总时间的5.3%降低到0.2%以下。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">关键技术一：离线神经元映射</h3>
+            <p class="text-gray-700 mb-4">在推理开始前，需要确定每个神经元的初始存放位置（GPU或某个NDP-DIMM）。这是一个组合优化问题。</p>
+            <div class="bg-gray-100 p-4 rounded-lg mb-4">
+              <h5 class="font-semibold text-gray-800 mb-2">问题形式化：整数线性规划（ILP）</h5>
+              <p class="text-sm text-gray-700"><strong>目标函数：</strong> 最小化总推理延迟，即所有层中GPU和NDP-DIMM执行时间的最大值之和（公式1）。</p>
+              <p class="text-sm text-gray-700 mt-2"><strong>约束：</strong> 存储在GPU或每个NDP-DIMM上的神经元总大小不能超过其可用内存容量（公式6,7）。</p>
+              <p class="text-sm text-gray-700 mt-2"><strong>求解：</strong> 使用开源优化求解器PulP，基于在数据集（如C4, Pile）上采样分析得到的神经元激活频率、计算开销等信息进行求解。对于LLaMA-7B，求解约需110秒，适用于单次离线编译。</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">关键技术二：在线热/冷神经元划分调整</h3>
+            <p class="text-gray-700 mb-4">基于背景中发现的令牌相似性和层间相关性，作者设计了一个<strong>轻量级预测器</strong>，用于在推理过程中动态调整神经元划分。</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-history mr-2"></i>令牌间预测
+                </h5>
+                <p class="text-sm text-gray-700">受分支预测启发，为每个神经元维护一个<strong>4位状态（0-15）</strong>，存储在神经元状态表中。</p>
+                <ul class="list-disc list-inside pl-2 text-xs text-gray-700 mt-2 space-y-1">
+                  <li><strong>初始化：</strong> 根据预填充阶段的激活频率初始化状态。</li>
+                  <li><strong>更新：</strong> 每个令牌生成步骤后，根据神经元是否被激活，使用有限状态机更新其状态（激活则+4，未激活则-1）。</li>
+                  <li><strong>预测：</strong> 状态值高的神经元更可能被预测为激活（热）。</li>
+                </ul>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-link mr-2"></i>层间预测
+                </h5>
+                <p class="text-sm text-gray-700">利用层间相关性增强预测精度。</p>
+                <ul class="list-disc list-inside pl-2 text-xs text-gray-700 mt-2 space-y-1">
+                  <li><strong>离线采样：</strong> 为每个神经元记录其在前一层中相关性最高的2个神经元。</li>
+                  <li><strong>在线预测：</strong> 如果前一层的这些高度相关神经元被激活，则增加当前神经元被激活的概率。</li>
+                </ul>
+              </div>
+            </div>
+            <p class="text-gray-700"><strong>最终预测准则：</strong> 结合两种预测。对于神经元i，检查不等式：<code>s₁ + λ·s₂ > T</code>。其中s₁是令牌间预测状态，s₂是层间相关神经元的激活数量，λ=6，T=15。若成立，则预测为激活。</p>
+
+            <!-- 图7占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-code-branch mr-2"></i>技术细节：图7 - Hermes中的预测器设计
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 7: Hermes中的预测器设计。(a) 利用令牌生成的时间局部性进行预测。(b) 层间相关性有效预测激活神经元。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig7.png" alt="论文图7: (a) 左侧展示一个神经元状态表，每个神经元有一个4位状态值。右侧展示一个更新示例：神经元6被激活，状态从7更新到11；神经元5未被激活，状态从10更新到9。(b) 展示层间相关性表，例如layer L的神经元0与layer L+1的神经元3和4高度相关。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> The predictor design in Hermes. (a) We are motivated to utilize the temporal locality of token generation for prediction. (b) The layer-wise correlation effectively predicts activated neurons.
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>轻量性：</strong> 该预测器的存储开销极小。神经元状态表只需为每个神经元存储4位，神经元相关性表存储前一层2个相关神经元的ID。这远低于Deja Vu等工作中使用的MB甚至GB级别的MLP预测器。</li>
+                    <li><strong>高效性：</strong> 预测逻辑非常简单，主要是查表和整数加法比较，计算开销极低（<0.1%的运行时开销），而MLP预测器可能占10%-25%的推理时间。</li>
+                    <li><strong>适应性：</strong> 状态机机制使预测器能够根据最近的激活历史动态调整预测，适应输入序列的变化。</li>
+                    <li><strong>组合预测：</strong> 结合令牌间和层间信息，提高了预测准确性，弥补了单一预测方法的不足（如令牌间预测无法处理神经元活动的突变）。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">关键技术三：基于窗口的在线调度（NDP-DIMM负载均衡）</h3>
+            <p class="text-gray-700 mb-4">为了解决多个NDP-DIMM间的负载不均问题，作者提出了一个<strong>基于窗口的贪婪重映射算法</strong>。</p>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-6">
+              <h5 class="font-bold text-orange-700 mb-2">算法核心思想</h5>
+              <ol class="list-decimal list-inside pl-2 text-sm text-gray-700 space-y-2">
+                <li><strong>收集信息：</strong> 在一个固定大小的“窗口”（多个连续令牌）内，统计每个冷神经元被激活的次数。</li>
+                <li><strong>计算负载：</strong> 根据当前神经元到DIMM的映射，计算每个NDP-DIMM在这个窗口内的总激活神经元数。</li>
+                <li><strong>排序与配对：</strong> 按负载对NDP-DIMM排序，将负载最高的与负载最低的配对。</li>
+                <li><strong>贪婪重映射：</strong> 在配对的DIMM之间，将负载高的一方中最活跃的神经元迁移到负载低的一方，直到负载达到平衡或无法进一步优化。</li>
+              </ol>
+              <p class="text-sm text-gray-700 mt-3">该策略利用令牌间相似性，基于一个窗口内的历史信息来预测未来的负载分布，并提前进行神经元重映射。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="space-y-10">
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">V. 实验设置</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="bg-gray-100 p-4 rounded-lg">
+                <h5 class="font-semibold text-gray-800 mb-2">Hermes配置</h5>
+                <ul class="list-disc list-inside pl-2 text-sm text-gray-700 space-y-1">
+                  <li><strong>GPU：</strong> 1x NVIDIA RTX 4090 (24GB GDDR6, 330 TFLOPS FP16)。</li>
+                  <li><strong>NDP-DIMM：</strong> 8x 32GB DDR4 DIMM，通过PCIe 4.0 (64GB/s)连接。</li>
+                  <li><strong>模拟器：</strong> 基于Ramulator 2.0修改的内部模拟器，NDP核心使用TSMC 7nm工艺综合。</li>
+                </ul>
+              </div>
+              <div class="bg-gray-100 p-4 rounded-lg">
+                <h5 class="font-semibold text-gray-800 mb-2">基线系统</h5>
+                <ul class="list-disc list-inside pl-2 text-sm text-gray-700 space-y-1">
+                  <li><strong>Huggingface Accelerate, FlexGen, Deja Vu：</strong> 基于主机内存卸载的SOTA系统。</li>
+                  <li><strong>Hermes-host：</strong> 冷神经元卸载到主机CPU计算，用于对比NDP-DIMM的必要性。</li>
+                  <li><strong>Hermes-base：</strong> 不使用激活稀疏性的朴素NDP-DIMM扩展系统，用于对比稀疏性的价值。</li>
+                </ul>
+              </div>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg">
+              <h5 class="font-semibold text-gray-800 mb-2">工作负载与指标</h5>
+              <p class="text-sm text-gray-700"><strong>模型：</strong> OPT-13B/30B/66B, LLaMA2-13B/70B, Falcon-40B。对于LLaMA和Falcon，使用开源版本将其激活函数替换为ReLU以启用稀疏性（精度损失<1%）。</p>
+              <p class="text-sm text-gray-700"><strong>指标：</strong> 平均每秒生成的令牌数 (tokens/s)。批大小1-16，输入输出序列长度固定为128。</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">主要实验结果</h3>
+            
+            <!-- 图9占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-bar mr-2"></i>技术细节：图9 - 与现有基于卸载系统的端到端性能对比（批大小=1）
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 9: 与现有基于卸载系统的性能对比。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig9.png" alt="论文图9: 柱状图，显示在OPT系列模型上，Hermes相比Accelerate、FlexGen、Deja Vu、Hermes-host的性能对比。Hermes在所有模型上性能最优，特别是对于大模型OPT-66B，优势更加明显。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>关键结果：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>大幅领先：</strong> 相比Accelerate和FlexGen，Hermes平均分别实现了<strong>578.42倍</strong>和<strong>247.25倍</strong>的加速。</li>
+                    <li><strong>超越Deja Vu：</strong> 尽管Deja Vu也利用了激活稀疏性，但其仍需通过PCIe加载冷神经元，且MLP预测器开销大，平均仅比FlexGen快2.12倍。Hermes则通过NDP-DIMM近数据处理彻底避免了这部分数据传输。</li>
+                    <li><strong>模型越大，优势越明显：</strong> 对于OPT-66B，Hermes达到20.37 tokens/s，而FlexGen等系统几乎无法运行。因为大模型中仅有更小比例的参数能放入GPU内存，加剧了传统卸载方案的数据传输瓶颈。</li>
+                    <li><strong>NDP-DIMM的必要性：</strong> Hermes比将冷神经元卸载到主机CPU计算的Hermes-host快<strong>4.79-7.75倍</strong>，证明了NDP-DIMM高内部带宽的优势。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            <!-- 图10占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-bar mr-2"></i>技术细节：图10 - 激活稀疏性与NDP设计在Hermes中的有效性
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 10: 激活稀疏性与NDP设计在Hermes中的有效性。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig10.png" alt="论文图10: 柱状图，对比Hermes与不利用激活稀疏性的Hermes-base系统在不同LLM上的性能。Hermes在大型模型（Falcon-40B, LLaMA2-70B）上优势显著。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>关键结果：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>稀疏性的价值：</strong> 相比不利用稀疏性的Hermes-base，Hermes平均实现了<strong>5.17倍</strong>的加速，在Falcon-40B和LLaMA2-70B等大型模型上尤为显著。</li>
+                    <li><strong>原因：</strong> 对于大模型，Hermes-base系统将大部分层的计算都卸载到了计算能力有限的NDP-DIMM上，成为瓶颈。而Hermes通过稀疏性，将80%的计算（热神经元）分配给高性能GPU，仅将20%的计算（冷神经元）留给NDP-DIMM，完美匹配了二者的能力。</li>
+                    <li><strong>NDP-DIMM的基本优势：</strong> 即使没有利用稀疏性，Hermes-base也比Accelerate平均快53.89倍，因为它大幅减少了PCIe上的数据传输。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            <!-- 图11占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-line mr-2"></i>技术细节：图11 - 不同批大小下的端到端性能
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 11: 不同批大小（1到16）下的端到端性能。N.P.表示当前推理系统不支持该模型。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig11.png" alt="论文图11: 多组柱状图，显示不同系统（Hermes, FlexGen, Deja Vu, Hermes-host, Hermes-base）在批大小从1增加到16时，OPT-66B和LLaMA2-70B模型的性能变化。Hermes在所有批大小下均保持领先。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>关键结果：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>批处理性能：</strong> Hermes在不同批大小下均表现稳定，相比FlexGen和Deja Vu，平均分别实现了<strong>148.98倍</strong>和<strong>75.24倍</strong>的加速。</li>
+                    <li><strong>与Hermes-host的差距：</strong> 随着批大小增加，Hermes相对于Hermes-host的优势更加明显（平均7.17倍）。因为GPU计算能力强，受批大小影响小，而CPU端冷神经元加载的动态开销受带宽限制，批大小增大时瓶颈更严重。</li>
+                    <li><strong>与Hermes-base的对比：</strong> 在批大小为2时，两者差距最小，因为此时NDP核心尚能应对计算负载，且批处理能分摊DRAM访问开销。在其他批大小下，Hermes的优势显著，尤其是在批大小为1时，稀疏性大幅减少了数据访问；批大小增大时，稀疏性使Hermes不受NDP-DIMM有限计算能力的约束。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">消融实验与性能分析</h3>
+            
+            <!-- 图13占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-sliders-h mr-2"></i>技术细节：图13 - 对提出的离线与在线调度策略的消融研究
+              </summary>
+              <div class="mt-6 space-y-6">
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 13: 对提出的离线与在线调度策略的消融研究。
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig13.png" alt="论文图13: 柱状图，对比不同调度策略组合下的MLP块推理延迟，包括Hermes-random（随机映射）、Hermes-partition（仅离线最优映射）、Hermes-adjustment（离线映射+在线热冷划分调整）、Hermes（完整系统）。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>关键结果：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>离线映射的有效性：</strong> 使用离线ILP求解器找到的最优神经元映射（Hermes-partition）比随机映射（Hermes-random）快<strong>1.63倍</strong>，成功识别出了频繁激活的热神经元。</li>
+                    <li><strong>在线调整的必要性：</strong> 在离线映射基础上增加在线热/冷划分调整（Hermes-adjustment），性能又提升了<strong>1.33倍</strong>，验证了动态调整对处理输入特定稀疏性的重要性。</li>
+                    <li><strong>负载均衡的贡献：</strong> 最终完整的Hermes系统（包含NDP-DIMM间负载均衡）比仅有在线调整的系统（Hermes-adjustment）进一步提升了<strong>1.29倍</strong>，证明了基于窗口的在线调度策略有效解决了多个NDP-DIMM间的计算瓶颈。</li>
+                    <li><strong>预测器组合的优势：</strong> 单独使用令牌间预测或层间预测的在线调整，仅能带来约1.1倍的性能提升，而两者结合才能充分发挥预测器潜力。</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            <!-- 性能对比总结 -->
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-300">
+              <h5 class="font-bold text-gray-800 mb-3">与高性能系统的对比</h5>
+              <p class="text-gray-700 mb-3">作者将Hermes与需要昂贵硬件的高性能服务系统<strong>TensorRT-LLM</strong>进行了对比。</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-white p-3 rounded shadow-sm">
+                  <strong class="text-blue-700 block">TensorRT-LLM</strong>
+                  <p>部署LLaMA2-70B (batch=16) 需要<strong>5个 NVIDIA A100-40GB GPUs</strong>，成本约<strong>$50,000</strong>。</p>
+                </div>
+                <div class="bg-white p-3 rounded shadow-sm">
+                  <strong class="text-green-700 block">Hermes</strong>
+                  <p>部署LLaMA2-70B仅需<strong>1个 NVIDIA RTX 4090 + NDP-DIMMs</strong>，成本约<strong>$2,500</strong>。</p>
+                </div>
+              </div>
+              <p class="text-gray-700 mt-3"><strong>性能效率：</strong> 在批大小=1时，Hermes的推理效率达到TensorRT-LLM的<strong>79.1%</strong>；在批大小=16时，仍保持<strong>24.4%</strong>的效率。这意味着Hermes以<strong>约5%的成本</strong>，实现了极具竞争力的性能。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 text-lg">总结</h4>
+            <p class="text-gray-700 mb-4">本文提出了<strong>Hermes</strong>，一个创新的、低成本的LLM推理系统。它通过利用商用NDP-DIMM来增强消费级GPU的内存容量和处理能力，成功地将<strong>数百亿参数规模的LLM部署到了经济型硬件上</strong>。</p>
+            <p class="text-gray-700 mb-4">其核心思想是充分利用LLM中固有的<strong>激活稀疏性</strong>（80/20规律），将参数划分为热神经元和冷神经元，并分别映射到计算能力强但存储有限的GPU，以及存储量大但计算能力有限的NDP-DIMM上，实现了异构计算资源的优势互补。</p>
+            <p class="text-gray-700">为了优化系统效率，作者还设计了<strong>轻量级的在线预测器</strong>（基于令牌相似性和层间相关性）和<strong>基于窗口的在线调度策略</strong>，分别解决了动态神经元划分和多个NDP-DIMM间负载均衡的挑战。</p>
+          </div>
+
+          <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-200">
+            <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center">
+              <i class="fas fa-lightbulb mr-2 text-yellow-600"></i>创新与贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-2 pl-2 text-gray-700">
+              <li><strong>系统创新：</strong> 首个将商用NDP-DIMM与消费级GPU协同用于高效LLM推理的系统设计。</li>
+              <li><strong>算法创新：</strong> 结合离线ILP优化与轻量级在线预测/调度的两级优化框架，有效应对了激活稀疏性的动态性。</li>
+              <li><strong>显著效益：</strong> 相比SOTA基于卸载的系统，实现了数量级的性能提升（最高数百倍加速），同时将LLaMA2-70B的部署成本从数万美元降低到约2500美元。</li>
+              <li><strong>可及性：</strong> 为研究者和开发者提供了在有限预算下本地部署和实验大型LLM的可能性。</li>
+            </ul>
+          </div>
+
+          <div class="bg-red-50 p-6 rounded-xl border border-red-200">
+            <h4 class="font-bold text-gray-800 mb-4 text-lg flex items-center">
+              <i class="fas fa-exclamation-circle mr-2 text-red-600"></i>不足之处与未来方向
+            </h4>
+            <ul class="list-disc list-inside space-y-2 pl-2 text-gray-700">
+              <li><strong>硬件依赖与生态：</strong> Hermes依赖于配备NDP单元的特定DIMM设计，这类产品目前在消费市场尚不普及，生态系统支持有限。</li>
+              <li><strong>稀疏性假设：</strong> 系统性能增益严重依赖于LLM中存在的显著激活稀疏性。对于稀疏性不高的模型或任务，性能优势可能会减弱。</li>
+              <li><strong>预填充阶段瓶颈：</strong> 如图12所示，在优化了令牌生成阶段后，预填充阶段（prompting）成为了新的瓶颈，占总开销的~33%。未来可以针对此阶段进行进一步优化。</li>
+              <li><strong>评估范围：</strong> 论文主要对比了基于卸载的基线系统。与更广泛的其他低成本推理方案（如模型压缩、量化）的横向对比可以更全面地展示其优势与适用场景。</li>
+              <li><strong>实际部署挑战：</strong> 论文使用模拟器进行评估。实际部署中，NDP-DIMM与GPU之间的协同编程模型、数据一致性、错误处理等实际问题需要进一步探索。</li>
+            </ul>
+          </div>
+
+          <div class="bg-gradient-to-r from-blue-100 to-purple-100 p-6 rounded-xl border border-blue-300 text-center">
+            <h4 class="font-bold text-gray-800 mb-2 text-xl">核心启示</h4>
+            <p class="text-gray-700 text-lg">Hermes的成功在于它<strong>敏锐地观察到了LLM计算的内在特征（激活稀疏性）</strong>，并以此为指导，<strong>将存储扩展问题创造性地转化为存储与计算协同扩展的问题</strong>，通过精巧的软硬件协同设计，用低成本硬件实现了以往需要昂贵服务器才能达到的性能。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+
+      // 自动展开当前活跃章节的技术细节（简化版，实际可根据需要实现）
+      // 这里仅作为示例，提供一个手动展开所有细节的按钮
+      const expandAllBtn = document.createElement('button');
+      expandAllBtn.innerHTML = '<i class="fas fa-expand-alt mr-2"></i>展开所有技术细节';
+      expandAllBtn.className = 'fixed bottom-20 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-40 transition-colors';
+      expandAllBtn.onclick = () => {
+        document.querySelectorAll('details.technical-details').forEach(d => d.open = true);
+        expandAllBtn.style.display = 'none';
+        collapseAllBtn.style.display = 'block';
+      };
+      document.body.appendChild(expandAllBtn);
+
+      const collapseAllBtn = document.createElement('button');
+      collapseAllBtn.innerHTML = '<i class="fas fa-compress-alt mr-2"></i>收起所有技术细节';
+      collapseAllBtn.className = 'fixed bottom-20 left-4 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-40 transition-colors';
+      collapseAllBtn.style.display = 'none';
+      collapseAllBtn.onclick = () => {
+        document.querySelectorAll('details.technical-details').forEach(d => d.open = false);
+        collapseAllBtn.style.display = 'none';
+        expandAllBtn.style.display = 'block';
+      };
+      document.body.appendChild(collapseAllBtn);
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

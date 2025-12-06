@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Applications of Bloom Filters: A Survey</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .survey-analysis {
+        margin: 1rem 0;
+      }
+      .pdf-figure-container {
+        padding: 1rem;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-purple-600 hover:bg-purple-50;
+    }
+    .nav-item.active {
+      @apply text-purple-600 bg-purple-100;
+    }
+    /* 图像交互样式 */
+    .pdf-figure-container img {
+      transition: transform 0.3s ease;
+    }
+    .pdf-figure-container img:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">引言</a>
+        <a href="#mathematical-preliminaries" class="nav-item whitespace-nowrap">数学基础</a>
+        <a href="#historical-applications" class="nav-item whitespace-nowrap">历史应用</a>
+        <a href="#network-applications" class="nav-item whitespace-nowrap">网络应用</a>
+        <a href="#p2p-overlay-networks" class="nav-item whitespace-nowrap">P2P/覆盖网络</a>
+        <a href="#resource-routing" class="nav-item whitespace-nowrap">资源路由</a>
+        <a href="#packet-routing" class="nav-item whitespace-nowrap">数据包路由</a>
+        <a href="#measurement-infrastructure" class="nav-item whitespace-nowrap">测量基础设施</a>
+        <a href="#recent-work" class="nav-item whitespace-nowrap">近期工作</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Network Applications of Bloom Filters: A Survey
+        </h1>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Andrei Broder, Michael Mitzenmacher</div>
+                <div class="text-sm text-gray-600 mt-1">IBM Research Division, Harvard University</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">发表信息</strong>
+                <div>Internet Mathematics, Vol. 1, No. 4: 485-509</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">综述范围</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Bloom过滤器</span>
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">网络应用</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">数据结构</span>
+                  <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">概率算法</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 研究领域概览 -->
+      <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-8">
+        <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+          <i class="fas fa-map mr-2"></i>研究领域概览
+        </h4>
+        <ul class="list-disc list-inside space-y-1 text-gray-700">
+          <li>领域发展时间线：从1970年代数据库应用到现代网络应用</li>
+          <li>核心技术分支：标准Bloom过滤器、计数Bloom过滤器、压缩Bloom过滤器</li>
+          <li>关键里程碑：Bloom过滤器原理、网络应用爆发、变体算法发展</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-purple-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Bloom过滤器是一种简单的空间高效随机数据结构，用于表示集合以支持成员查询。Bloom过滤器允许假阳性，但当错误概率被控制得足够低时，空间节省通常超过这一缺点。
+          </p>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            自1970年代以来，Bloom过滤器已被用于数据库应用，但直到近年来它们才在网络文献中流行起来。本文旨在调查Bloom过滤器在各种网络问题中的使用和修改方式，旨在为理解它们提供一个统一的数学和实践框架，并促进它们在未来应用中的使用。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            本文首先描述Bloom过滤器背后的数学原理、历史和一些重要变体，然后考虑Bloom过滤器在网络相关应用中的四种类型：协作覆盖和对等网络、资源路由、数据包路由和测量。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 引言 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-purple-500"></i>
+          引言
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Bloom过滤器原理</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            <strong>Bloom过滤器原则</strong>：<em>只要使用列表或集合，并且空间有限，如果假阳性的影响可以减轻，考虑使用Bloom过滤器。</em>
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            统一这些不同应用的主题是Bloom过滤器提供了一种简洁的方式来表示项目集合或列表。在网络中有许多地方可能希望保留或发送列表，但完整列表需要太多空间。Bloom过滤器提供了一种可以显著减少空间的表示，代价是引入假阳性。如果假阳性不会引起显著问题，Bloom过滤器可以提供改进的性能。
+          </p>
+        </div>
+        
+        <!-- 应用分类概览 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 my-6 md:my-8">
+          <div class="survey-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-network-wired mr-2"></i>协作覆盖网络
+            </h4>
+            <p class="text-sm text-gray-700">用于总结内容以帮助覆盖和对等网络中的协作</p>
+          </div>
+          <div class="survey-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-route mr-2"></i>资源路由
+            </h4>
+            <p class="text-sm text-gray-700">允许定位资源的概率算法</p>
+          </div>
+          <div class="survey-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-server mr-2"></i>数据包路由
+            </h4>
+            <p class="text-sm text-gray-700">提供加速或简化数据包路由协议的方法</p>
+          </div>
+          <div class="survey-card bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <h4 class="font-bold text-orange-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-chart-bar mr-2"></i>测量
+            </h4>
+            <p class="text-sm text-gray-700">为用于在路由器或其他网络设备中创建数据摘要的测量基础设施提供有用工具</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 数学基础 -->
+      <section id="mathematical-preliminaries" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-purple-500"></i>
+          数学基础
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">标准Bloom过滤器</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            表示n个元素集合S = {x₁, x₂, ..., xₙ}的Bloom过滤器由m位数组描述，初始全部设置为0。Bloom过滤器使用k个独立哈希函数h₁, ..., hₖ，范围是{1, ..., m}。
+          </p>
+          
+          <!-- 图1占位符 -->
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 1: Bloom过滤器示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig1.png" 
+                   alt="论文图1: Bloom过滤器示例" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sitemap text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 1: Bloom过滤器示例</p>
+                  <p class="text-sm text-gray-500 text-center">过滤器开始是一个全0的数组。集合中的每个项目xᵢ被哈希k次，每次哈希产生一个位位置；这些位被设置为1。要检查元素y是否在集合中，将其哈希k次并检查相应的位。元素y₁不可能在集合中，因为在其中一个位找到了0。元素y₂要么在集合中，要么过滤器产生了假阳性。</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig1.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 图像技术描述 -->
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示Bloom过滤器的基本工作原理：初始化、插入元素和查询元素的过程。</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>初始状态所有位为0</li>
+                  <li>插入元素时设置多个哈希位置为1</li>
+                  <li>查询时检查所有哈希位置是否都为1</li>
+                  <li>假阳性可能发生但假阴性不会</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 原图图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">An example of a Bloom filter. The filter begins as an array of all 0s. Each item in the set xᵢ is hashed k times, with each hash yielding a bit location; these bits are set to 1. To check if an element y is in the set, hash it k times and check the corresponding bits. The element y₁ cannot be in the set, since a 0 is found at one of the bits. The element y₂ is either in the set or the filter has yielded a false positive.</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-gray-800 mb-3">假阳性概率分析</h4>
+              <p class="text-sm text-gray-700 mb-2">插入所有元素后，特定位仍为0的概率：</p>
+              <p class="text-sm font-mono bg-white p-2 rounded mb-3">p′ = (1 - 1/m)<sup>kn</sup> ≈ e<sup>-kn/m</sup> = p</p>
+              <p class="text-sm text-gray-700 mb-2">假阳性率：</p>
+              <p class="text-sm font-mono bg-white p-2 rounded">f = (1 - p)<sup>k</sup> = (1 - e<sup>-kn/m</sup>)<sup>k</sup></p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-gray-800 mb-3">优化参数</h4>
+              <p class="text-sm text-gray-700 mb-2">最优哈希函数数量：</p>
+              <p class="text-sm font-mono bg-white p-2 rounded mb-3">k = ln 2 · (m/n)</p>
+              <p class="text-sm text-gray-700 mb-2">此时假阳性率：</p>
+              <p class="text-sm font-mono bg-white p-2 rounded">f = (1/2)<sup>k</sup> ≈ (0.6185)<sup>m/n</sup></p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Bloom过滤器变体</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-calculator mr-2"></i>计数Bloom过滤器
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">每个条目不是单个位而是小计数器，支持插入和删除操作。</p>
+              <div class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block">支持动态集合</div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-compress-alt mr-2"></i>压缩Bloom过滤器
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">优化传输大小而非内存大小，使用更大但更稀疏的过滤器。</p>
+              <div class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded inline-block">网络传输优化</div>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-project-diagram mr-2"></i>其他变体
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">包括光谱Bloom过滤器、计数最小草图、Bloomier过滤器等。</p>
+              <div class="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded inline-block">扩展功能</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 表1占位符 -->
+        <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h5 class="font-semibold text-gray-700">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              论文表 1: 压缩Bloom过滤器性能比较
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原表</span>
+          </div>
+          
+          <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+            <img src="./images/table1.png" 
+                 alt="论文表1: 压缩Bloom过滤器性能比较" 
+                 class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            
+            <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+              <div class="flex flex-col items-center justify-center">
+                <i class="fas fa-table text-3xl text-gray-400 mb-3"></i>
+                <p class="text-gray-600 font-medium mb-2">表 1: 压缩Bloom过滤器性能比较</p>
+                <p class="text-sm text-gray-500 text-center">使用最多每个元素十六位压缩后，更大但更稀疏的Bloom过滤器可以减少假阳性概率。</p>
+                <div class="mt-4 w-full max-w-md">
+                  <table class="min-w-full bg-white border border-gray-300 text-sm">
+                    <thead>
+                      <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-2 py-1">数组位/元素</th>
+                        <th class="border border-gray-300 px-2 py-1">传输位/元素</th>
+                        <th class="border border-gray-300 px-2 py-1">哈希函数</th>
+                        <th class="border border-gray-300 px-2 py-1">假阳性概率</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="border border-gray-300 px-2 py-1">16</td>
+                        <td class="border border-gray-300 px-2 py-1">16</td>
+                        <td class="border border-gray-300 px-2 py-1">11</td>
+                        <td class="border border-gray-300 px-2 py-1">0.000459</td>
+                      </tr>
+                      <tr>
+                        <td class="border border-gray-300 px-2 py-1">28</td>
+                        <td class="border border-gray-300 px-2 py-1">15.846</td>
+                        <td class="border border-gray-300 px-2 py-1">4</td>
+                        <td class="border border-gray-300 px-2 py-1">0.000314</td>
+                      </tr>
+                      <tr>
+                        <td class="border border-gray-300 px-2 py-1">48</td>
+                        <td class="border border-gray-300 px-2 py-1">15.829</td>
+                        <td class="border border-gray-300 px-2 py-1">3</td>
+                        <td class="border border-gray-300 px-2 py-1">0.000222</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-3 text-xs text-gray-400">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  图像路径: ./images/table1.png
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图像技术描述 -->
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-3 rounded border">
+              <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-list-alt mr-2 text-blue-500"></i>表格内容
+              </h6>
+              <p class="text-sm text-gray-600">比较不同配置下压缩Bloom过滤器的性能：数组位/元素、传输位/元素、哈希函数数量和假阳性概率。</p>
+            </div>
+            <div class="bg-blue-50 p-3 rounded border">
+              <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+              </h6>
+              <ul class="text-sm text-gray-600 list-disc list-inside">
+                <li>使用更大但更稀疏的Bloom过滤器可以减少传输大小</li>
+                <li>压缩后仍能保持较低的假阳性概率</li>
+                <li>在相同传输大小下，稀疏过滤器有更好的性能</li>
+                <li>展示了空间与精度之间的权衡</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 历史应用 -->
+      <section id="historical-applications" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-history mr-3 text-purple-500"></i>
+          历史应用
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-book mr-2 text-blue-500"></i>词典应用
+            </h3>
+            <ul class="space-y-3 text-gray-700">
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>连字程序</strong>：Bloom最初将Bloom过滤器与连字程序应用结合使用</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>UNIX拼写检查器</strong>：存储字典的Bloom过滤器表示而非完整字典</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>密码安全</strong>：简洁存储不合适密码字典用于安全目的</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-database mr-2 text-blue-500"></i>数据库应用
+            </h3>
+            <ul class="space-y-3 text-gray-700">
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>半连接操作</strong>：加速分布式数据库中的查询操作</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>差异文件</strong>：跟踪数据库在一天中发生的更改</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span><strong>连接大小估计</strong>：使用Bloom过滤器估计连接操作的大小</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 网络应用 -->
+      <section id="network-applications" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-rocket mr-3 text-purple-500"></i>
+          网络应用
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">分布式缓存：Summary Cache</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Fan等人描述了Summary Cache，它使用Bloom过滤器进行Web缓存共享。在他们的设置中，代理以下列方式协作：在缓存未命中时，代理尝试确定另一个代理缓存是否持有所需的Web页面；如果是，则向该代理发出请求，而不是尝试从Web获取该页面。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            为了使这种方案有效，代理必须知道其他代理缓存的内容。在Summary Cache中，为了减少消息流量，代理不传输与其缓存确切内容对应的URL列表，而是定期广播表示其缓存内容的Bloom过滤器。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg mt-4">
+            <h4 class="font-semibold text-blue-700 mb-2">技术实现细节</h4>
+            <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+              <li>使用计数Bloom过滤器跟踪自己的缓存内容</li>
+              <li>广播对应的标准0-1 Bloom过滤器给其他代理</li>
+              <li>使用增量压缩和压缩Bloom过滤器进一步减少传输位数</li>
+              <li>在开源Web代理缓存Squid中实现，称为缓存摘要</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- P2P/覆盖网络 -->
+      <section id="p2p-overlay-networks" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-share-alt mr-3 text-purple-500"></i>
+          P2P/覆盖网络应用
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">中等规模P2P网络</h3>
+            <p class="text-gray-700 leading-relaxed mb-4">
+              对于数百个节点的中等规模和更健壮的对等系统，Bloom过滤器可能为在对等系统上定位对象提供有吸引力的分布式哈希表替代方案。
+            </p>
+            <p class="text-gray-700 leading-relaxed">
+              虽然在对等系统中保留每个其他节点存储的对象列表可能不可行，但保留每个其他节点的Bloom过滤器可能是可行的。例如，不是为每个对象使用64位标识符，Bloom过滤器可以为每个对象使用8或16位。
+            </p>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">近似集合协调</h3>
+            <p class="text-gray-700 leading-relaxed mb-4">
+              Byers等人展示了Bloom过滤器在对等应用中可能有用的另一个领域。他们建议对等方可能希望解决以下类型的<em>近似集合协调</em>问题。
+            </p>
+            <p class="text-gray-700 leading-relaxed">
+              假设对等方A有一组项目S<sub>A</sub>，对等方B有一组项目S<sub>B</sub>。对等方B希望向对等方A发送一个简洁的数据结构，以便A可以开始向B发送B没有的项目，即S<sub>A</sub> - S<sub>B</sub>中的项目。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">关键字搜索的集合交集</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Reynolds和Vahdat以类似于数据库连接的方式使用Bloom过滤器，除了他们的目标是找到集合交集而不是集合差集。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            对等方B可以向A发送表示S<sub>B</sub>的Bloom过滤器；然后对等方A发送根据过滤器似乎出现在S<sub>B</sub>中的S<sub>A</sub>元素。假阳性产生实际上不在S<sub>B</sub>中的S<sub>A</sub>元素，但如果需要，B可以然后确定这些元素以精确找到S<sub>A</sub> ∩ S<sub>B</sub>。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 资源路由 -->
+      <section id="resource-routing" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-route mr-3 text-purple-500"></i>
+          资源路由应用
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">基本路由协议</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Czerwinski等人描述了资源发现服务架构的一部分的一般框架。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            假设我们有一个根树形式的网络，节点持有资源。从树内部开始的资源请求朝向根节点。每个节点保留它持有或通过任何其子节点可达的统一资源列表，以及它和每个子节点的单独资源列表。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            当节点收到资源请求时，它检查其统一列表以确保它有路由该请求到资源的方式。如果有，它然后检查单独列表以找到它是否持有资源或如何通过适当的子节点将请求路由到正确的节点；否则，它将请求进一步向上传递到根节点。
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">P2P网络上的资源路由</h3>
+            <p class="text-gray-700 leading-relaxed mb-4">
+              Rhea和Kubiatowicz利用第6.节基本协议中的思想为对等定位机制设计概率路由算法，与OceanStore项目结合。
+            </p>
+            <p class="text-gray-700 leading-relaxed">
+              目标是确保当请求的文件在系统中有附近的文件副本时，找到它并且请求沿着最短路径高效路由。
+            </p>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">地理路由</h3>
+            <p class="text-gray-700 leading-relaxed mb-4">
+              Hsiao建议将这种类型的路由用于移动计算机的地理路由系统。
+            </p>
+            <p class="text-gray-700 leading-relaxed">
+              为方便起见，假设地理空间是一个正方形区域，递归细分为较小的正方形，每个是前一个区域面积的四分之一。也就是说，每个父正方形被分成四个子正方形，给出自然的隐式树层次结构。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 数据包路由 -->
+      <section id="packet-routing" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-server mr-3 text-purple-500"></i>
+          数据包路由应用
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-sync-alt mr-2 text-blue-500"></i>Icarus中的环路检测
+            </h4>
+            <p class="text-sm text-gray-700">使用小型Bloom过滤器以避免单播和多播协议中的转发环路。</p>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2 text-green-500"></i>随机公平蓝队列管理
+            </h4>
+            <p class="text-sm text-gray-700">使用计数Bloom过滤器检测过于激进或无响应的流。</p>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-broadcast-tower mr-2 text-purple-500"></i>多播
+            </h4>
+            <p class="text-sm text-gray-700">使用Bloom过滤器进行多播地址到接口列表的关联。</p>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术实现细节</h3>
+          
+          <div class="space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-2">环路检测机制</h4>
+              <p class="text-sm text-gray-700">每个数据包在头部携带一个小型Bloom过滤器，用于跟踪访问过的节点集。每个节点有一个对应的掩码，可以在传递时OR到Bloom过滤器中；如果过滤器没有变化，可能存在环路。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-2">队列管理算法</h4>
+              <p class="text-sm text-gray-700">每个数据包到达基于源-目的地对的哈希递增计数Bloom过滤器的k个计数器。每个Bloom过滤器条目有一个关联值pᵢ，用于表示与该计数器关联的标记概率。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-purple-700 mb-2">多播转发</h4>
+              <p class="text-sm text-gray-700">不是为每个地址保留接口列表，每个接口可以有一个地址的Bloom过滤器。当具有多播地址的数据包到达一个接口时，检查所有其他接口的Bloom过滤器以查看具有该地址的数据包是否应该沿着该接口转发。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测量基础设施 -->
+      <section id="measurement-infrastructure" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-bar mr-3 text-purple-500"></i>
+          测量基础设施应用
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">记录重流</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Estan和Varghese提出了Bloom过滤器在路由器内部流量测量问题中的优秀应用，让人想起随机公平蓝算法中使用的技术。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            目标是轻松确定路由器中的重流。每个进入的数据包被哈希k次到Bloom过滤器中。与Bloom过滤器中的每个位置关联的是一个计数器，记录通过该位置与路由器关联的已通过数据包字节数。计数器按数据包中的字节数递增。
+          </p>
+          
+          <!-- 图2占位符 -->
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-4">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 2: 保守更新示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig2.png" 
+                   alt="论文图2: 保守更新示例" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-chart-bar text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 2: 保守更新示例</p>
+                  <p class="text-sm text-gray-500 text-center">此流最多只能负责2个先前的字节，因此当它引入4个新字节时，计数器应仅增加到6。</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig2.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 图像技术描述 -->
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示保守更新策略如何减少多个轻流哈希到同一位置时计数器值超过阈值的概率。</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>保守更新只将计数器的值更改为反映与该流关联的最可能字节数</li>
+                  <li>减少假阳性率，特别是对于真实数据</li>
+                  <li>当数据包到达时更新计数器，流的先前字节数最多是其k个计数器的最小值</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 原图图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">An example of conservative update. This flow can only have been responsible for 2 previous bytes, so when it introduces 4 new bytes, counters should increase only to 6.</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">IP追踪</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Snoeren等人建议这种方法，并添加使用Bloom过滤器以减少需要存储的信息量，以总结看到的数据包集，作为其源路径隔离引擎(SPIE)的一部分。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            此设置中的假阳性意味着路由器错误地将数据包识别为已看到。当尝试追溯数据包的反向路径时，假阳性将导致分支，给出多个可能路径。低假阳性率将保持分支小，因此可能路径的数量也小。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 近期工作 -->
+      <section id="recent-work" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-purple-500"></i>
+          近期工作
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            自本调查的初始版本以来，Bloom过滤器已经有显著额外工作。我们简要强调一些相关的理论工作，我们预计这些工作将在未来的网络应用中有用。
+          </p>
+          
+          <div class="space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-2">光谱Bloom过滤器</h4>
+              <p class="text-sm text-gray-700">Cohen和Matias引入光谱Bloom过滤器，它扩展基本Bloom过滤器构造以便它可以处理多集。他们工作的一个创新是使用第二个过滤器处理在过滤器中有唯一最小计数器的元素，以提高结果估计的准确性。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-2">计数最小草图</h4>
+              <p class="text-sm text-gray-700">Cormode和Muthukrishnan设计计数最小草图，Bloom过滤器上的变体，设计用于处理数据流上的几个问题，再次类似于Estan和Varghese的工作。他们能够提供理论保证，同时仅使用成对独立哈希函数；这是一个重大进步，因为成对独立哈希函数通常易于实现并且在实践中非常高效。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-purple-700 mb-2">空间码Bloom过滤器</h4>
+              <p class="text-sm text-gray-700">另一篇处理类似问题的论文引入空间码Bloom过滤器，它利用多个Bloom过滤器和最大似然估计以近似多集。推动此变体的目标是获得网络路由器上所有流的准确数据包计数估计，而不仅仅是重流。</p>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-orange-700 mb-2">Bloomier过滤器</h4>
+              <p class="text-sm text-gray-700">Chazelle等人引入他们称为Bloomier过滤器的内容，它将Bloom过滤器扩展到处理集合S的每个元素与函数值关联的情况（来自离散和有限的值集）；宇宙的所有其他元素的函数值假定未定义。Bloomier过滤器为S中的任何元素提供适当的函数值，并为不在S中的任何元素返回对应于未定义的值，除了对于不在S中的元素，有一些假阳性的概率，Bloomier过滤器可能返回不正确的函数值。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-purple-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            Bloom过滤器是一种简单的空间高效集合或列表表示，处理成员查询。正如我们在本调查中看到的，有许多网络问题需要这样的数据结构。特别是当空间是一个问题时，Bloom过滤器可能是保留显式列表的优秀替代方案。
+          </p>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            使用Bloom过滤器的缺点是它允许假阳性。必须为每个特定应用仔细考虑它们的影响，以确定假阳性的影响是否可接受。这使我们回到：
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-4">
+            <p class="text-gray-700 font-medium">
+              <strong>Bloom过滤器原则</strong>：<em>只要使用列表或集合，并且空间有限，如果假阳性的影响可以减轻，考虑使用Bloom过滤器。</em>
+            </p>
+          </div>
+          
+          <p class="text-gray-700 leading-relaxed">
+            似乎有足够的空间为特定应用开发Bloom过滤器的变体或扩展。例如，我们已经看到计数Bloom过滤器允许多集或通过插入和删除随时间变化的动态集的近似表示。Bloom过滤器现在开始受到算法社区的显著关注，虽然已经有了一些最近的结果，但很可能还有进一步的改进可以发现。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 挑战与不足 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-purple-500"></i>
+          挑战与不足
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术局限性</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-times-circle mr-2"></i>假阳性问题
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+                <li>假阳性是Bloom过滤器的固有特性</li>
+                <li>在某些应用中假阳性可能导致性能下降或错误</li>
+                <li>需要仔细权衡空间节省与假阳性率</li>
+              </ul>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>动态操作限制
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+                <li>标准Bloom过滤器不支持删除操作</li>
+                <li>计数Bloom过滤器增加空间开销</li>
+                <li>计数器溢出是潜在风险</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>未来研究方向
+            </h4>
+            <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+              <li>开发更高效的变体以减少空间开销</li>
+              <li>探索在更大规模网络应用中的使用</li>
+              <li>研究与其他数据结构的结合使用</li>
+              <li>优化哈希函数选择和性能</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 图像交互增强
+      const images = document.querySelectorAll('.pdf-figure-container img');
+      images.forEach(img => {
+        img.addEventListener('click', function() {
+          this.classList.toggle('max-w-full');
+          this.classList.toggle('max-w-none');
+          this.classList.toggle('cursor-zoom-out');
+        });
+        
+        img.style.cursor = 'zoom-in';
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

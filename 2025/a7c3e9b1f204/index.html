@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On Scalable Integrity Checking for Secure Cloud Disks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          On Scalable Integrity Checking for Secure Cloud Disks
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Quinn Burke, Ryan Sheatsley, Rachel King, Owen Hines, Michael Swift, and Patrick McDaniel</div>
+                <div class="text-sm text-gray-600 mt-1">University of Wisconsin–Madison</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST '25)</div>
+                <div class="text-sm text-gray-600">February 25–27, 2025 • Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">ISBN 978-1-939133-45-8</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">云存储安全</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">完整性检查</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Merkle哈希树</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">动态优化</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>首次系统量化了云块存储中哈希树的性能开销，识别CPU成本是主要瓶颈</li>
+          <li>将最优哈希树问题建模为最优前缀树问题，建立了理论基础</li>
+          <li>提出了动态Merkle树(DMT)，通过自适应调整树结构减少频繁访问数据的哈希计算开销</li>
+          <li>在真实云环境中验证了DMT的性能优势，相比现有技术提升高达2.2倍</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed">
+            Merkle哈希树是保护存储数据完整性和新鲜度的标准方法。然而，哈希树在I/O关键路径上引入了额外的计算和I/O成本，先前的工作并未完全表征这些成本。本文在现实环境中量化了存储级哈希树的性能开销，然后基于对开销根本原因的分析，设计了一种优化的树结构——<strong>动态Merkle树(DMT)</strong>。DMT利用工作负载模式，相比现有技术实现了高达<strong>2.2倍的吞吐量和延迟改进</strong>。这种新颖方法为实现大规模存储完整性保证提供了一个有前景的新方向。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-cloud mr-2"></i>云块存储
+            </h4>
+            <p class="text-gray-700 text-sm">
+              云块存储是现代公有云基础设施的支柱。在标准IaaS部署中，应用程序在客户虚拟机内运行，并读写连接到VM的快速本地NVMe磁盘。应用程序可以是面向最终用户的(如Web服务器)，也可以是网络存储系统的最后一跳(如其他云托管应用程序的文件服务器)。
+            </p>
+          </div>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-shield-alt mr-2"></i>Merkle哈希树
+            </h4>
+            <p class="text-gray-700 text-sm">
+              Merkle哈希树是保护任意数据集完整性和新鲜度的最先进方法。它们通常实现为平衡二叉树，每个节点包含哈希值。叶子节点包含数据块的哈希，内部节点包含其两个子节点哈希串联后的哈希。根哈希存储在安全位置，验证存储设备的当前内容。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 图2: Merkle哈希树 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - Merkle哈希树结构
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: Merkle哈希树结构
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: Merkle哈希树保护从存储设备读取/写入数据的完整性和新鲜度" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Merkle哈希树保护从存储设备读取/写入数据的完整性和新鲜度
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>树结构:</strong> 通常是平衡二叉树，每个节点包含哈希值</li>
+                <li><strong>叶子节点:</strong> 包含数据块的哈希(MAC)和加密IV</li>
+                <li><strong>内部节点:</strong> 包含其两个子节点哈希串联后的哈希</li>
+                <li><strong>根哈希:</strong> 存储在安全位置，验证存储设备的当前内容</li>
+                <li><strong>验证操作:</strong> 读取块时，必须对照根哈希进行验证</li>
+                <li><strong>更新操作:</strong> 写入块时，必须计算新哈希并更新树</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">验证流程:</strong>
+                  <p>1. 从磁盘获取(加密的)块数据、MAC和加密IV</p>
+                  <p>2. 通过重新哈希数据并比较来检查检索到的MAC是否一致</p>
+                  <p>3. 获取真实性证明(从访问的叶子到根路径上的兄弟哈希集合)</p>
+                  <p>4. 使用兄弟哈希沿认证路径迭代计算父哈希</p>
+                  <p>5. 将计算的根哈希与已知根哈希比较</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">更新流程:</strong>
+                  <p>写入块时，计算新哈希并更新树中所有祖先节点</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+          <div class="flex items-start">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-bold text-yellow-700 mb-2">安全模型</h4>
+              <p class="text-gray-700 text-sm">
+                论文假设所有VM内容(代码和数据)是可信的，存储设备是不可信的。VM内存内容可以通过基于硬件的隔离原语(如AMD SEV-SNP)进行保护。威胁模型考虑具有特权的攻击者，他们可以访问、损坏、交换、丢弃、记录、注入或重放存储主干上的任何数据。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+          <div class="flex items-start">
+            <i class="fas fa-bolt text-red-600 mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-bold text-red-700 mb-2">可扩展性问题</h4>
+              <p class="text-gray-700 text-sm">
+                哈希树在I/O关键路径上引入了额外的计算(哈希)和I/O(元数据获取)成本，可能严重降低性能。例如，1TB磁盘包含约2.68亿个4KB块。典型的平衡二叉哈希树高度为28，每次读写需要计算(至少)28个哈希。获取元数据和验证/更新哈希的总成本可能超过几百微秒，远超过在高性能存储设备上执行数据访问的基线延迟(可能小于60微秒)。
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 图3: 吞吐量随容量变化 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-line mr-2"></i>技术细节：图3 - 吞吐量随容量变化
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 吞吐量随容量变化
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 吞吐量随容量变化" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 此图显示在示例设置和工作负载下，吞吐量如何随容量减少
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>性能下降:</strong> 吞吐量随容量增加而减少</li>
+                <li><strong>树高度影响:</strong> 树大小(高度)随容量对数增加，反映在对数增加的减速中</li>
+                <li><strong>具体数据:</strong> 在16MB容量下，哈希树相比加密/无完整性基线造成近60%的吞吐量损失。在4TB容量下，吞吐量损失增加到75%</li>
+                <li><strong>工作负载无关:</strong> 由于树结构，始终观察到相同的开销(所有访问都需要计算相同数量的哈希)</li>
+              </ul>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">测试配置:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>工作负载: Zipf(2.5)</li>
+                    <li>读取比例: 1%</li>
+                    <li>I/O大小: 32 KB</li>
+                    <li>缓存大小: 10%</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">关键结果:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>16MB: 60%吞吐量损失</li>
+                    <li>4TB: 75%吞吐量损失</li>
+                    <li>根本原因: 树高度增加导致哈希计算成本增加</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 图4: CPU与I/O时间 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microchip mr-2"></i>技术细节：图4 - CPU与I/O时间分析
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 4: CPU与I/O时间分析
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig4.png" alt="论文图4: 设备驱动程序写入例程中的CPU与I/O时间" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 设备驱动程序写入例程中的CPU与I/O时间。实验参数同上。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>根本原因:</strong> 哈希计算(CPU成本)是主要性能瓶颈</li>
+                <li><strong>数据I/O:</strong> 对于32KB I/O，将数据推送到磁盘的时间约为60μs</li>
+                <li><strong>元数据I/O:</strong> 由于哈希缓存非常高效，获取/写入哈希到磁盘的时间可忽略</li>
+                <li><strong>哈希树管理:</strong> 大部分时间用于管理哈希树</li>
+                <li><strong>具体计算:</strong> 1GB磁盘有262,144个4KB块，高度为18，需要每层一个SHA256计算</li>
+              </ul>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">哈希计算成本:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>计算64B数据的SHA256哈希约需490ns</li>
+                    <li>使用AES GCM加密和生成4KB块的MAC约需2μs</li>
+                    <li>1GB容量下，管理哈希树约花费150μs</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">I/O操作分析:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>32KB写入I/O需要8个哈希树更新顺序执行</li>
+                    <li>每个更新花费18.75μs</li>
+                    <li>实际哈希树更新花费16.75μs</li>
+                    <li>每层树工作花费0.93μs</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+              <i class="fas fa-balance-scale mr-2"></i>高扇出树的局限性
+            </h4>
+            <p class="text-gray-700 text-sm">
+              先前优化内存哈希树的工作主要集中于高扇出树(如64叉树)作为消除开销的解决方案。直觉是通过增加树扇出来减少树高度，从而减少每次读写必须计算的哈希数量。然而，论文证明高扇出树实际上是次优的设计选择。虽然树高度减少，但增加扇出导致高扇出树由于哈希更多内容而产生最高的预期哈希成本，最终导致较低的性能。
+            </p>
+          </div>
+          
+          <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+            <h4 class="font-bold text-indigo-700 mb-3 flex items-center">
+              <i class="fas fa-tree mr-2"></i>最优树结构探索
+            </h4>
+            <p class="text-gray-700 text-sm">
+              论文提出基本问题：是否存在最优树结构？通过将最优哈希树问题简化为在无损数据压缩背景下寻找最优前缀树的问题，作者展示了在已知工作负载配置文件下，可以产生实现最优吞吐量的哈希树。这为动态Merkle树(DMT)的设计提供了理论基础。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-blue-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-lightbulb mr-2"></i>动态Merkle树(DMT)设计理念
+          </h4>
+          <p class="text-gray-700">
+            动态Merkle树(DMT)是一种新颖的动态非平衡哈希树设计，基于常用于垃圾收集和IP路由的splay树。DMT在运行时自我调整，以减少频繁访问数据的哈希成本。通过利用现实工作负载中存在的偏斜访问模式，DMT能够近似最优树性能，而无需先验知识。
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-sitemap mr-2"></i>自适应树结构
+            </h4>
+            <p class="text-sm text-gray-700">DMT不是静态平衡树，而是根据访问模式动态调整结构，将频繁访问的节点放置在更靠近根的位置。</p>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-bolt mr-2"></i>随机化Splaying
+            </h4>
+            <p class="text-sm text-gray-700">通过随机化splaying操作，DMT在重组成本和性能收益之间取得平衡，只在部分访问时执行splaying。</p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-thermometer-half mr-2"></i>热度分析
+            </h4>
+            <p class="text-sm text-gray-700">DMT为每个树节点附加整数热度计数器，跟踪节点的相对访问频率，用于确定splaying距离。</p>
+          </div>
+        </div>
+        
+        <!-- 图10: Splay树操作 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-code-branch mr-2"></i>技术细节：图10 - Splay树操作
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 10: Splay树操作
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig10.png" alt="论文图10: Splay树是一种二叉搜索树，通过将访问的叶子更靠近根来捕获时间局部性" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Splay树是一种二叉搜索树，通过将访问的叶子更靠近根来捕获时间局部性。我们使用基于splay的哈希树设计来类似地捕获云块存储工作负载中的时间局部性。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>Splay树:</strong> 一种二叉搜索树，通过一系列旋转将访问的叶子带到根</li>
+                <li><strong>时间局部性:</strong> 通过将频繁访问的节点保持在更靠近根的位置来捕获时间局部性</li>
+                <li><strong>三种情况:</strong> 当splaying节点时需要考虑三种情况：zig、zig-zig和zig-zag</li>
+                <li><strong>Zig情况:</strong> 节点的父节点是根，将节点旋转到根</li>
+                <li><strong>Zig-zig情况:</strong> 节点的父节点不是根，节点和节点的父节点都是左子节点或右子节点</li>
+                <li><strong>Zig-zag情况:</strong> 节点的父节点不是根，节点和节点的父节点是相反侧的子节点</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">参数定义:</strong>
+                  <p>DMT定义了三个关键参数：splay窗口标志w、splay概率p和splay距离d</p>
+                  <ul class="list-disc list-inside mt-1 ml-4">
+                    <li><strong>Splay窗口标志(w):</strong> 指示splay窗口是否活动</li>
+                    <li><strong>Splay概率(p):</strong> 访问节点时应被splayed的概率</li>
+                    <li><strong>Splay距离(d):</strong> 节点应被splayed(提升)的最大级别数</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-green-700">热度分析:</strong>
+                  <p>DMT为每个树节点附加整数热度计数器，在节点在树中提升时递增，在节点降级时递减</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">树不变量维护:</strong>
+                  <p>对标准splay操作进行了三个关键更改以维护树不变量：确保叶节点保持叶节点，传播子状态，以及通过预取和验证所有兄弟哈希来确保树保持一致性状态</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mt-8">
+          <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-cube mr-2"></i>实现细节
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 class="font-semibold text-gray-600 mb-2">技术栈</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>5K行C++代码实现哈希树</li>
+                <li>使用BDUS实现自定义块设备驱动程序</li>
+                <li>内核模块向用户空间暴露块层钩子</li>
+                <li>基本数据单元与磁盘I/O大小对齐(4KB块)</li>
+              </ul>
+            </div>
+            <div>
+              <h5 class="font-semibold text-gray-600 mb-2">加密设置</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>使用AES-GCM确保确定性认证加密</li>
+                <li>块使用128位加密密钥</li>
+                <li>内部节点使用SHA-256计算256位哈希</li>
+                <li>加密过程中产生的MAC用作哈希树中的叶子</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-vial mr-2"></i>实验设置
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 class="font-semibold text-gray-600 mb-2">测试环境</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>AWS EC2 i4i.8xlarge实例</li>
+                <li>32核心，256GB内存</li>
+                <li>本地连接的NVMe SSD用于数据和元数据</li>
+                <li>标准LRU缓存替换策略</li>
+                <li>DMT参数：splay窗口标志w=True，splay概率p=0.01</li>
+              </ul>
+            </div>
+            <div>
+              <h5 class="font-semibold text-gray-600 mb-2">工作负载设置</h5>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>Zipfian工作负载(近似真实世界块级访问模式)</li>
+                <li>阿里巴巴数据集(来自公共云数据中心1000个卷)</li>
+                <li>Filebench OLTP工作负载</li>
+                <li>使用fio生成工作负载</li>
+                <li>5分钟预热期和15分钟基准测试期</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-chart-bar mr-2"></i>容量扩展性能
+            </h5>
+            <p class="text-sm text-gray-700 mb-3">
+              所有平衡树的聚合读/写吞吐量随容量减少。64叉树性能最差：减少的树高度可以减少必须计算的有效哈希数量，但导致较低的缓存效率，这放大了元数据I/O成本。
+            </p>
+            <div class="bg-gray-50 p-3 rounded text-center">
+              <div class="text-lg font-bold text-blue-600">DMT表现</div>
+              <div class="text-sm text-gray-600">在所有容量下始终提供最高吞吐量，且>85%的最优吞吐量</div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-sliders-h mr-2"></i>工作负载偏斜影响
+            </h5>
+            <p class="text-sm text-gray-700 mb-3">
+              DMT在重度偏斜下提供高达2倍于最先进二叉树的加速，但在更均匀的模式下由于探索性splaying而产生6%的成本，这些splaying没有带来好处。
+            </p>
+            <div class="bg-gray-50 p-3 rounded text-center">
+              <div class="text-lg font-bold text-green-600">理论保证</div>
+              <div class="text-sm text-gray-600">DMT继承splay树的O(log n)摊销查找时间保证</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 性能对比表格 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-table mr-2"></i>Filebench OLTP工作负载性能对比
+          </h4>
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="py-2 px-4 border-b text-left">系统</th>
+                  <th class="py-2 px-4 border-b text-center">写入吞吐量</th>
+                  <th class="py-2 px-4 border-b text-center">读取吞吐量</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium">DMT</td>
+                  <td class="py-2 px-4 border-b text-center text-green-600 font-medium">255.4 MB/s</td>
+                  <td class="py-2 px-4 border-b text-center text-green-600 font-medium">0.7 MB/s</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">dm-verity</td>
+                  <td class="py-2 px-4 border-b text-center">151.9 MB/s</td>
+                  <td class="py-2 px-4 border-b text-center">0.4 MB/s</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">无加密/无完整性</td>
+                  <td class="py-2 px-4 border-b text-center">318.8 MB/s</td>
+                  <td class="py-2 px-4 border-b text-center">1.0 MB/s</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-gray-600 mt-3">
+            DMT驱动程序级改进反映在应用程序级：相比dm-verity，DMT在写入吞吐量上提供约1.68倍改进，在读取吞吐量上提供1.75倍改进。
+          </p>
+        </div>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+          <div class="flex items-start">
+            <i class="fas fa-clipboard-check text-yellow-600 mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-bold text-yellow-700 mb-2">内存与存储开销</h4>
+              <p class="text-gray-700 text-sm">
+                DMT提供多个优势，但比平衡树有更高的内存和存储需求。DMT不能使用隐式索引，而是需要显式存储父子指针(作为整数节点ID)，包括内存中和磁盘上的节点。这意味着叶节点至少需要一个额外的整数字段，内部节点最多需要三个额外的整数字段，所有节点需要一个额外的整数热度计数器字段。然而，即使对于非常小的缓存，缓存命中率也非常高。DMT在0.1%缓存大小下提供比二叉树在1%缓存大小下更好的性能。因此，DMT在缓存内存上的每美元花费提供更好的性能。
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2"></i>关键性能指标
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div class="text-2xl font-bold text-blue-600">2.2×</div>
+              <div class="text-sm text-gray-600">吞吐量和延迟改进</div>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <div class="text-2xl font-bold text-green-600">>85%</div>
+              <div class="text-sm text-gray-600">最优吞吐量达成率</div>
+            </div>
+            <div class="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div class="text-2xl font-bold text-purple-600">75%</div>
+              <div class="text-sm text-gray-600">现有技术吞吐量损失</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            Merkle哈希树为不受信任的存储提供强大的完整性保护，但它们可能严重降低性能。本文对性能开销进行了全面分析，证明了根本原因，并设计了一种优化的树结构——动态Merkle树(DMT)，推进了现有技术水平。DMT展示了利用工作负载模式减少开销的完整性结构的力量。
+          </p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-key mr-2"></i>关键结论
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>最先进的哈希树产生显著的性能损失(高达80%)</li>
+              <li>DMT通过利用偏斜模式(当存在时)并快速适应随时间的变化来解决这个问题</li>
+              <li>平衡树不适合作为哈希树的基础构造：最大化性能需要根据工作负载模式定制树结构</li>
+              <li>DMT为寻找在大规模高效运行的完整性机制提供了新的基础</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+          <div class="flex items-start">
+            <i class="fas fa-code-branch text-blue-600 mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-bold text-blue-700 mb-2">代码可用性</h4>
+              <p class="text-gray-700 text-sm">
+                论文代码已开源，可在 <a href="https://github.com/MadSP-McDaniel/dmt" class="text-blue-600 hover:text-blue-800 underline">https://github.com/MadSP-McDaniel/dmt</a> 获取。代码可即插即用到Linux系统中。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片的展开/折叠
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

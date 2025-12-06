@@ -1,0 +1,10 @@
+{
+  "id": "a7c3f8e1b92d",
+  "title": "GPHash: An Efficient Hash Index for GPU with Byte-Granularity Persistent Memory",
+  "authors": ["Menglei Chen", "Yu Hua", "Zhangyu Chen", "Ming Zhang", "Gen Dong"],
+  "year": 2025,
+  "conference": "FAST",
+  "category": "存储系统",
+  "keywords": ["GPU", "持久内存", "哈希索引", "并行计算", "缓存管理", "一致性保证", "GPM系统"],
+  "abstract": "GPU with persistent memory (GPM) enables GPU-powered applications to directly manage the data in persistent memory at the byte granularity. Hash indexes have been widely used to achieve efficient data management. However, conventional hash indexes become inefficient for GPM systems due to warp-agnostic execution manner, high-overhead consistency guarantee, and significant bandwidth gap between PM and GPU. In this paper, we propose GPHash, an efficient hash index for GPM systems with high performance and consistency guarantee. To fully exploit the parallelism of GPU, GPHash executes all index operations in a lock-free and warp-cooperative manner. Moreover, by using CAS primitive and slot states, GPHash ensures consistency guarantee with low overhead. To further bridge the bandwidth gap between PM and GPU, GPHash caches hot items in GPU memory while minimizing the overhead for cache management. Extensive evaluations on YCSB and real-world workloads show that GPHash outperforms state-of-the-art CPU-assisted data management approaches and GPM hash indexes by up to 27.62\\\\(\\\\times\\\\)."
+}

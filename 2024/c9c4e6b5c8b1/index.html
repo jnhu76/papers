@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Mess of Memory System Benchmarking, Simulation and Application Profiling</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#mess-benchmark" class="nav-item whitespace-nowrap">Mess基准测试</a>
+        <a href="#performance-characterization" class="nav-item whitespace-nowrap">性能表征</a>
+        <a href="#mess-simulator" class="nav-item whitespace-nowrap">Mess仿真器</a>
+        <a href="#mess-profiling" class="nav-item whitespace-nowrap">Mess性能分析</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          A Mess of Memory System Benchmarking, Simulation and Application Profiling
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Pouya Esmaili-Dokht, Francesco Sgherzi, Valéria Soldera Girelli, Isaac Boixaderas, Mariana Carmin, Alireza Monemi, Adrià Armejach, Estanislao Mercadal, Germán Llort, Petar Radojković, Miquel Moreto, Judit Giménez, Xavier Martorell, Eduard Ayguadé, Jesus Labarta, Emanuele Confalonieri, Rishabh Dubey, Jason Adlard</div>
+                <div class="text-sm text-gray-600 mt-1">Barcelona Supercomputing Center, Universitat Politecnica de Catalunya, Micron Technology</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>57th IEEE/ACM International Symposium on Microarchitecture (MICRO), 2024</div>
+                <div class="text-sm text-gray-600 mt-1">最佳论文亚军</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2405.10170v4</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">内存系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">基准测试</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">仿真</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">性能分析</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">带宽-延迟曲线</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12 md:mb-16">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>统一的Mess框架</strong>：提供了内存系统基准测试、仿真和应用性能分析的统一视图</li>
+          <li><strong>全面的基准测试</strong>：基于带宽-延迟曲线家族的内存系统表征，覆盖所有主要CPU和GPU ISA</li>
+          <li><strong>高精度仿真器</strong>：基于带宽-延迟概念的快速、准确内存性能仿真，支持DDR4、DDR5、HBM2、HBM2E、Optane和CXL内存扩展器</li>
+          <li><strong>应用性能分析</strong>：将应用执行定位在目标内存系统的带宽-延迟空间中，与运行时活动和源代码关联</li>
+          <li><strong>开源实现</strong>：发布Mess基准测试、与ZSim、gem5和OpenPiton Metro-MPI集成的Mess仿真器</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p>Memory stress (Mess)框架为内存系统基准测试、仿真和应用性能分析提供了统一视图。</p>
+          
+          <p>Mess基准测试提供了全面而详细的内存系统表征。它基于数百个测量值，表示为带宽-延迟曲线家族。该基准测试增加了所有先前工具的覆盖范围，并在实际和仿真内存系统的行为中带来了新发现。作者部署Mess基准测试来表征具有DDR4、DDR5、HBM2和HBM2E内存的Intel、AMD、IBM、Fujitsu、Amazon和NVIDIA服务器。</p>
+          
+          <p>Mess内存仿真器使用带宽-延迟概念进行内存性能仿真。作者将Mess与广泛使用的CPU仿真器集成，支持所有高端内存技术的建模。Mess仿真器快速、易于集成，并且与实际系统性能紧密匹配。通过设计，它能够在硬件仿真器中快速采用新的内存技术。</p>
+          
+          <p>最后，Mess应用性能分析将应用定位在目标内存系统的带宽-延迟空间中。此信息可以与其他应用运行时活动和源代码相关联，从而更好地理解应用行为。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>主内存在整体系统设计中的重要性推动了内存系统基准测试、仿真和内存相关应用性能分析的重大努力。尽管这三个内存性能方面本质上是相互关联的，但它们使用不同且解耦的工具进行分析。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h5 class="font-semibold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>现有工具的局限性
+            </h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>内存基准测试</strong>：通常报告最大可持续内存带宽或带宽受限应用内核的性能，有时辅以未加载内存系统中的延迟测量</li>
+              <li><strong>内存仿真器</strong>：确定给定流量的内存系统响应时间，从固定延迟模型到考虑详细内存设备序列和时序的周期精确内存仿真器</li>
+              <li><strong>应用性能分析工具</strong>：基于内存访问延迟、Roofline模型中的位置或整体CPI栈中内存相关部分确定应用是否受内存限制</li>
+            </ul>
+          </div>
+          
+          <p>作者认为内存系统基准测试、仿真和应用性能分析可以并且应该基于内存系统性能的统一视图。作者通过Memory stress (Mess)框架提供这一视图，该框架包括Mess基准测试、分析内存系统仿真器和应用性能分析工具。</p>
+          
+          <!-- 图1: Mess框架概览 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - Mess框架概览
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: Mess框架概览
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: Mess框架概览" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mess框架：Mess基准测试用带宽-延迟曲线家族描述内存系统性能。作者部署基准测试来表征实际服务器和硬件仿真器的内存系统。Mess带宽-延迟曲线也可用于内存性能仿真和内存相关应用性能分析。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>统一框架:</strong> Mess框架将内存基准测试、仿真和应用性能分析统一在一个概念框架下</li>
+                  <li><strong>带宽-延迟曲线:</strong> 核心创新是使用带宽-延迟曲线家族来表征内存系统性能</li>
+                  <li><strong>三个组件:</strong> 框架包含基准测试、仿真器和性能分析工具三个主要组件</li>
+                  <li><strong>实际系统表征:</strong> 基准测试用于表征实际硬件和仿真器的内存系统</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">框架架构:</strong>
+                    <p>Mess框架采用模块化设计，三个主要组件可以独立使用或协同工作。基准测试生成带宽-延迟曲线，仿真器使用这些曲线进行性能预测，性能分析工具将应用行为映射到这些曲线上。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择带宽-延迟曲线作为核心表征方法，因为它能够捕捉内存系统在不同负载条件下的完整行为特征，从空闲状态到完全饱和状态。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- Mess基准测试 -->
+      <section id="mess-benchmark" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-tachometer-alt mr-3 text-blue-500"></i>
+          Mess基准测试
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>Mess内存表征包括数十条带宽-延迟曲线，每条曲线对应特定的读写内存流量比例。Mess基准测试内核覆盖从100%加载到100%存储的整个内存操作范围。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-search mr-2"></i>指针追踪
+              </h4>
+              <p class="text-sm text-gray-700">测量内存访问延迟，包含一系列依赖的背靠背加载指令，访问主内存而非片上缓存。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-broadcast-tower mr-2"></i>流量生成器
+              </h4>
+              <p class="text-sm text-gray-700">创建具有可配置内存带宽利用率和读写比例的内存访问，在加载的内存系统中与指针追踪冲突。</p>
+            </div>
+          </div>
+          
+          <p>指针追踪和流量生成器都在汇编中实现，以最小化任何编译器干预。为了最小化TLB未命中和页行走引入的延迟惩罚，Mess数据结构分配在巨大的内存页中。</p>
+          
+          <!-- 验证 -->
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>验证
+            </h4>
+            <p class="text-gray-700">Mess基准测试超过了所有现有内存基准测试和工具的覆盖范围。作者使用LMbench、Google multichase、P-chase和Intel Advisor等工具验证了Mess测量结果，在所有实验中，Mess与这些工具的结果紧密匹配。</p>
+          </div>
+          
+          <!-- 图2: Mess基准测试性能分析示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图2 - Mess基准测试性能分析示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 24核Intel Skylake服务器的Mess基准测试性能分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 24核Intel Skylake服务器的Mess基准测试性能分析" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mess基准测试用带宽-延迟曲线家族建模内存系统性能。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>带宽-延迟关系:</strong> 图表显示了内存访问延迟如何随内存压力(带宽)增加而变化，初始阶段大致恒定，然后由于并行访问间的资源争用而增加</li>
+                  <li><strong>读写流量影响:</strong> 最佳性能(最低延迟和最高带宽)在100%读取流量时获得，内存写入由于额外的时序约束(如t_WR和t_WTR)会降低内存性能</li>
+                  <li><strong>性能指标:</strong> 除了常用的未加载内存延迟外，详细的Mess表征量化了所有读写比例的内存访问延迟的最大延迟范围和饱和带宽范围</li>
+                  <li><strong>波形行为:</strong> 在某些平台中，作者检测到Mess内存访问速率的增加导致内存带宽下降，而访问延迟继续增加</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">关键发现:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>读写流量对性能有显著影响</li>
+                      <li>100%读取流量提供最佳性能</li>
+                      <li>写入流量由于额外时序约束而降低性能</li>
+                      <li>在某些情况下，带宽增加会导致性能下降</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">系统行为:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>内存系统饱和时延迟急剧增加</li>
+                      <li>不同读写比例的曲线形状不同</li>
+                      <li>STREAM基准测试结果与Mess测量互补</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 性能表征 -->
+      <section id="performance-characterization" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-bar mr-3 text-blue-500"></i>
+          性能表征
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>作者使用Mess测量来比较具有DDR4、DDR5、HBM2和HBM2E的Intel、AMD、IBM、Fujitsu和Amazon服务器以及NVIDIA GPU的内存系统性能。</p>
+          
+          <!-- 表1: CPU和GPU平台研究 -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-table mr-2 text-blue-500"></i>
+                表1: CPU和GPU平台研究：定量内存性能比较
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原表</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300 text-sm">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-3 border-b text-left">平台</th>
+                    <th class="py-2 px-3 border-b text-left">Intel Skylake</th>
+                    <th class="py-2 px-3 border-b text-left">Intel Cascade Lake</th>
+                    <th class="py-2 px-3 border-b text-left">AMD Zen2</th>
+                    <th class="py-2 px-3 border-b text-left">IBM Power9</th>
+                    <th class="py-2 px-3 border-b text-left">Amazon Graviton 3</th>
+                    <th class="py-2 px-3 border-b text-left">Intel Sapphire Rapids</th>
+                    <th class="py-2 px-3 border-b text-left">Fujitsu A64FX</th>
+                    <th class="py-2 px-3 border-b text-left">NVIDIA Hopper H100</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">发布年份</td>
+                    <td class="py-2 px-3 border-b">2015</td>
+                    <td class="py-2 px-3 border-b">2019</td>
+                    <td class="py-2 px-3 border-b">2019</td>
+                    <td class="py-2 px-3 border-b">2017</td>
+                    <td class="py-2 px-3 border-b">2022</td>
+                    <td class="py-2 px-3 border-b">2023</td>
+                    <td class="py-2 px-3 border-b">2019</td>
+                    <td class="py-2 px-3 border-b">2023</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">核心@频率</td>
+                    <td class="py-2 px-3 border-b">24 @ 2.1 GHz</td>
+                    <td class="py-2 px-3 border-b">16 @ 2.3 GHz</td>
+                    <td class="py-2 px-3 border-b">64 @ 2.25 GHz</td>
+                    <td class="py-2 px-3 border-b">20 @ 2.4 GHz</td>
+                    <td class="py-2 px-3 border-b">64 @ 2.5 GHz</td>
+                    <td class="py-2 px-3 border-b">56 @ 2.0 GHz</td>
+                    <td class="py-2 px-3 border-b">48 @ 2.2 GHz</td>
+                    <td class="py-2 px-3 border-b">133 SM @ 1.8 GHz</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">主内存</td>
+                    <td class="py-2 px-3 border-b">6×DDR4-2666</td>
+                    <td class="py-2 px-3 border-b">6×DDR4-2666</td>
+                    <td class="py-2 px-3 border-b">8×DDR4-3200</td>
+                    <td class="py-2 px-3 border-b">8×DDR4-2666</td>
+                    <td class="py-2 px-3 border-b">8×DDR5-4800</td>
+                    <td class="py-2 px-3 border-b">8×DDR5-4800</td>
+                    <td class="py-2 px-3 border-b">4×HBM2</td>
+                    <td class="py-2 px-3 border-b">4×HBM2E</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">理论带宽</td>
+                    <td class="py-2 px-3 border-b">128 GB/s</td>
+                    <td class="py-2 px-3 border-b">128 GB/s</td>
+                    <td class="py-2 px-3 border-b">204 GB/s</td>
+                    <td class="py-2 px-3 border-b">170 GB/s</td>
+                    <td class="py-2 px-3 border-b">307 GB/s</td>
+                    <td class="py-2 px-3 border-b">1024 GB/s</td>
+                    <td class="py-2 px-3 border-b">1024 GB/s</td>
+                    <td class="py-2 px-3 border-b">1631 GB/s</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">饱和带宽范围</td>
+                    <td class="py-2 px-3 border-b">72-91%</td>
+                    <td class="py-2 px-3 border-b">68-87%</td>
+                    <td class="py-2 px-3 border-b">57-71%</td>
+                    <td class="py-2 px-3 border-b">67-91%</td>
+                    <td class="py-2 px-3 border-b">63-95%</td>
+                    <td class="py-2 px-3 border-b">60-86%</td>
+                    <td class="py-2 px-3 border-b">72-92%</td>
+                    <td class="py-2 px-3 border-b">51-95%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">未加载延迟</td>
+                    <td class="py-2 px-3 border-b">89 ns</td>
+                    <td class="py-2 px-3 border-b">85 ns</td>
+                    <td class="py-2 px-3 border-b">113 ns</td>
+                    <td class="py-2 px-3 border-b">96 ns</td>
+                    <td class="py-2 px-3 border-b">129 ns</td>
+                    <td class="py-2 px-3 border-b">109 ns</td>
+                    <td class="py-2 px-3 border-b">122 ns</td>
+                    <td class="py-2 px-3 border-b">363 ns</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 border-b font-medium">最大延迟范围</td>
+                    <td class="py-2 px-3 border-b">242-391 ns</td>
+                    <td class="py-2 px-3 border-b">182-303 ns</td>
+                    <td class="py-2 px-3 border-b">257-657 ns</td>
+                    <td class="py-2 px-3 border-b">238-546 ns</td>
+                    <td class="py-2 px-3 border-b">332-527 ns</td>
+                    <td class="py-2 px-3 border-b">238-406 ns</td>
+                    <td class="py-2 px-3 border-b">338-428 ns</td>
+                    <td class="py-2 px-3 border-b">699-1433 ns</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-clock mr-2"></i>未加载内存延迟
+              </h4>
+              <p class="text-sm text-gray-700">不同平台间差异显著，从Cascade Lake服务器中的85 ns到Graviton 3中的129 ns。这种差异不应直接与主内存关联，因为负载到使用延迟考虑了内存请求在CPU芯片内花费的时间。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-chart-area mr-2"></i>饱和带宽范围
+              </h4>
+              <p class="text-sm text-gray-700">除AMD Zen2 CPU和NVIDIA H100外，所有平台显示相似的饱和带宽范围，约为最大理论带宽的70%到90%。AMD Zen2的饱和带宽范围显著较低，为57-71%。</p>
+            </div>
+          </div>
+          
+          <p>作者还在一些AMD Zen2、Intel Skylake和Intel Cascade Lake带宽-延迟曲线中检测到，在某个点之后，Mess内存访问速率的增加导致测量的带宽下降。通过分析行缓冲硬件计数器，作者发现带宽下降与行缓冲未命中率的显著增加高度相关。</p>
+          
+          <!-- 图3: 内存系统行为检测 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图3 - 内存系统行为检测
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 内存系统行为检测
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 内存系统行为检测" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 作者检测到广泛的内存系统行为，即使对于具有相同内存标准的硬件平台也是如此。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>平台比较:</strong> 图表比较了不同硬件平台的内存系统性能，显示了即使使用相同内存标准，不同平台之间也存在显著差异</li>
+                  <li><strong>性能特征:</strong> 不同平台在未加载延迟、饱和带宽和最大延迟范围方面表现出不同的特征</li>
+                  <li><strong>读写影响:</strong> 所有平台都显示读写流量比例对性能有显著影响，但影响程度和模式因平台而异</li>
+                  <li><strong>波形行为:</strong> 在某些平台中检测到带宽下降的波形行为，这与行缓冲未命中率增加相关</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">关键差异:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>不同平台的未加载延迟差异显著</li>
+                      <li>饱和带宽范围因平台而异</li>
+                      <li>最大延迟范围显示不同平台的内存系统稳定性</li>
+                      <li>读写流量影响程度不同</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">设计影响:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>内存控制器设计对性能有重大影响</li>
+                      <li>内存调度策略影响延迟和带宽</li>
+                      <li>行缓冲管理策略影响波形行为</li>
+                      <li>系统架构影响整体内存性能</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- Mess仿真器 -->
+      <section id="mess-simulator" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          Mess仿真器
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>Mess仿真器使用带宽-延迟概念进行内存性能仿真。作者将Mess与广泛使用的CPU仿真器集成，支持所有高端内存技术的建模。</p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心思想
+            </h4>
+            <p class="text-gray-700">Mess仿真器的核心思想是，对于给定的内存系统，内存访问延迟取决于内存系统负载和读写流量比例。作者使用Mess基准测试测量来构建目标内存系统的带宽-延迟曲线家族，然后使用这些曲线来仿真内存性能。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+              <i class="fas fa-database text-green-500 text-3xl mb-2"></i>
+              <p class="text-sm font-medium">内存技术</p>
+              <p class="text-xs text-gray-600 mt-1">支持DDR4、DDR5、HBM2、HBM2E、Optane和CXL内存扩展器</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+              <i class="fas fa-tachometer-alt text-blue-500 text-3xl mb-2"></i>
+              <p class="text-sm font-medium">仿真速度</p>
+              <p class="text-xs text-gray-600 mt-1">比周期精确仿真器快几个数量级</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+              <i class="fas fa-cube text-purple-500 text-3xl mb-2"></i>
+              <p class="text-sm font-medium">集成能力</p>
+              <p class="text-xs text-gray-600 mt-1">与ZSim、gem5和OpenPiton Metro-MPI集成</p>
+            </div>
+          </div>
+          
+          <p>Mess仿真器基于以下关键观察：内存系统性能主要由内存系统负载和读写流量比例决定。通过使用Mess基准测试测量来构建目标内存系统的带宽-延迟曲线家族，Mess仿真器能够快速准确地预测内存性能。</p>
+          
+          <!-- 图4: Mess仿真器验证 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-check-circle mr-2"></i>技术细节：图4 - Mess仿真器验证
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: Mess仿真器验证
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: Mess仿真器验证" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mess仿真器与周期精确仿真器相比，在内存性能仿真方面具有高精度。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>验证方法:</strong> 作者使用实际硬件测量和周期精确仿真器来验证Mess仿真器的准确性</li>
+                  <li><strong>精度比较:</strong> Mess仿真器与周期精确仿真器在内存性能预测方面具有高度一致性</li>
+                  <li><strong>速度优势:</strong> Mess仿真器比周期精确仿真器快几个数量级，同时保持高精度</li>
+                  <li><strong>适用范围:</strong> 验证覆盖了多种内存技术和不同负载条件</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">仿真流程:</strong>
+                    <p>Mess仿真器首先使用基准测试构建目标内存系统的带宽-延迟曲线家族，然后在仿真过程中根据当前内存系统负载和读写流量比例查询相应的延迟值。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择基于带宽-延迟曲线的方法，因为它能够捕捉内存系统的宏观行为特征，而不需要模拟详细的时序和协议细节，从而大幅提高仿真速度。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">集成策略:</strong>
+                    <p>Mess仿真器设计为与现有CPU仿真器无缝集成，通过替换或增强原有的内存模型来提供更准确和更快速的内存性能仿真。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- Mess性能分析 -->
+      <section id="mess-profiling" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-pie mr-3 text-blue-500"></i>
+          Mess性能分析
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>Mess应用性能分析将应用定位在目标内存系统的带宽-延迟空间中。此信息可以与其他应用运行时活动和源代码相关联，从而更好地理解应用行为。</p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-map-marker-alt mr-2"></i>定位应用性能
+            </h4>
+            <p class="text-gray-700">Mess性能分析工具通过测量应用的内存带宽利用率和平均内存访问延迟，将应用执行定位在目标内存系统的带宽-延迟空间中。这提供了应用如何与内存系统交互的直观视图。</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-code mr-2"></i>源代码关联
+              </h4>
+              <p class="text-sm text-gray-700">Mess性能分析工具可以将应用在带宽-延迟空间中的位置与特定的源代码区域关联，帮助识别性能瓶颈和优化机会。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-running mr-2"></i>运行时活动
+              </h4>
+              <p class="text-sm text-gray-700">通过将应用执行定位在带宽-延迟空间中，可以更好地理解应用在不同阶段的运行时行为，以及如何受到内存系统性能的影响。</p>
+            </div>
+          </div>
+          
+          <p>Mess性能分析工具通过以下步骤工作：</p>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700 ml-4">
+            <li>测量应用的内存带宽利用率和平均内存访问延迟</li>
+            <li>将测量结果定位在目标内存系统的带宽-延迟空间中</li>
+            <li>将定位结果与特定的源代码区域和运行时活动关联</li>
+            <li>提供性能分析和优化建议</li>
+          </ol>
+          
+          <!-- 图5: Mess性能分析示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-area mr-2"></i>技术细节：图5 - Mess性能分析示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: Mess性能分析示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: Mess性能分析示例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mess性能分析将应用执行定位在目标内存系统的带宽-延迟空间中。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>应用定位:</strong> 图表显示了不同应用或同一应用的不同阶段在带宽-延迟空间中的位置</li>
+                  <li><strong>性能分析:</strong> 通过将应用定位在带宽-延迟空间中，可以直观地理解应用的性能特征和瓶颈</li>
+                  <li><strong>优化指导:</strong> 应用在带宽-延迟空间中的位置提供了优化方向和目标</li>
+                  <li><strong>系统匹配:</strong> 帮助理解应用如何与特定内存系统交互，以及在不同系统上的性能表现</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">分析方法:</strong>
+                    <p>Mess性能分析工具通过运行时监控和采样来测量应用的内存带宽利用率和平均内存访问延迟，然后将这些测量结果映射到预先构建的带宽-延迟曲线上。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">关联技术:</strong>
+                    <p>使用程序计数器采样和符号表信息将性能测量与特定的源代码区域关联，提供细粒度的性能分析。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">可视化策略:</strong>
+                    <p>采用直观的可视化方法展示应用在带宽-延迟空间中的位置，帮助用户快速理解应用性能特征和瓶颈。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="space-y-6 text-gray-700">
+          <p>作者提出了Memory stress (Mess)框架，为内存系统基准测试、仿真和应用性能分析提供了统一视图。Mess框架基于带宽-延迟曲线家族，这些曲线捕捉了内存系统在不同负载条件和读写流量比例下的性能特征。</p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-check-double mr-2"></i>主要贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>Mess基准测试</strong>：提供了全面而详细的内存系统表征，基于数百个测量值，表示为带宽-延迟曲线家族</li>
+              <li><strong>Mess仿真器</strong>：使用带宽-延迟概念进行内存性能仿真，快速、准确且易于集成</li>
+              <li><strong>Mess性能分析</strong>：将应用定位在目标内存系统的带宽-延迟空间中，与运行时活动和源代码关联</li>
+              <li><strong>开源实现</strong>：发布Mess基准测试、与ZSim、gem5和OpenPiton Metro-MPI集成的Mess仿真器</li>
+            </ul>
+          </div>
+          
+          <p>作者使用Mess框架表征了具有DDR4、DDR5、HBM2和HBM2E内存的Intel、AMD、IBM、Fujitsu、Amazon和NVIDIA服务器的内存系统性能。作者检测到广泛的内存系统行为，即使对于具有相同内存标准的硬件平台也是如此。</p>
+          
+          <p>Mess仿真器与周期精确仿真器相比，在内存性能仿真方面具有高精度，同时速度快几个数量级。Mess性能分析工具提供了应用如何与内存系统交互的直观视图，帮助识别性能瓶颈和优化机会。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-semibold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来工作
+            </h4>
+            <p class="text-gray-700">作者计划扩展Mess框架以支持新兴内存技术，如CXL内存扩展器和持久内存。作者还计划开发更高级的性能分析功能，如自动性能瓶颈识别和优化建议生成。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>
