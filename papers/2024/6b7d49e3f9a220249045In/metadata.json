@@ -1,0 +1,10 @@
+{
+  "id": "6b7d49e3f9a220249045In",
+  "title": "In-Memory Key-Value Store Live Migration with NetMigrate",
+  "authors": ["Zeying Zhu", "Yibo Zhao", "Zaoxing Liu"],
+  "year": 2024,
+  "conference": "FAST",
+  "category": "存储系统",
+  "keywords": ["内存键值存储", "在线迁移", "可编程数据平面", "NetMigrate", "键值分片迁移"],
+  "abstract": "Distributed key-value stores today require frequent key-value shard migration between nodes to react to dynamic workload changes for load balancing, data locality, and service elasticity. In this paper, we propose NetMigrate, a live migration approach for in-memory key-value stores based on programmable network data planes. NetMigrate migrates shards between nodes with zero service interruption and minimal performance impact. During migration, the switch data plane monitors the migration process in a fine-grained manner and directs client queries to the right server in real time, eliminating the overhead of pulling data between nodes. We implement a NetMigrate prototype on a testbed consisting of a programmable switch and several commodity servers running Redis, and evaluate it under YCSB workloads. Our experiments demonstrate that NetMigrate improves the query throughput from 6.5% to 416% and maintains low access latency during migration, compared to the state-of-the-art migration approaches."
+}
