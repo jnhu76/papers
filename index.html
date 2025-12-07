@@ -21,32 +21,33 @@
     <style>
         body {
             font-family: 'Inter', 'Noto Serif SC', sans-serif;
-            background: linear-gradient(135deg, #1e3a8a, #312e81, #581c87);
+            background: linear-gradient(135deg, #ffffff, #f8fafc, #f1f5f9);
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
         }
         
         .glass-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
             border-radius: 1rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
         
         .paper-card {
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 1rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
         
         .paper-card:hover {
             transform: translateY(-8px) rotateX(5deg);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
         }
         
         .nav-item {
@@ -245,7 +246,7 @@
         
         .particle {
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(59, 130, 246, 0.1);
             border-radius: 50%;
             pointer-events: none;
         }
@@ -400,18 +401,18 @@
             <!-- 加载状态 -->
             <div id="loading-state" class="flex justify-center items-center py-12">
                 <div class="text-center">
-                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                    <p class="mt-4 text-white">加载中...</p>
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    <p class="mt-4 text-gray-600">加载中...</p>
                 </div>
             </div>
             
             <!-- 空状态 -->
             <div id="empty-state" class="hidden text-center py-12">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4">
-                    <i class="fas fa-search text-white text-2xl"></i>
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <i class="fas fa-search text-gray-500 text-2xl"></i>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">未找到相关论文</h3>
-                <p class="text-white/70 mb-4">尝试使用不同的关键词或筛选条件</p>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">未找到相关论文</h3>
+                <p class="text-gray-600 mb-4">尝试使用不同的关键词或筛选条件</p>
                 <button id="reset-search" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all">
                     重置搜索
                 </button>
@@ -431,59 +432,59 @@
     </div>
 
     <!-- 特色功能 -->
-    <section class="py-16 bg-white/5 backdrop-blur-sm">
+    <section class="py-16 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-white mb-4">特色功能</h2>
-                <p class="text-xl text-white/80 max-w-2xl mx-auto">探索我们的独特功能</p>
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">特色功能</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">探索我们的独特功能</p>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="feature-card bg-white/10 backdrop-blur-md rounded-xl p-6 text-center hover:shadow-xl transition-all">
+                <div class="feature-card bg-white rounded-xl p-6 text-center hover:shadow-xl transition-all border border-gray-200">
                     <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
                         <i class="fas fa-brain text-white text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">AI智能解析</h3>
-                    <p class="text-white/70">使用先进的AI技术深度解析论文内容，提取关键信息和核心观点</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">AI智能解析</h3>
+                    <p class="text-gray-600">使用先进的AI技术深度解析论文内容，提取关键信息和核心观点</p>
                 </div>
                 
                 <div class="feature-card bg-white/10 backdrop-blur-md rounded-xl p-6 text-center hover:shadow-xl transition-all">
                     <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
                         <i class="fas fa-image text-white text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">图像提取展示</h3>
-                    <p class="text-white/70">自动提取论文中的图像和表格，提供直观的可视化展示</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">图像提取展示</h3>
+                    <p class="text-gray-600">自动提取论文中的图像和表格，提供直观的可视化展示</p>
                 </div>
                 
                 <div class="feature-card bg-white/10 backdrop-blur-md rounded-xl p-6 text-center hover:shadow-xl transition-all">
                     <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
                         <i class="fas fa-search text-white text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-2">多维度搜索</h3>
-                    <p class="text-white/70">支持标题、作者、摘要、会议等多维度搜索，快速定位所需论文</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">多维度搜索</h3>
+                    <p class="text-gray-600">支持标题、作者、摘要、会议等多维度搜索，快速定位所需论文</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- 页脚 -->
-    <footer class="py-8 bg-black/20 backdrop-blur-sm">
+    <footer class="py-8 bg-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h3 class="text-2xl font-bold gradient-text mb-4">学术论文探索平台</h3>
-                <p class="text-white/70 mb-4">发现、探索和分享最新的学术研究成果</p>
+                <p class="text-gray-600 mb-4">发现、探索和分享最新的学术研究成果</p>
                 <div class="flex justify-center space-x-6 mb-6">
-                    <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <a href="#" class="text-gray-500 hover:text-gray-900 transition-colors">
                         <i class="fab fa-github text-xl"></i>
                     </a>
-                    <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <a href="#" class="text-gray-500 hover:text-gray-900 transition-colors">
                         <i class="fab fa-twitter text-xl"></i>
                     </a>
-                    <a href="#" class="text-white/70 hover:text-white transition-colors">
+                    <a href="#" class="text-gray-500 hover:text-gray-900 transition-colors">
                         <i class="fab fa-linkedin text-xl"></i>
                     </a>
                 </div>
-                <p class="text-white/50 text-sm">© 2024 学术论文探索平台. 保留所有权利.</p>
+                <p class="text-gray-500 text-sm">© 2024 学术论文探索平台. 保留所有权利.</p>
             </div>
         </div>
     </footer>
@@ -801,13 +802,49 @@
                 const data = await response.json();
                 console.log('✅ 成功加载论文数据，文件时间戳:', data.time, '数据条数:', data.papers ? data.papers.length : 0);
                 
-                if (!data.papers || !Array.isArray(data.papers)) {
-                    throw new Error('JSON文件格式错误：缺少papers数组');
+                // 确保数据结构正确
+                if (!data || typeof data !== 'object') {
+                    throw new Error('JSON文件格式错误：根对象不存在');
                 }
                 
+                // 处理不同的JSON格式
+                let papers = [];
+                let timestamp = data.time || Date.now();
+                
+                if (data.papers && Array.isArray(data.papers)) {
+                    // 标准格式: {time: ..., papers: [...]}
+                    papers = data.papers;
+                } else if (Array.isArray(data)) {
+                    // 直接是数组格式: [...]
+                    papers = data;
+                } else {
+                    // 尝试将整个对象作为论文数组
+                    const keys = Object.keys(data);
+                    if (keys.length > 0) {
+                        papers = keys.map(key => {
+                            if (typeof data[key] === 'object' && data[key] !== null) {
+                                return data[key];
+                            }
+                            return null;
+                        }).filter(item => item !== null);
+                    }
+                }
+                
+                if (!Array.isArray(papers) || papers.length === 0) {
+                    throw new Error('JSON文件格式错误：无法找到有效的论文数组');
+                }
+                
+                // 确保每篇论文都有必要的字段
+                papers = papers.map(paper => {
+                    if (!paper.id) {
+                        paper.id = paper.title ? paper.title.replace(/\s+/g, '-').toLowerCase() : Math.random().toString(36).substring(2, 9);
+                    }
+                    return paper;
+                });
+                
                 return {
-                    papers: data.papers,
-                    timestamp: data.time,
+                    papers: papers,
+                    timestamp: timestamp,
                     fileUrl: 'papers_data.json'
                 };
             } catch (error) {
