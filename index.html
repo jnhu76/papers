@@ -908,7 +908,7 @@
 
         async function fetchLatestPapersFile() {
             try {
-                const path = '/papers_data.json'; 
+                const path = './papers_data.json'; 
                 
                 console.log('🌐 开始请求JSON文件...');
                 const response = await fetch(path, {
@@ -968,7 +968,7 @@
                 return {
                     papers: papers,
                     timestamp: timestamp,
-                    fileUrl: 'papers_data.json'
+                    fileUrl: './papers_data.json'
                 };
             } catch (error) {
                 console.error('❌ 获取论文文件失败:', error);
