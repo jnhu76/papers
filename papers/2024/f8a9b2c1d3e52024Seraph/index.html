@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seraph: Towards Scalable and Efficient Fully-external Graph Computation via On-demand Processing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Seraph: Towards Scalable and Efficient Fully-external Graph Computation via On-demand Processing
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Tsun-Yu Yang, Yizou Chen, Yuhong Liang, and Ming-Chang Yang</div>
+                <div class="text-sm text-gray-600 mt-1">The Chinese University of Hong Kong</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>FAST '24: 22nd USENIX Conference on File and Storage Technologies</div>
+                <div class="text-sm text-gray-600">February 27-29, 2024 • Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">978-1-939133-38-0</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">图计算</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">全外存系统</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">按需处理</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">I/O优化</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <!-- 核心贡献高亮 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+          <h4 class="font-bold text-green-700 mb-2 flex items-center">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>按需处理框架</strong>：利用现代存储随机访问性能可比的特性，采用按需处理减少I/O数据量</li>
+            <li><strong>混合存储格式</strong>：结合行格式和网格格式的优势，平衡I/O量与访问局部性</li>
+            <li><strong>顶点传递机制</strong>：通过延迟和聚合顶点更新，解决行格式计算时的随机访问问题</li>
+            <li><strong>选择性预计算</strong>：复用已加载数据，预先计算未来活跃顶点，进一步减少I/O</li>
+          </ul>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>这篇论文提出了Seraph，一个全新的全外存图计算系统。全外存系统具有最佳的可扩展性，能够在单机上用恒定内存处理持续增长的大规模图数据。然而，现有系统的效率往往过低，无法与其它类型的图计算系统竞争。</p>
+          
+          <p>论文的关键洞察是：大多数现有全外存系统过度强调通过顺序访问从存储中检索图数据。虽然这一原则能实现高存储带宽，但也导致读取过多无关数据，严重降低整体效率。受现代存储（如SSD）顺序和随机访问速度相当的启发，Seraph采用<strong>按需处理</strong>原则，只访问必要的图数据，在享受随机访问良好速度的同时节省I/O。</p>
+          
+          <p>基于这一原则，Seraph进一步设计了三个关键技术：</p>
+          <ol class="list-decimal list-inside space-y-2">
+            <li><strong>混合格式</strong>：在I/O量和访问局部性之间取得良好平衡的图数据表示方法</li>
+            <li><strong>顶点传递</strong>：在混合格式基础上实现高效顶点更新的机制</li>
+            <li><strong>选择性预计算</strong>：复用已加载数据以减少I/O的技术</li>
+          </ol>
+          
+          <p>实验评估表明，Seraph在所有评估的十亿级规模图和代表性图算法上，比现有最先进的全外存系统性能提升高达两个数量级。</p>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">图计算系统分类</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-lg mb-2">
+                <i class="fa-solid fa-memory mr-2"></i>共享内存系统
+              </h4>
+              <p class="text-sm text-gray-700 mb-2">如Ligra、Galois、Ligra+</p>
+              <ul class="list-disc list-inside text-sm text-gray-600">
+                <li>需将整个图数据加载到内存</li>
+                <li>性能最高但可扩展性差</li>
+                <li>内存需求：O(V+E)</li>
+              </ul>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-2">
+                <i class="fa-solid fa-hard-drive mr-2"></i>半外存系统
+              </h4>
+              <p class="text-sm text-gray-700 mb-2">如FlashGraph、Graphene</p>
+              <ul class="list-disc list-inside text-sm text-gray-600">
+                <li>边数据存于存储，顶点数据存于内存</li>
+                <li>平衡性能与内存</li>
+                <li>内存需求：O(V)</li>
+              </ul>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-2">
+                <i class="fa-solid fa-database mr-2"></i>全外存系统
+              </h4>
+              <p class="text-sm text-gray-700 mb-2">如GridGraph、CLIP、V-Part</p>
+              <ul class="list-disc list-inside text-sm text-gray-600">
+                <li>全部图数据存于存储</li>
+                <li>最优可扩展性但效率低</li>
+                <li>内存需求：O(c) 恒定</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 图1：性能-可扩展性权衡 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图1 - 性能与可扩展性权衡
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 不同图计算系统的性能-可扩展性权衡
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="图1：显示共享内存(Ligra+)、半外存(Graphene)和全外存(CLIP)系统在性能与内存消耗之间的权衡关系" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同图计算系统在性能与可扩展性方面的权衡。展示的时间是§4.3中描述的不同内存量的图计算系统的平均结果。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>性能-可扩展性权衡:</strong> 图计算系统需要在执行时间（性能）和内存消耗（可扩展性）之间进行权衡</li>
+                  <li><strong>Ligra+:</strong> 共享内存系统，需要O(V+E)内存，性能最高但可扩展性最差</li>
+                  <li><strong>Graphene:</strong> 半外存系统，需要O(V)内存，内存比Ligra+少7.2倍，性能降低2倍</li>
+                  <li><strong>CLIP:</strong> 全外存系统，最优可扩展性，内存比Graphene少17倍，比Ligra+少127倍，但性能严重下降</li>
+                  <li><strong>关键洞察:</strong> 全外存系统虽提供最优可扩展性，但其严重下降的性能使其缺乏竞争力</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">动机：流式处理 vs 按需处理</h3>
+          
+          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键动机
+            </h4>
+            <p class="text-gray-700">现代存储设备（特别是SSD）的顺序和随机访问速度已经相当接近。这使得我们可以放弃传统全外存系统过度依赖的流式处理，转而采用<strong>按需处理</strong>，只读取必要数据，从而大幅减少I/O量。</p>
+          </div>
+          
+          <!-- 图4：不同存储设备上的BFS评估 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microchip mr-2"></i>技术细节：图4 - 不同存储设备上的BFS性能对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: Twitter图在不同存储设备上的BFS评估
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="图4：显示GridGraph、GridGraph-ODP和CLIP在HDD、SATA SSD、NVMe SSD和ULL SSD上运行BFS的性能对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在不同存储设备上对Twitter图进行BFS的评估。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>HDD上的表现:</strong> 随机I/O严重降低HDD速度，流式处理仍是有效原则</li>
+                  <li><strong>CLIP的优势:</strong> 通过重复计算加载的块来加速算法收敛，在HDD上表现最佳</li>
+                  <li><strong>SSD上的转折:</strong> 在SSD上，GridGraph-ODP（按需处理基线）表现显著更好</li>
+                  <li><strong>关键发现:</strong> GridGraph-ODP平均优于GridGraph 59.0%，优于CLIP 36.3%</li>
+                  <li><strong>结论:</strong> 在SSD普及的今天，开发面向按需处理优化的全外存系统是很有前景的方向</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+          <h4 class="font-bold text-red-700 mb-2 flex items-center">
+            <i class="fas fa-fire mr-2"></i>现有全外存系统的核心问题
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>过度依赖流式处理:</strong> 即使只有少量活跃顶点/边，仍读取整个网格的边数据</li>
+            <li><strong>读取过多无关数据:</strong> 许多图算法具有稀疏访问模式，但系统仍读取大量不必要数据</li>
+            <li><strong>I/O效率低下:</strong> 存储带宽利用率高，但数据传输效率低</li>
+          </ul>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">具体技术挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-hdd text-red-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">I/O与计算不匹配</h4>
+              </div>
+              <p class="text-gray-600">常见的I/O块大小（如4KB）远大于典型的边列表大小（如Twitter图中平均132字节），导致大量浪费。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-project-diagram text-blue-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">访问模式多样性</h4>
+              </div>
+              <p class="text-gray-600">不同图算法具有不同的访问模式（密集vs稀疏），单一数据格式难以同时优化。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-exchange-alt text-green-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">顶点更新效率</h4>
+              </div>
+              <p class="text-gray-600">按需处理时，顶点更新可能涉及频繁的内存-存储交换，导致性能下降。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-compress-arrows-alt text-purple-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">数据局部性平衡</h4>
+              </div>
+              <p class="text-gray-600">需要在顶点访问局部性和边数据读取开销之间取得平衡。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">现有系统局限性</h3>
+          
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">系统</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">处理方式</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">主要局限</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">GridGraph</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">流式处理</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">即使只有少量活跃顶点，仍读取整个网格</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">CLIP</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">流式处理+重复计算</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">专门针对异步算法，通用性有限</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">V-Part</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">部分按需处理</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">仍需流式读取源顶点表，需要镜像更新开销</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">Lumos</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">流式处理+未来计算</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">专门针对同步算法，约束较多</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Seraph系统概述</h3>
+          
+          <!-- 图5：Seraph架构 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图5 - Seraph系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: Seraph系统架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="图5：Seraph系统架构图，展示全外存图计算与按需处理框架的结合" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Seraph的架构，结合了全外存图计算和按需处理框架。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>全外存框架:</strong> 整个图数据存储在外部存储中，支持最优可扩展性</li>
+                  <li><strong>按需处理框架:</strong> 维护索引数据记录每个边列表的位置，支持精细粒度的数据访问</li>
+                  <li><strong>混合格式:</strong> 结合行格式和网格格式的优势，平衡I/O量和访问局部性</li>
+                  <li><strong>执行流程:</strong> 每个迭代中先处理行格式，再处理网格格式，每次计算一个分区</li>
+                  <li><strong>内存管理:</strong> 使用内存映射机制引用文件和索引数据，无需额外用户空间缓冲区</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="tech-card bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-200 shadow-sm">
+              <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                  <i class="fas fa-blender-phone text-blue-500 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-blue-700 text-lg">混合格式</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">将边数据同时存储在行格式和网格格式中，根据数据局部性需求智能选择。</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>行格式：减少边列表读取开销</li>
+                <li>网格格式：提高顶点访问局部性</li>
+                <li>平衡I/O量与访问效率</li>
+              </ul>
+            </div>
+            
+            <div class="tech-card bg-gradient-to-br from-green-50 to-teal-50 p-5 rounded-xl border border-green-200 shadow-sm">
+              <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                  <i class="fas fa-exchange-alt text-green-500 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-green-700 text-lg">顶点传递</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">延迟和聚合顶点更新，通过内存缓冲区解决行格式计算时的随机访问问题。</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>传递缓冲区：内存中暂存更新</li>
+                <li>日志文件：存储溢出更新</li>
+                <li>顺序I/O：高效读写更新</li>
+              </ul>
+            </div>
+            
+            <div class="tech-card bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-200 shadow-sm">
+              <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                  <i class="fas fa-forward text-purple-500 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-purple-700 text-lg">选择性预计算</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">复用已加载数据，异步预计算未来活跃顶点，减少I/O次数。</p>
+              <ul class="list-inside text-sm text-gray-600 space-y-1">
+                <li>基于顶点ID估计</li>
+                <li>默认ID间隔：32个顶点</li>
+                <li>机会性I/O复用</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">关键技术详解</h3>
+          
+          <!-- 图6：混合格式示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>技术细节：图6 - 混合格式示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: 混合格式示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="图6：混合格式示例，展示如何结合行格式和网格格式存储边数据" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 混合格式的示例。例如，对于顶点u的边列表，行格式存储v和w，网格格式存储a和f。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>行格式优势:</strong> 减少读取边列表所需的I/O页面数（Twitter图中从3.88页减少到1.03页）</li>
+                  <li><strong>网格格式优势:</strong> 将顶点访问范围限制在两个分区内，提高访问局部性</li>
+                  <li><strong>混合决策:</strong> 通过比较两种格式的I/O开销上界，选择更适合的存储格式</li>
+                  <li><strong>索引效率:</strong> 网格格式存在高比例（53.6%）的冗余索引（指向空边列表）</li>
+                  <li><strong>对角线块:</strong> 由于真实世界图的自然局部性，许多边位于对角线块（源和目的地分区相同），默认使用行格式</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">构造过程:</strong>
+                    <p>1. 顺序读取原始边数据<br>2. 根据决策将边数据重新分配到网格或行格式<br>3. 创建索引数据<br>4. I/O复杂度: O(SE+(V/P+1)×G+V)</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>基于I/O开销比较选择存储格式，针对全外存环境优化，其中存储I/O通常比CPU计算慢。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">启发式假设:</strong>
+                    <p>构造时假设所有顶点都是活跃的，因为图计算的主要瓶颈是按需处理下的密集访问模式。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图9：执行流程 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图9 - Seraph执行流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: Seraph中的执行流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="图9：Seraph执行流程图，展示图计算的具体步骤" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Seraph中的执行流程。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>迭代执行:</strong> 每个迭代先处理行格式，再处理网格格式</li>
+                  <li><strong>分区计算:</strong> 每次计算一个分区，合并延迟的更新到最新值</li>
+                  <li><strong>并行识别:</strong> 多线程并行识别和记录活跃顶点</li>
+                  <li><strong>I/O优化:</strong> 将活跃顶点索引转换为页面对齐的偏移，使用Linux AIO分组多个页面到一个I/O请求</li>
+                  <li><strong>计算顺序:</strong> 行格式按分区顺序计算，网格格式按基于列的执行顺序计算</li>
+                  <li><strong>内存映射:</strong> 使用内存映射机制引用文件和索引数据，无需额外用户空间缓冲区</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">顶点传递机制</h3>
+          
+          <!-- 图7：行格式执行示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-exchange-alt mr-2"></i>技术细节：图7 - 行格式执行示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 行格式执行示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="图7：展示顶点传递机制如何在行格式计算中工作" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 行格式执行的示例。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>问题场景:</strong> 计算分区P₀时，顶点u在内存中可直接更新，顶点v在存储上无法直接更新</li>
+                  <li><strong>解决方案:</strong> 将v的更新信息传递到Pᵢ的传递缓冲区，延迟更新</li>
+                  <li><strong>更新时机:</strong> 当计算分区Pᵢ时，v被加载到内存，从传递缓冲区合并更新</li>
+                  <li><strong>传递信息:</strong> 邻居顶点ID和更新值，可根据图算法需求配置</li>
+                  <li><strong>内存管理:</strong> 传递缓冲区很小（如1MB），溢出时写入日志文件</li>
+                  <li><strong>I/O优化:</strong> 使用顺序I/O读写传递信息，效率较高</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">缓冲区设计:</strong>
+                    <p>每个顶点分区关联一个内存中的传递缓冲区，大小可忽略（1MB）</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">溢出处理:</strong>
+                    <p>当传递缓冲区满时，顺序I/O写入对应的日志文件</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">更新合并:</strong>
+                    <p>计算分区时，从日志文件顺序读取更新信息并合并到顶点属性</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">效率保证:</strong>
+                    <p>1) 只传递活跃顶点更新<br>2) 行格式块包含少量边<br>3) 传递信息连续存储，顺序I/O高效</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">选择性预计算</h3>
+          
+          <!-- 图8：预计算示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-forward mr-2"></i>技术细节：图8 - 预计算示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 预计算示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="图8：选择性预计算机制示例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 预计算的示例。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>机会来源:</strong> I/O块大小（4KB）与边列表大小（平均132字节）不匹配，当前和未来活跃顶点可能在同一I/O块</li>
+                  <li><strong>实施挑战:</strong> 识别加载数据是否包含未来活跃顶点需要遍历三个数据结构（顶点属性、索引、边），实现成本高</li>
+                  <li><strong>简化方案:</strong> 使用顶点ID进行估计，因为所有数据结构都按顶点ID顺序存储</li>
+                  <li><strong>ID间隔:</strong> 默认32个顶点，基于4KB页面和平均边列表大小的合理值</li>
+                  <li><strong>位图管理:</strong> cur_bitmap标记当前活跃顶点，next_bitmap标记下一次迭代的活跃顶点</li>
+                  <li><strong>预计算流程:</strong> 从next_bitmap移动设置位到cur_bitmap，预计算后从next_bitmap移除</li>
+                  <li><strong>一致性保证:</strong> 先计算行格式修改cur_bitmap，再用修改后的cur_bitmap计算所有网格</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3">硬件配置</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li><strong>服务器:</strong> HPE ProLiant DL560 Gen10</li>
+                <li><strong>CPU:</strong> Intel Xeon Platinum 8160</li>
+                <li><strong>内存:</strong> 1TB DDR4-2666</li>
+                <li><strong>存储:</strong> 2×1TB Samsung NVMe SSD (6.0 GB/s总顺序读带宽)</li>
+                <li><strong>线程数:</strong> 16（合理商用PC配置）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3">测试算法</h4>
+              <ul class="space-y-1 text-sm text-gray-600">
+                <li>• BFS (广度优先搜索)</li>
+                <li>• WCC (弱连通分量)</li>
+                <li>• K-core (K核分解)</li>
+                <li>• APSP (全对最短路径，近似)</li>
+                <li>• PR (PageRank，运行4次迭代)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 表2：评估图数据集 -->
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">图名称</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">顶点数</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">边数</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">图大小</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">Twitter</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">42 M</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">1.4 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">11.2 GB</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">社交图</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">Gsh2015</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">988 M</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">33.88 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">271 GB</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">网络爬虫图</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">Eu2015</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">1.1 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">91.8 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">734 GB</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">网络爬虫图</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">RMAT</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">8.6 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">112 B</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">1.7 TB</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">生成图</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">全外存系统对比</h3>
+          
+          <!-- 图10：整体对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-balance-scale mr-2"></i>技术细节：图10 - Seraph与其它全外存系统对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 10: Seraph与其它全外存系统的整体对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig10.png" alt="图10：Seraph与GridGraph、V-Part、CLIP、Lumos在多种算法和图上的执行时间和I/O量对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Seraph与其它全外存系统的整体对比。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">异步算法结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>Seraph执行时间优于GridGraph 8.9倍，优于V-Part 4.9倍，优于CLIP 4.0倍</li>
+                      <li>Seraph I/O量优于GridGraph 8.5倍，优于V-Part 5.0倍，优于CLIP 4.5倍</li>
+                      <li>Gsh2015图上优势更明显：BFS算法中Seraph优于CLIP 5.0倍</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">同步算法结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>PageRank（PR）算法中，所有系统表现相似</li>
+                      <li>Seraph仍略有优势：I/O量节省22.7%（vs GridGraph）、8.5%（vs V-Part）、7.1%（vs Lumos）</li>
+                      <li>执行时间改善11.1%（vs GridGraph）、10.4%（vs V-Part）、0.6%（vs Lumos）</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">测试配置:</strong>
+                    <p>所有系统提供固定内存量：RMAT图18GB，其它图按类似比例调整（Twitter 130MB，Gsh2015 2.4GB，Eu2015 2.7GB）</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">对比系统:</strong>
+                    <p>GridGraph（流式处理基线）、V-Part（部分按需处理）、CLIP（异步算法优化）、Lumos（同步算法优化）</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">算法分类:</strong>
+                    <p>BFS、WCC、Kcore、APSP为异步算法；PR为同步算法（严格同步语义）</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">设计选择研究</h3>
+          
+          <!-- 图11：设计选择性能研究 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-vial mr-2"></i>技术细节：图11 - Seraph主要设计选择性能研究
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 11: Seraph主要设计选择的性能研究
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig11.png" alt="图11：比较Grid（网格格式）、Row+VP（行格式+顶点传递）、Hybrid+VP（混合格式+顶点传递）和Hybrid+VP+PreC（加上选择性预计算）的性能" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Seraph主要设计选择的性能研究。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>混合格式+顶点传递（Hybrid+VP）表现最佳:</strong> 平均优于网格格式37.4%，平均优于行格式+顶点传递18.1%（针对Twitter和RMAT图）</li>
+                  <li><strong>混合格式优势:</strong> 平衡行格式和网格格式，减轻顶点传递开销，提高索引和边数据读取效率</li>
+                  <li><strong>选择性预计算改进:</strong> Hybrid+VP+PreC平均优于Hybrid+VP 16.1%的执行时间</li>
+                  <li><strong>预计算效果差异:</strong> Twitter和RMAT图改进21.5%，Gsh2015和Eu2015图改进10.7%（因访问模式密度不同）</li>
+                  <li><strong>KCore算法:</strong> 预计算影响较小（3.7%改进），因为其访问模式通常较稀疏</li>
+                  <li><strong>关键洞察:</strong> 简单将按需处理应用于传统全外存设计改进有限，需要专门为按需处理设计的技术（如混合格式和顶点传递）才能带来显著改进</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>相同系统配置和环境</li>
+                      <li>对比四种设计组合</li>
+                      <li>禁用选择性预计算以观察格式效果</li>
+                      <li>Gsh2015和Eu2015图中Hybrid+VP与Row+VP结果相同</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>RMAT图上预计算显著改进：BFS 25.6%，WCC 29.1%，KCore 14.5%，APSP 8.2%</li>
+                      <li>行格式+顶点传递不一定优于网格格式，过度使用顶点传递可能因传输过多顶点更新而降低性能</li>
+                      <li>混合格式有效平衡两种格式优势</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">不同内存量评估</h3>
+          
+          <!-- 图12：不同内存量评估 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-memory mr-2"></i>技术细节：图12 - 不同内存量评估
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 12: 不同内存量评估（基于Gsh2015图）
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig12.png" alt="图12：基于Gsh2015图，比较不同内存量下Seraph与其它全外存系统、半外存系统（Graphene）和共享内存系统（Ligra+）的性能" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 基于Gsh2015图，调整不同内存量进行评估。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>全外存系统:</strong> 性能随内存增加而提升，Seraph在不同内存量下均优于其它系统</li>
+                  <li><strong>成本效益对比:</strong> Seraph(4.2GB)性能接近Graphene(16GB)，平均仅低10.6%</li>
+                  <li><strong>半外存模式:</strong> Seraph(16GB)平均优于Graphene(16GB) 1.31倍（得益于预计算）</li>
+                  <li><strong>共享内存系统:</strong> Ligra+使用7.2倍于Seraph的内存，获得平均1.83倍加速，但对某些算法（如WCC）加速仅1.27倍</li>
+                  <li><strong>PR算法特殊:</strong> Ligra+优于Seraph 2.87倍，因Ligra+在内存中保持两个版本的边数据以解决计算密集问题</li>
+                  <li><strong>可扩展性优势:</strong> Seraph可处理更大规模图（如Eu2015和RMAT），而Ligra+无法处理</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">内存配置:</strong>
+                    <p>全外存系统：900MB、2.4GB、4.8GB、16GB<br>Graphene（半外存）：16GB<br>Ligra+（共享内存）：115GB</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">可扩展性对比:</strong>
+                    <p>Graphene和Ligra+的内存需求随图规模线性增长，而Seraph的内存需求恒定<br>以RMAT图为例：Graphene需132GB，Ligra+需1.7TB，Seraph仅需18GB</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+            <h4 class="font-bold text-green-700 mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-semibold text-blue-700 mb-2">技术突破</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>提出首个面向按需处理优化的全外存图计算系统</li>
+                  <li>混合格式平衡I/O量与访问局部性</li>
+                  <li>顶点传递机制解决随机访问问题</li>
+                  <li>选择性预计算实现I/O复用</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-blue-700 mb-2">性能成就</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>比现有全外存系统性能提升高达两个数量级</li>
+                  <li>在适度内存下接近半外存系统性能</li>
+                  <li>保持全外存系统的最优可扩展性</li>
+                  <li>支持十亿级规模图计算</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">论文局限性</h3>
+          
+          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>不足之处与未来方向
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>同步算法优化有限:</strong> 对PageRank等同步算法的优化相对有限，性能提升不明显</li>
+              <li><strong>预计算启发式简单:</strong> 选择性预计算使用固定的ID间隔（32），可能不是所有场景的最优值</li>
+              <li><strong>构造时间开销:</strong> 混合格式的构造时间比GridGraph慢约30%，尽管这是一次性开销</li>
+              <li><strong>内存映射限制:</strong> 依赖Linux AIO和内存映射机制，可移植性可能受限</li>
+              <li><strong>顶点传递开销:</strong> 对于某些图算法和访问模式，顶点传递可能引入额外I/O开销</li>
+              <li><strong>未来方向:</strong> 自适应预计算参数、更智能的格式选择算法、支持更多图算法类型</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">核心价值与意义</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-bolt text-blue-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">性能突破</h4>
+              </div>
+              <p class="text-gray-600">Seraph成功解决了全外存系统效率低下的核心问题，在不牺牲可扩展性的前提下，将性能提升到可与半外存系统竞争的水平。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-expand-arrows-alt text-green-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">可扩展性保持</h4>
+              </div>
+              <p class="text-gray-600">系统保持了全外存架构的最优可扩展性，能够用恒定内存处理任意规模的图数据，解决了大内存依赖问题。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-lightbulb text-purple-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">设计创新</h4>
+              </div>
+              <p class="text-gray-600">论文提出了多个创新设计，特别是按需处理框架下的混合格式和顶点传递机制，为全外存图计算开辟了新方向。</p>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-hdd text-red-500"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">存储技术适应</h4>
+              </div>
+              <p class="text-gray-600">充分利用现代存储设备（SSD）顺序和随机访问速度相近的特性，突破传统流式处理的限制。</p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg p-6 mt-8">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-graduation-cap mr-2 text-blue-500"></i>
+              给"智力低下博士生"的学习要点
+            </h4>
+            <div class="space-y-4 text-gray-700">
+              <div>
+                <strong class="text-blue-700">1. 核心问题识别:</strong>
+                <p>全外存系统有最优可扩展性，但效率太低。原因是过度依赖流式处理，读取太多不必要数据。</p>
+              </div>
+              <div>
+                <strong class="text-blue-700">2. 关键技术洞察:</strong>
+                <p>现代SSD顺序和随机访问速度差不多，所以可以采用"按需处理"，只读必要数据，减少I/O。</p>
+              </div>
+              <div>
+                <strong class="text-blue-700">3. 三个关键技术:</strong>
+                <ul class="list-disc list-inside ml-4 mt-1">
+                  <li><strong>混合格式:</strong> 行格式+网格格式，平衡I/O和访问效率</li>
+                  <li><strong>顶点传递:</strong> 延迟更新，解决随机访问问题</li>
+                  <li><strong>选择性预计算:</strong> 复用已读数据，预先计算未来顶点</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-blue-700">4. 实验结果记住:</strong>
+                <p>Seraph比其他全外存系统快最多100倍，用很少内存就能算很大图，证明了按需处理的方向是对的。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动打开第一个技术细节
+      const firstDetails = document.querySelector('.technical-details');
+      if (firstDetails) {
+        firstDetails.open = true;
+      }
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>
