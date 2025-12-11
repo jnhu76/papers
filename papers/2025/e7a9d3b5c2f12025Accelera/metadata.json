@@ -1,0 +1,10 @@
+{
+  "id": "e7a9d3b5c2f12025Accelera",
+  "title": "Accelerating Large-Scale Reasoning Model Inference: Self-Speculative Decoding with Sparse Attention",
+  "authors": ["Yilong Zhao", "Jiaming Tang", "Kan Zhu", "Zihao Ye", "Chi-Chih Chang", "Chaofan Lin", "Jongseok Park", "Guangxuan Xiao", "Mohamed S. Abdelfattah", "Mingyu Gao", "Baris Kasikci", "Song Han", "Ion Stoica"],
+  "year": 2025,
+  "conference": "arXiv",
+  "category": "自然语言处理",
+  "keywords": ["推理语言模型", "推测解码", "稀疏注意力", "自推测", "KV-Cache", "内存带宽", "系统优化"],
+  "abstract": "Reasoning language models have demonstrated remarkable capabilities on challenging tasks by generating elaborate chain-of-thought solutions. However, such lengthy generation shifts the inference bottleneck from compute-bound to memory-bound. To generate each token, the model applies full attention to all previously generated tokens, requiring memory access to an increasingly large KV-Cache. Consequently, longer generations demand more memory access for every step, leading to substantial pressure on memory bandwidth.\n\nTo address this, we introduce SparseSpec, a speculative decoding framework that reuses the same model as both the draft and target models (i.e., self-speculation). SparseSpec features a novel sparse attention mechanism, PillarAttn, as the draft model, which accurately selects critical tokens via elegantly reusing information from the verification stage. Furthermore, SparseSpec co-designs self-speculation with three system optimizations: (1) a unified scheduler to batch both draft and verification phases to maximize parallelism, (2) delayed verification for CPU/GPU overlap, and (3) dynamic KV-Cache management to enable host memory offload to maximize GPU memory utilization. Across various models and datasets, SparseSpec outperforms state-of-the-art solutions, with an up to 2.13× throughput gain. Code is open-sourced at github.com/sspec-project/SparseSpec."
+}
