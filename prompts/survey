@@ -570,6 +570,42 @@ function enhanceImageInteractivity() {
       
       <!-- 更多章节... -->
     </div>
+    <!-- AI生成内容标识 - 放在元数据区域后、导航前 -->
+<div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-900 border-l-4 border-amber-500 dark:border-amber-400 rounded-r-lg shadow-sm">
+  <div class="flex items-start gap-3">
+    <!-- 图标 -->
+    <div class="flex-shrink-0 mt-0.5">
+      <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+    </div>
+    
+    <!-- 内容 -->
+    <div class="flex-1">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-sm font-bold rounded-full border border-amber-200 dark:border-amber-700">
+          ⚠️ AI生成内容
+        </span>
+        <span class="text-xs text-amber-700 dark:text-amber-300 font-medium px-2 py-1 bg-amber-50 dark:bg-amber-900/30 rounded">
+          法律要求标识
+        </span>
+      </div>
+      
+      <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+        根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700 dark:text-amber-400">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+      </p>
+      
+      <div class="mt-3 pt-3 border-t border-amber-200 dark:border-gray-700">
+        <p class="text-xs text-gray-600 dark:text-gray-400 flex items-start">
+          <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+          建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
   </div>
   
   <!-- 交互脚本 -->
