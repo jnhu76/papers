@@ -1,0 +1,10 @@
+{
+  "id": "5d2a2d2c5d2a",
+  "title": "Efficient Stepping Algorithms and Implementations for Parallel Shortest Paths",
+  "authors": ["Xiaojun Dong", "Yan Gu", "Yihan Sun", "Yunming Zhang"],
+  "year": 2021,
+  "conference": "SPAA",
+  "category": "图算法",
+  "keywords": ["并行算法", "最短路径", "SSSP", "Δ-stepping", "ρ-stepping", "LaB-PQ", "单源最短路径"],
+  "abstract": "The single-source shortest-path (SSSP) problem is a notoriously hard problem in the parallel context. In practice, the Δ-stepping algorithm of Meyer and Sanders has been widely adopted. However, Δ-stepping has no known worst-case bounds for general graphs, and the performance highly relies on the parameter Δ, which requires exhaustive tuning. The parallel SSSP algorithms with provable bounds, such as Radius-stepping, either have no implementations available or are much slower than Δ-stepping in practice.\nWe propose the stepping algorithm framework that generalizes existing algorithms such as Δ-stepping and Radius-stepping. The framework allows for similar analysis and implementations for all stepping algorithms. We also propose a new abstract data type, lazy-batched priority queue (LAB-PQ) that abstracts the semantics of the priority queue needed by the stepping algorithms. We provide two data structures for LAB-PQ, focusing on theoretical and practical efficiency, respectively. Based on the new framework and LAB-PQ, we show two new stepping algorithms, ρ-stepping and Δ∗-stepping, that are simple, with non-trivial worst-case bounds, and fast in practice. We also show improved bounds for a list of existing algorithms such as Radius-Stepping.\nBased on our framework, we implement three algorithms: Bellman-Ford, Δ∗-stepping, and ρ-stepping. We compare the performance with four state-of-the-art implementations. On five social and web graphs, ρ-stepping is 1.3-2.6x faster than all the existing implementations. On two road graphs, our Δ∗-stepping is at least 14% faster than existing ones, while ρ-stepping is also competitive. The almost identical implementations for stepping algorithms also allow for in-depth analyses among the stepping algorithms in practice."
+}

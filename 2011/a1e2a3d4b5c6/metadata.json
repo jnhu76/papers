@@ -1,0 +1,10 @@
+{
+  "id": "a1e2a3d4b5c6",
+  "title": "A File is Not a File: Understanding the I/O Behavior of Apple Desktop Applications",
+  "authors": ["Tyler Harter", "Chris Dragga", "Michael Vaughn", "Andrea C. Arpaci-Dusseau", "Remzi H. Arpaci-Dusseau"],
+  "year": 2011,
+  "conference": "SOSP",
+  "category": "存储系统",
+  "keywords": ["I/O行为", "文件系统", "桌面应用", "工作负载分析", "Apple应用", "fsync", "原子操作"],
+  "abstract": "We analyze the I/O behavior of _iBench_, a new collection of productivity and multimedia application workloads. Our analysis reveals a number of differences between iBench and typical file-system workload studies, including the complex organization of modern files, the lack of pure sequential access, the influence of underlying frameworks on I/O patterns, the widespread use of file synchronization and atomic operations, and the prevalence of threads. Our results have strong ramifications for the design of next generation local and cloud-based storage systems."
+}

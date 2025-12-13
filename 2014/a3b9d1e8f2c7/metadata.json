@@ -1,0 +1,10 @@
+{
+  "id": "a3b9d1e8f2c7",
+  "title": "BeyondCorp: A New Approach to Enterprise Security",
+  "authors": ["Rory Ward", "Betsy Beyer"],
+  "year": 2014,
+  "conference": "USENIX ;login:",
+  "category": "网络安全",
+  "keywords": ["零信任", "企业安全", "访问控制", "设备管理", "身份认证", "BeyondCorp", "无特权网络"],
+  "abstract": "Virtually every company today uses firewalls to enforce perimeter security. However, this security model is problematic because, when that perimeter is breached, an attacker has relatively easy access to a company’s privileged intranet. As companies adopt mobile and cloud technologies, the perimeter is becoming increasingly difficult to enforce. Google is taking a different approach to network security. We are removing the requirement for a privileged intranet and moving our corporate applications to the Internet.\n\nGoogle’s BeyondCorp initiative is moving to a new model that dispenses with a privileged corporate network. Instead, access depends solely on device and user credentials, regardless of a user’s network location—be it an enterprise location, a home network, or a hotel or coffee shop. All access to enterprise resources is fully authenticated, fully authorized, and fully encrypted based upon device state and user credentials. We can enforce fine-grained access to different parts of enterprise resources. As a result, all Google employees can work successfully from any network, and without the need for a traditional VPN connection into the privileged network. The user experience between local and remote access to enterprise resources is effectively identical, apart from potential differences in latency."
+}

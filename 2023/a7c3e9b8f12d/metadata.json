@@ -1,0 +1,10 @@
+{
+  "id": "a7c3e9b8f12d",
+  "title": "Binary Fuse Filters: Fast and Smaller Than Xor Filters",
+  "authors": ["Thomas Mueller Graf", "Daniel Lemire"],
+  "year": 2023,
+  "conference": "arXiv",
+  "category": "数据结构与算法",
+  "keywords": ["概率过滤器", "二进制融合过滤器", "XOR过滤器", "空间效率", "查询性能", "构造时间", "指纹技术"],
+  "abstract": "我们提出了二进制融合过滤器，这是一种新的概率过滤器，比XOR过滤器更快、更小。二进制融合过滤器在空间上仅比理论下界高出约12%（XOR过滤器为23%），同时保持了同样良好的查询时间。二进制融合过滤器还具有更快的构造速度，在某些情况下构造速度可以是XOR过滤器的两倍。此外，我们还引入了4-wise二进制融合过滤器，进一步将空间开销降至约8%，同时查询时间比XOR过滤器增加约30%。实验表明，二进制融合过滤器在构造时间、空间效率和查询性能方面均优于多种现有过滤器。"
+}

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>论文解析：Streaming Batch 模型</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: smooth; }
+        .nav-active { border-bottom: 3px solid #3b82f6; font-weight: 600; }
+        .card { transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1); }
+        .figure-modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+        .figure-modal-content { margin: auto; display: block; max-width: 90%; max-height: 90%; }
+        .figure-modal-close { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- 导航栏 -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-700 mb-4 md:mb-0">Streaming Batch 模型解析</h1>
+            <div class="flex overflow-x-auto space-x-6 py-2 md:py-0">
+                <a href="#title" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">标题</a>
+                <a href="#abstract" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">摘要</a>
+                <a href="#core-question" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">核心问题</a>
+                <a href="#contributions" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">贡献</a>
+                <a href="#method" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">方法</a>
+                <a href="#experiments" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">实验</a>
+                <a href="#conclusion" class="nav-link text-gray-600 hover:text-blue-600 whitespace-nowrap">结论</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 标题区 -->
+    <header id="title" class="py-12 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">The Streaming Batch Model for Efficient and Fault-Tolerant Heterogeneous Execution</h1>
+            <p class="text-xl text-gray-700 mb-2">Frank Sifei Luan, Ron Yifeng Wang, Yile Gu, et al.</p>
+            <p class="text-lg text-gray-600">UC Berkeley, University of Washington, Anyscale</p>本文提出 Streaming Batch 模型，用于高效、容错的异构（CPU+GPU）数据流水线执行，并在 Ray Data 系统中实现。</p>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-6 py-12">
+        <!-- 摘要 -->
+        <section id="abstract" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">📌 摘要总结</h2>
+            <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                <p class="text-lg leading-relaxed">机器学习训练与推理中，CPU 数据预处理常成为瓶颈。传统批处理系统（如 Spark）与流处理系统（如 Flink）无法同时实现<strong>异构资源高效利用</strong>与<strong>弹性容错</strong>。本文提出 <strong>Streaming Batch 模型</strong>，结合批处理的弹性分区与流处理的流水线执行，实现内存高效、资源弹性的异构数据流水线。系统 <strong>Ray Data</strong> 在异构推理流水线上比 Spark/Flink 快 2.5–12 倍，在 Stable Diffusion 训练中利用异构集群提升吞吐量 31%。
+                  </p>
+            </div>
+        </section>
+
+        <!-- 核心问题 -->
+        <section id="core-question" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">❓ 核心问题</h2>
+            <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">唯一关键问题</h3>
+                <p class="text-lg mb-6">
+                    <strong>如何设计一个能高效、容错地执行异构（CPU + GPU）数据流水线的分布式数据处理系统？</strong>
+                </p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-3">为什么现有方法不行？</h4>
+                        <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                            <li><strong>批处理系统</strong>：静态分区、阶段执行 → 无流水线、内存占用大。</li>
+                            <li><strong>流处理系统</strong>：静态绑定资源 → 无法动态负载均衡、故障恢复代价高。</li>
+                            <li><strong>ML 数据加载器</strong>：单节点、无分布式异构支持。</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-3">谁在乎？</h4>
+                        <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                            <li>系统领域：分布式计算、资源调度、容错。</li>
+                            <li>AI/ML 领域：大规模训练、多模态模型、LLM 推理。</li>
+                            <li>工业界：云服务商、ML 平台、数据处理团队。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 贡献 -->
+        <section id="contributions" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">🏆 核心贡献（4C 模型）</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">Concept</h3>
+                    <p class="text-lg"><strong>Streaming Batch 模型</strong>：以分区为执行单位，支持弹性扩缩容；分区可动态创建、在异构算子间流式传输，实现内存高效流水线。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">Challenge</h3>
+                    <p class="text-lg">解决异构资源高效利用、内存高效管理、弹性容错三大难题。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">Construction</h3>
+                    <p class="text-lg"><strong>Ray Data 系统</strong>：基于 Ray，实现动态分区、中心化内存感知调度、分区级容错。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">Claim</h3>
+                    <p class="text-lg">吞吐量比 Spark/Flink 高 2.5–12 倍；训练吞吐量比单节点加载器高 31%；支持动态资源分配与分区级容错。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 方法 -->
+        <section id="method" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">⚙️ 方法原理解构</h2>
+            
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">隐含假设</h3>
+                <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                    <li>用户转换函数为纯函数（无副作用、确定性）。</li>
+                    <li>中间数据可放入分布式对象存储（Ray Object Store）。</li>
+                    <li>集群资源可被中心化调度器统一视图管理。</li>
+                    <li>任务执行时间与数据大小可在线估计。</li>
+                </ul>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">工作流程</h3>
+                <img src="./images/fig6.png" alt="Ray Data 架构概览" class="w-full rounded-lg mb-4 cursor-pointer" onclick="openModal(this)">
+                <p class="text-gray-600 text-sm text-center mb-6">图：Ray Data 架构概览（来自论文）</p>
+                <ol class="list-decimal pl-5 space-y-3 text-lg">
+                    <li>用户通过 Dataset API 定义流水线。</li>
+                    <li>查询规划器编译为物理 DAG，进行算子融合与初始分区。</li>
+                    <li>调度器循环：等待任务完成 → 将输出分区加入下游队列 → 选择可用资源与分区启动新任务。</li>
+                    <li>任务执行时动态切分输出，控制分区大小（默认 128 MB）。</li>
+                    <li>故障时基于 Lineage 重放丢失分区。</li>
+                </ol>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">核心算法：自适应调度器（乐观策略）</h3>
+                <pre class="bg-gray-100 p-6 rounded-lg overflow-x-auto text-sm">
+budget = total_memory_capacity
+while not all_done:
+    update_estimates()  # 更新算子处理速率
+    if budget >= output_size(source_op):
+        launch_task(source_op)
+        budget -= output_size(source_op)
+    # 选择下游算子
+    qualified_ops = [op for op in DAG if has_input(op) and has_resources(op) and has_buffer_space(op)]
+    if qualified_ops:
+        selected = argmin(qualified_ops, buffered_output_size)
+        launch_task(selected)</pre>
+                <p class="mt-4 text-gray-700">该算法通过动态内存预算控制源头任务启动速率，平衡流水线各阶段处理速率，最大化资源利用率。</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg card">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">与相关工作对比</h3>
+                <img src="./images/table1.png" alt="系统对比表" class="w-full rounded-lg mb-4 cursor-pointer" onclick="openModal(this)">
+                <p class="text-gray-600 text-sm text-center">表：各系统在异构数据处理上的特性对比（来自论文）</p>
+            </div>
+        </section>
+
+        <!-- 实验 -->
+        <section id="experiments" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">📊 实验与结果</h2>
+            
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">RAG 推理流水线</h3>
+                <img src="./images/fig7a.png" alt="RAG 任务完成时间" class="w-full rounded-lg mb-4 cursor-pointer" onclick="openModal(this)">
+                <p class="text-gray-600 text-sm text-center mb-4">图：RAG 任务完成时间对比（Ray Data vs. 基线）</p>
+                <p class="text-lg">Ray Data 在 8 GPU 上实现 6.44 倍加速，且能自动平衡 CPU/GPU 瓶颈。</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">视频分类吞吐量</h3>
+                <img src="./images/fig7b.png" alt="视频分类吞吐量对比" class="w-full rounded-lg mb-4 cursor-pointer" onclick="openModal(this)">
+                <p class="text-gray-600 text-sm text-center mb-4">图：视频分类吞吐量对比（批处理 vs. 流处理 vs. Streaming Batch）</p>
+                <p class="text-lg">Ray Data 动态调度比 Flink 快 2.5 倍，比静态流处理快 1.25 倍。</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg card mb-8">
+                <h3 class="text-2xl font-semibold text-blue-700 mb-4">内存感知流水线微基准测试</h3>
+                <img src="./images/fig9.png" alt="内存限制下的运行时间" class="w-full rounded-lg mb-4 cursor-pointer" onclick="openModal(this)">
+                <p class="text-gray-600 text-sm text-center mb-4">图：各系统在不同内存限制下的运行时间</p>
+                <p class="text-lg">Ray Data 在内存受限下仍接近最优性能，而 Spark 易 OOM，Flink 性能下降明显。</p>
+            </div>
+        </section>
+
+        <!-- 结论 -->
+        <section id="conclusion" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 border-b pb-2">🎯 结论与启示</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-green-50 p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-green-700 mb-4">✅ 优点</h3>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li>高效异构流水线执行（CPU+GPU 流水线）</li>
+                        <li>内存感知动态调度，避免 OOM</li>
+                        <li>分区级容错，恢复开销低</li>
+                        <li>支持动态扩缩容与异构节点</li>
+                    </ul>
+                </div>
+                <div class="bg-yellow-50 p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-yellow-700 mb-4">⚠️ 局限性</h3>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li>依赖 Ray 生态，非独立系统</li>
+                        <li>纯函数假设（不适用非确定性转换）</li>
+                        <li>中心化调度器可能成为单点瓶颈</li>
+                        <li>Python 实现可能在高并发下性能受限</li>
+                    </ul>
+                </div>
+                <div class="bg-blue-50 p-8 rounded-2xl shadow-lg card">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">🚀 未来工作</h3>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li>全自动查询规划与集群自动扩缩容</li>
+                        <li>支持更复杂的有状态算子</li>
+                        <li>多租户与优先级调度</li>
+                        <li>更细粒度的数据局部性优化</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 图像模态框 -->
+    <div id="figure-modal" class="figure-modal">
+        <span class="figure-modal-close" onclick="closeModal()">&times;</span>
+        <img class="figure-modal-content" id="modal-img">
+        <div id="modal-caption" class="text-white text-center mt-4 text-lg"></div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <button id="back-to-top" class="fixed bottom-8 right-8 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition hidden">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-900 text-white py-8 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-lg mb-2">论文解析可视化页面</p>
+            <p class="text-gray-400 text-sm">基于 AI 生成，仅供学习交流。图像来自原论文，版权归原作者所有。</p>
+            <p class="text-gray-400 text-sm mt-4">© 2025 费曼教授辅导课 | 系统与 AI 实验室</p>
+        </div>
+    </footer>
+
+    <script>
+        // 导航栏高亮
+        const sections = document.querySelectorAll("section");
+        const navLinks = document.querySelectorAll(".nav-link");
+
+        window.addEventListener("scroll", () => {
+            let current = "";
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 100;
+                if (scrollY >= sectionTop) current = section.getAttribute("id");
+            });
+            navLinks.forEach(link => {
+                link.classList.remove("nav-active");
+                if (link.getAttribute("href").slice(1) === current) link.classList.add("nav-active");
+            });
+        });
+
+        // 返回顶部按钮
+        const backToTop = document.getElementById("back-to-top");
+        window.addEventListener("scroll", () => {
+            backToTop.style.display = scrollY > 300 ? "block" : "none";
+        });
+        backToTop.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        // 图像模态框
+        function openModal(img) {
+            const modal = document.getElementById("figure-modal");
+            const modalImg = document.getElementById("modal-img");
+            const caption = document.getElementById("modal-caption");
+            modal.style.display = "block";
+            modalImg.src = img.src;
+            caption.innerHTML = img.alt;
+        }
+        function closeModal() {
+            document.getElementById("figure-modal").style.display = "none";
+        }
+    </script>
+</body>
+</html>

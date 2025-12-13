@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegonKV: A High Bandwidth, Low Tail Latency, and Low Storage Cost KV-Separated LSM Store with SmartSSD-based GC Offloading</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .performance-bar {
+      transition: width 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          AegonKV: A High Bandwidth, Low Tail Latency, and Low Storage Cost KV-Separated LSM Store with SmartSSD-based GC Offloading
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Zhuohui Duan, Hao Feng, Haikun Liu, Xiaofei Liao, Hai Jin, and Bangyu Li</div>
+                <div class="text-sm text-gray-600 mt-1">华中科技大学</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST '25)</div>
+                <div class="text-sm text-gray-600">2025年2月25-27日 • 美国圣克拉拉</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">978-1-939133-45-8</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">KV存储</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">LSM树</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">垃圾回收</span>
+                  <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">SmartSSD</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">近数据处理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-3 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li><strong>首次提出基于SmartSSD的GC卸载机制</strong>：将垃圾回收操作从主机CPU迁移到SmartSSD，避免与LSM读写操作竞争带宽和CPU资源</li>
+          <li><strong>"一石三鸟"解决方案</strong>：同时优化KV分离系统的吞吐量、尾延迟和存储空间使用</li>
+          <li><strong>创新的硬件/软件协同设计</strong>：包括GC Manager、GC Scheduler和GC友好元数据安装机制</li>
+          <li><strong>实验验证</strong>：相比现有KV分离系统，吞吐量提升1.28-3.3倍，尾延迟降低37%-66%，空间开销减少15%-85%</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">键值分离架构因其显著减轻传统LSM树固有的写入放大而闻名。然而，KV分离在值区域的管理中可能增加性能开销，特别是用于减少冗余空间占用的垃圾回收操作。</p>
+          
+          <p class="mb-4">作者提出了AegonKV，这是一个"一石三鸟"的解决方案，全面增强了KV分离系统的吞吐量、尾延迟和空间使用。AegonKV首次提出基于SmartSSD的GC卸载机制，实现异步GC操作，不与LSM读写竞争带宽或CPU。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+            <h5 class="font-bold text-yellow-700 mb-2">关键结果</h5>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div class="bg-white p-3 rounded-lg shadow-sm">
+                <div class="text-2xl font-bold text-green-600">1.28-3.3x</div>
+                <div class="text-sm text-gray-600">吞吐量提升</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg shadow-sm">
+                <div class="text-2xl font-bold text-blue-600">37%-66%</div>
+                <div class="text-sm text-gray-600">尾延迟降低</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg shadow-sm">
+                <div class="text-2xl font-bold text-purple-600">15%-85%</div>
+                <div class="text-sm text-gray-600">空间开销减少</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">KV分离的LSM树存储</h3>
+          <p class="mb-4">基于日志结构合并树的键值存储在当代数据密集型应用中扮演关键角色，主要因其出色的写入性能。然而，合并操作带来的大量读写开销一直是行业面临的挑战。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-semibold text-blue-700 mb-2">KV分离架构</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>键和值分别存储在不同区域</li>
+              <li>键区域仍遵循传统LSM存储结构</li>
+              <li>SSTables不再存储实际数据，而是存储键和值的地址引用</li>
+              <li>值区域采用日志结构组织（称为vLog）</li>
+              <li>LSM区域的大小相比传统架构显著减小</li>
+            </ul>
+          </div>
+          
+          <!-- KV分离架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - KV分离架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: KV分离架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: KV分离架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> KV分离架构示意图，展示了键区域和值区域的分离管理
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>键区域:</strong> 包含内存中的MemTables和磁盘上的SSTables，但SSTables只存储键和指向值的地址引用</li>
+                  <li><strong>值区域:</strong> 采用日志结构组织，称为vLog或Blob文件，存储实际的值数据</li>
+                  <li><strong>写入流程:</strong> 当MemTable满时，刷新线程将值分离并追加到值区域，同时将每个值在文件中的偏移量写入SSTable</li>
+                  <li><strong>读取流程:</strong> 通过键在SSTable中找到值地址，然后直接从值区域读取</li>
+                  <li><strong>优势:</strong> 显著减少LSM树大小，减轻合并操作的读写放大问题</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-8">垃圾回收机制</h3>
+          <p class="mb-4">为了减少空间冗余并确保最佳数据检索性能，KV分离架构在值区域管理中引入了垃圾回收机制。GC将包含大量过期数据的文件合并到新的有序文件中，按键排列并包含最新版本数据。</p>
+          
+          <!-- GC过程图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图2 - GC过程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: GC过程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: GC过程示意图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (a) 直接GC过程 (b) 合并触发的GC过程
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>直接GC:</strong> 扫描整个Blob文件，在文件的每个偏移位置，GC线程查询LSM以确定相应值的有效性。无效值被过滤掉，有效值被重写到新的Blob文件，新地址被写回LSM</li>
+                  <li><strong>合并触发的GC:</strong> 将Blob文件的单层结构转变为类似键区域的多层LSM结构，并维护从SSTables到Blobs的多对多关系映射。当对SSTable执行合并时，相应地在原始Blob文件中仍然有效的值数据将被迁移到新的Blob</li>
+                  <li><strong>GC挑战:</strong> GC操作需要外部信息来确定数据有效性，传统方法无法在卸载环境中完全迁移和实现LSM查询</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-8">SmartSSD计算存储设备</h3>
+          <p class="mb-4">SmartSSD在SSD内集成FPGA，并通过内部总线与SSD建立交互路径。这种独立内部计算能力的集成为解决I/O和计算开销相关的挑战开辟了新可能性。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>SmartSSD优势
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                <li>计算单元能够利用SmartSSD内部带宽直接访问存储介质中的数据</li>
+                <li>数据处理绕过复杂的操作系统I/O栈和互连总线</li>
+                <li>显著减少数据移动，降低能耗</li>
+                <li>减少主机CPU和总线带宽利用率</li>
+              </ul>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-semibold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>技术特性
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                <li>通过PCIe Switch将NVMe、FPGA和FPGA DRAM暴露给不同的主机PCIe地址空间</li>
+                <li>支持NVMe SSD和FPGA DRAM之间通过PCIe Switch进行内部数据移动</li>
+                <li>这种机制称为P2P（点对点）通信</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">作者通过实验分析了现有KV分离系统的性能瓶颈，发现现有解决方案在吞吐量、尾延迟和空间使用之间存在权衡，无法同时在这三个方面都表现出色。</p>
+          
+          <!-- 性能对比表 -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">表1: RocksDB、BlobDB、Titan和DiffKV的性能对比</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b border-gray-200 text-left">系统</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">吞吐量 (ops/s)</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">99%延迟 (ms)</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">空间 (GB)</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">合并I/O (GB)</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">写入停顿 (s)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b border-gray-200">RocksDB</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">23051</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1.307</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">29</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1110</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1230</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b border-gray-200">BlobDB</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">27151</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">0.657</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">155</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">78</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">431</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b border-gray-200">Titan</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">18247</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1.888</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">31</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">47</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">0</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b border-gray-200">DiffKV</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">28484</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">0.591</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">73</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">443</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">288</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- 性能对比可视化 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">图3: 系统性能能力对比</h4>
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300 mb-4">
+              <img src="./images/fig3.png" alt="论文图3: 系统性能能力对比图" class="max-w-full h-auto rounded-lg">
+            </div>
+            <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 将吞吐量、99%延迟、空间、合并I/O和写入停顿能力进行归一化对比（值越大表示能力越强）
+            </div>
+          </div>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-red-700 mb-2">关键发现</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>现有KV分离系统存在性能权衡</strong>：无法同时在吞吐量、尾延迟和空间使用方面都表现出色</li>
+              <li><strong>GC操作是性能瓶颈</strong>：关闭GC后，Titan的吞吐量提升67.7%，尾延迟降低69.1%</li>
+              <li><strong>资源竞争问题</strong>：在CPU资源受限环境中，Titan的吞吐量进一步下降22.9%</li>
+              <li><strong>空间与性能的权衡</strong>：BlobDB和DiffKV通过牺牲空间效率来提升性能，导致空间放大显著增加</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-8">GC卸载到SmartSSD的挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-semibold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>回读传输问题
+              </h4>
+              <p class="text-sm text-gray-700">GC操作中遍历查询有效性的逻辑实现复杂，由于硬件限制无法查询主机，难以在FPGA中复制相同逻辑。</p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-semibold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>资源限制
+              </h4>
+              <p class="text-sm text-gray-700">SmartSSD内的计算资源虽然强大，但无法与主机相媲美。GC过程中大文件读写操作对FPGA DRAM施加巨大压力。</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-semibold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-arrows-alt-h mr-2"></i>额外数据移动
+              </h4>
+              <p class="text-sm text-gray-700">GC过程的本质决定了部分I/O操作必须从硬件传输回主机，这可能引起通道拥塞并影响GC性能。</p>
+            </div>
+          </div>
+          
+          <!-- GC时间分析表 -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">表3: Titan的GC时间分解</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">读取值</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">读取LSM</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">写入值</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">写入LSM</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">额外开销</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">5.31%</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">25.3%</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">2.18%</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">65.93%</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1.28%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-3 text-sm text-gray-600">
+              <strong>分析:</strong> GC操作中写入LSM元数据的开销占比最大（65.93%），其次是读取LSM的开销（25.3%），这表明GC性能瓶颈主要在于与LSM的交互。
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">AegonKV基于最新版本的Titan构建，是首个在SmartSSD上实现GC卸载策略的系统。作者保留了原始架构中主机端的内存结构和基本数据流逻辑，在SmartSSD的计算设备上实现了GC逻辑单元。</p>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图4 - AegonKV系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: AegonKV系统架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: AegonKV系统架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AegonKV系统架构图，展示了主机端和SmartSSD端的组件及其交互
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>主机端组件:</strong> 包括GC Manager、GC Scheduler和原有的LSM树结构</li>
+                  <li><strong>SmartSSD端组件:</strong> 包括I/O控制单元、计算单元控制单元、元数据安装单元和多个GC计算单元</li>
+                  <li><strong>数据流:</strong> GC操作通过SmartSSD内部P2P路径进行，减少主机带宽竞争</li>
+                  <li><strong>控制流:</strong> 主机端的GC Scheduler负责协调硬件资源的分配和任务调度</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">GC Manager</h3>
+          <p class="mb-4">GC Manager作为连接合并和GC的桥梁，从合并中收集必要信息，并为硬件GC准备必要的数据结构ValidMap。</p>
+          
+          <!-- GC Manager设计图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图5 - GC Manager设计
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: GC Manager设计
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: GC Manager设计图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> GC Manager设计，展示了ValidMap的创建和更新过程
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>ValidMap数据结构:</strong> 为每个Blob文件创建一个位图数据结构，指示每个偏移点数据的有效性（位"0"和"1"分别标记有效和无效）</li>
+                  <li><strong>空间效率:</strong> 每个KV数据只需要ValidMap中的单个位，以标准的32MB Blob文件为例，当包含24B+1KB的KV数据时，理论所需空间为4KB</li>
+                  <li><strong>更新机制:</strong> 在每次合并结束时，所有过滤的数据在回调期间传递给GC Manager。GC Manager接收无效数据信息后，启动更新过程</li>
+                  <li><strong>位操作:</strong> 遍历数据并构建临时ValidMap，然后与当前ValidMap执行按位OR操作，将标记有效的位'0'替换为无效的"1"</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">GC Scheduler</h3>
+          <p class="mb-4">GC Scheduler设计了几个关键单元来有效驱动硬件进行GC操作：I/O控制单元、计算单元控制单元和元数据安装单元。</p>
+          
+          <!-- GC Scheduler设计图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-tasks mr-2"></i>技术细节：图6 - GC Scheduler设计
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: GC Scheduler设计
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: GC Scheduler设计图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> GC Scheduler设计，展示了I/O控制、计算单元控制和元数据安装单元
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>I/O控制单元:</strong> 充分利用SmartSSD内部数据路径进行GC，涉及SSD和DRAM之间的数据传输，包括通过SmartSSD内部P2P路径读写Blob文件，以及通过系统总线传输ValidMap和回写元数据</li>
+                  <li><strong>计算单元控制单元:</strong> 由于SmartSSD硬件资源有限，将CU调度移至软件层以实现简单性和灵活性。硬件中的CU数量在硬件编译期间确定</li>
+                  <li><strong>元数据安装单元:</strong> 设计缓冲队列来协调多个任务的并发竞争，将其统一到一个通道中，并通过批量刷新保持效率</li>
+                  <li><strong>资源管理:</strong> 管理正在使用的CU数量和为每个CU分配的FPGA DRAM内存</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">GC友好元数据安装</h3>
+          <p class="mb-4">为了解决GC回写过程中的数据一致性问题，作者提出了延迟验证的方法，将查找验证过程推迟到涉及相应键的获取和合并过程中。</p>
+          
+          <!-- GC回写状态图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-database mr-2"></i>技术细节：图7-8 - GC回写状态和版本冲突
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7-8: GC回写状态和版本冲突
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7-8.png" alt="论文图7-8: GC回写状态和版本冲突图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (左) GC回写版本冲突 (右) GC回写状态机制
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>版本冲突问题:</strong> 在GC过程中，如果插入包含旧数据的条目并覆盖在GC期间写入的最新版本，会导致数据一致性问题</li>
+                  <li><strong>延迟验证:</strong> 将查找验证过程推迟到获取和合并过程中，而不是在元数据安装时立即验证</li>
+                  <li><strong>状态区分:</strong> 添加GC回写状态到原本用于区分是否为KV分离的标志中，以区分正常数据和GC元数据</li>
+                  <li><strong>版本比较:</strong> 当查询到元数据时，继续向后查询到数据的较旧版本，并将其值地址与元数据中存储的原始地址进行比较</li>
+                  <li><strong>提升机制:</strong> 在合并过程中，当遇到元数据并发现确实是最新时，将元数据提升为正常数据，减少额外读取情况的发生频率</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">GC计算单元</h3>
+          <p class="mb-4">在FPGA端，板上的计算逻辑被称为CU。当资源充足时，多个实现相同逻辑的CU可以在单个计算核心中共存。</p>
+          
+          <!-- GC计算单元图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microchip mr-2"></i>技术细节：图9 - GC计算单元
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: GC计算单元
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: GC计算单元图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> GC计算单元设计，展示了输入解码、数据计算和输出编码三个阶段
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>三阶段设计:</strong> 输入解码、数据计算和输出编码</li>
+                  <li><strong>输入解码:</strong> 每个CU的输入包括几个等待GC的Blob文件，以及每个文件对应的ValidMap。Blob文件内的键值对彼此相邻，偏移边界由数据大小确定</li>
+                  <li><strong>数据计算:</strong> 分为过滤和获取两部分。过滤模块使用ValidMap结构以类似数据流的方式遍历字符标志，产生过滤或保留数据的信号，然后传递给获取器模块</li>
+                  <li><strong>输出编码:</strong> CU的输出包括需要直接安装在SSD上的信息和需要重写到LSM MemTable的信息。新Blob文件的生成对应于解码过程，直接检索来自获取器模块传递的结果中的KV，并按文件格式排列以写入指定区域，无需主机端干预</li>
+                  <li><strong>数据完整性:</strong> 添加少量计算开销来分解原始CRC结果数据并执行CRC验证，确保数据完整性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">作者在YCSB基准测试和生产工作负载上评估了AegonKV的整体性能，并与三种最先进的KV分离系统（Titan、DiffKV、BlobDB）、传统LSM存储RocksDB以及无GC的理想情况目标（Titan w/o GC）进行了比较。</p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-server mr-2"></i>测试平台
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                <li>CPU: 2 x 18核 Intel Xeon Gold 5220 @2.20GHz，支持双向超线程</li>
+                <li>内存: 64 GB DDR4-2666</li>
+                <li>存储: 三星SmartSSD，包含Xilinx UltraScale+ FPGA和3.84TB SSD</li>
+                <li>操作系统: Ubuntu 20.04.4 LTS</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-tasks mr-2"></i>工作负载
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                <li>YCSB基准测试: 键大小24B，值大小1KB</li>
+                <li>社交图工作负载: 平均键大小48B，值大小228B</li>
+                <li>Twitter缓存集群: 三个集群分别代表写入密集型、混合和读取密集型工作负载</li>
+                <li>默认客户端线程数: 16，操作数: 2亿</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">YCSB工作负载结果</h3>
+          
+          <!-- YCSB结果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图10 - YCSB基准测试结果
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 10: YCSB基准测试结果
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig10.png" alt="论文图10: YCSB基准测试结果图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> RocksDB、BlobDB、Titan、Titan w/o GC、DiffKV、AegonKV在YCSB基准测试下的吞吐量、99%延迟、空间、合并I/O和写入停顿结果。YCSB A到F代表：A（50%读取，50%更新），B（95%读取，5%更新），C（100%读取），D（5%插入，95%最近记录读取），E（95%扫描，5%插入），F（50%读取，50%读取-修改-写入）
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>吞吐量:</strong> 在写入密集型工作负载（A和F）中，AegonKV相比BlobDB、Titan、DiffKV和RocksDB展现出1.11到4.66倍的吞吐量提升，接近无GC开销的情况（Titan w/o GC）</li>
+                  <li><strong>尾延迟:</strong> 在写入密集型工作负载中，AegonKV实现了最低的尾延迟，相比DiffKV、Titan、RocksDB和BlobDB分别降低了14.7%、85.9%、31.2%和36.8%</li>
+                  <li><strong>空间使用:</strong> 在写入密集型工作负载中，Titan和AegonKV在整个更新过程中仅需要0.5-0.75倍的额外冗余空间，而BlobDB和DiffKV的合并触发GC策略需要大得多的空间，分别为1.8倍和4.15倍冗余</li>
+                  <li><strong>合并I/O:</strong> 相比传统LSM RocksDB，KV分离的合并数据量显著减少，因为不需要将实际值数据读入合并过程。相比Titan w/o GC，AegonKV和Titan分别增加了136%和51%的额外开销</li>
+                  <li><strong>写入停顿:</strong> 相比RocksDB在写入密集型工作负载下的大量写入停顿时间，AegonKV和Titan没有写入停顿，因此KV分离很好地解决了合并的写入停顿问题</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 性能能力对比图 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">图12: YCSB基准测试下的性能能力对比</h4>
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300 mb-4">
+              <img src="./images/fig12.png" alt="论文图12: YCSB基准测试下的性能能力对比图" class="max-w-full h-auto rounded-lg">
+            </div>
+            <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> BlobDB、Titan、DiffKV、AegonKV在YCSB和生产工作负载下的吞吐量、99%延迟、空间、合并数据和写入停顿能力对比
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">生产工作负载结果</h3>
+          
+          <!-- 生产工作负载结果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-industry mr-2"></i>技术细节：图11 - 生产工作负载结果
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 11: 生产工作负载结果
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig11.png" alt="论文图11: 生产工作负载结果图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> RocksDB、BlobDB、Titan、Titan w/o GC、DiffKV、AegonKV在生产工作负载下的吞吐量、99%延迟、空间、合并I/O和写入停顿结果。SG代表社交图，39、19和51分别是集群编号
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>社交图工作负载:</strong> AegonKV相比其他KV分离系统，吞吐量提高1.07到2.16倍，尾延迟降低10%-52%。AegonKV继承了直接GC在空间使用、合并I/O和写入停顿指标上的优势，减少冗余空间使用31%-55%，减少合并I/O 40%-78%，并保持0写入停顿</li>
+                  <li><strong>Twitter缓存集群工作负载:</strong> 在写入密集型工作负载（cluster39）下，AegonKV实现吞吐量提升7.6%-97.7%，减少合并I/O 38%-40%，并有0写入停顿，表明AegonKV的直接GC策略和GC卸载策略在写入密集型场景中的有效性</li>
+                  <li><strong>混合和读取密集型工作负载:</strong> 所有系统在各方面性能接近，除了由于密集读取操作导致GC频率低外，这两个工作负载中的值大小也影响读取性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">开销分析</h3>
+          
+          <!-- 硬件资源利用表 -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">表4: 硬件资源利用</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">资源类型</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">1 CU使用</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">总使用量</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">可用总量</th>
+                    <th class="py-2 px-4 border-b border-gray-200 text-center">利用率</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">CLB</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">-</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">63817</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">65340</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">97.6%</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">LUT</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">19704</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">292661</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">522720</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">55.9%</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">Flip Flop</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">31404</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">466312</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">1045440</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">44.6%</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">BRAM(MB)</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">10</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">445.5</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">984</td>
+                    <td class="py-2 px-4 border-b border-gray-200 text-center">45.2%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-3 text-sm text-gray-600">
+              <strong>分析:</strong> 作者充分利用了SmartSSD的硬件资源，部署了8个CU，足以支持系统正常运行。CLB资源是限制CU部署数量的主要因素，利用率为97.6%。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>CPU使用率
+              </h4>
+              <p class="text-sm text-gray-700">RocksDB、BlobDB、Titan、Titan w/o GC、DiffKV和AegonKV的归一化CPU利用率分别为95.52%、97.18%、90.4%、96.97%、97.16%和77.17%。AegonKV实现了约20%的节省，因为GC卸载有效解决了计算瓶颈。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>能源效率
+              </h4>
+              <p class="text-sm text-gray-700">RocksDB、BlobDB、Titan、DiffKV和AegonKV的能源效率分别为571.64、775.11、246.82、720.28、901.78（操作/焦耳）。通过将CPU计算卸载到低功耗的SmartSSD计算能力，AegonKV实现了最高的能源效率，提高了15.9%到69.8%。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">敏感性分析</h3>
+          
+          <!-- 敏感性分析图 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <h4 class="font-semibold text-gray-700 mb-4 text-center">图13-14: 参数敏感性分析</h4>
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300 mb-4">
+              <img src="./images/fig13-14.jpg" alt="论文图13-14: 参数敏感性分析图" class="max-w-full h-auto rounded-lg">
+            </div>
+            <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> (图13) Titan和AegonKV随垃圾比率、GC线程和批处理大小变化的吞吐量、空间和99%延迟 (图14) RocksDB、BlobDB、Titan、DiffKV和AegonKV随值大小、数据库大小、工作负载比率（写/读）和客户端线程变化的吞吐量、空间和99%延迟
+            </div>
+          </div>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-2">敏感性分析关键结论</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>系统参数:</strong> AegonKV的性能优势不受系统参数影响，不需要过多的计算资源来维持最佳性能</li>
+              <li><strong>工作负载参数:</strong> 无论值大小、数据集大小、读写比例或客户端线程数如何变化，AegonKV在吞吐量、尾延迟和空间开销方面相对于其他KV分离系统的性能优势不会剧烈变化</li>
+              <li><strong>适应性:</strong> AegonKV具有最佳的工作负载适应性和多线程可扩展性</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">为了全面优化GC性能在吞吐量、尾延迟和存储开销三个维度上的表现，作者提出了AegonKV。AegonKV巧妙地将GC操作卸载到存储内计算的SmartSSD，从而有效减轻了CPU和I/O压力。</p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>首次提出基于SmartSSD的GC卸载机制</strong>，实现异步GC操作，不与LSM读写竞争带宽或CPU资源</li>
+              <li><strong>创新的硬件/软件协同设计</strong>，包括GC Manager、GC Scheduler和GC友好元数据安装机制</li>
+              <li><strong>有效的资源管理</strong>，解决了SmartSSD资源有限和GC回读传输的挑战</li>
+              <li><strong>全面的性能评估</strong>，证明AegonKV在吞吐量、尾延迟和空间使用方面均优于现有KV分离系统</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2">论文不足之处</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>硬件依赖性:</strong> 方案依赖于特定的SmartSSD硬件，可能限制了在更广泛环境中的部署</li>
+              <li><strong>资源限制:</strong> 虽然部署了8个CU，但在极端工作负载下可能仍然存在资源瓶颈</li>
+              <li><strong>成本考虑:</strong> SmartSSD相比普通SSD成本更高，需要权衡性能提升与硬件成本</li>
+              <li><strong>通用性:</strong> 方案主要针对KV分离系统的GC优化，对其他类型的存储优化适用性有限</li>
+            </ul>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-2">未来研究方向</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>探索在其他计算存储设备上的适用性</li>
+              <li>研究更动态的资源分配策略以适应变化的工作负载</li>
+              <li>将类似方法应用于其他存储优化任务</li>
+              <li>研究在分布式环境中的扩展性</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      const performanceBars = document.querySelectorAll('.performance-bar');
+      performanceBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+          bar.style.width = width;
+        }, 500);
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

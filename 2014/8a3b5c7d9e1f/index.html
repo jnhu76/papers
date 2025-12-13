@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Join: Distributed Joins with Minimal Network Traffic</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .algorithm-step {
+      @apply bg-gray-50 border-l-4 border-blue-500 p-4 mb-4 rounded-r-lg;
+    }
+    .performance-bar {
+      transition: width 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Track Join: Distributed Joins with Minimal Network Traffic
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Orestis Polychroniou, Rajkumar Sen, Kenneth A. Ross</div>
+                <div class="text-sm text-gray-600 mt-1">Columbia University, Oracle Labs</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SIGMOD 2014</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">研究领域</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">分布式数据库，查询优化，网络通信</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分布式连接</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">网络优化</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Track Join</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">查询处理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>Track Join算法</strong>：提出了一种新颖的分布式连接算法，通过为每个不同的连接键生成最优传输调度来最小化网络流量</li>
+          <li><strong>网络优化</strong>：在CPU和网络使用之间提供了新的权衡选项，显著减少了网络传输量</li>
+          <li><strong>适应性</strong>：能够适应不同的数据局部性情况，即使在没有局部性的情况下也能在昂贵查询中优于哈希连接</li>
+          <li><strong>通用性</strong>：不依赖于模式特性（如外键连接）或有利的预存在元组放置</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            网络通信是部署用于大规模分析的分布式并行数据库中许多操作最慢的组件。虽然大量工作集中在加速现代硬件上的数据库，但通信减少受到的关注较少。现有的并行DBMS依赖于为磁盘设计的算法，仅对网络进行了微小修改。
+          </p>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            作者引入了<strong>Track Join</strong>，一种新颖的分布式连接算法，通过为每个不同的连接键生成最优传输调度来最小化网络流量。Track Join扩展了CPU和网络之间的权衡选项。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            基于真实和合成数据的评估显示，Track Join适应了不同的情况和局部性程度。考虑到网络流量和执行时间，即使在无局部性的情况下，Track Join在真实工作负载的最昂贵查询上也优于哈希连接。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-server mr-2"></i>硬件发展
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>单机处理能力和存储容量已足够容纳中小规模数据库</li>
+              <li>具有超过1TB内存容量的服务器很常见</li>
+              <li>多核CPU和NUMA RAM提供了显著的并行性</li>
+              <li>数据库操作可以在RAM驻留数据上以每秒几GB的速率运行</li>
+            </ul>
+          </div>
+          
+          <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="font-bold text-purple-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-network-wired mr-2"></i>网络瓶颈
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>网络技术相对于主内存处理仍然较慢</li>
+              <li>40 Gbps InfiniBand在哈希分区期间每个节点的实际数据速率低于3 GB/s</li>
+              <li>RAM分区速率可达30-35 GB/s，比InfiniBand网络高一个数量级</li>
+              <li>网络优化对低端和高端硬件都很重要</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+            <i class="fas fa-chart-bar mr-2"></i>现实工作负载分析
+          </h4>
+          <p class="text-gray-700 mb-3">
+            在大型商业供应商的真实分析工作负载中，使用8台通过40 Gbps InfiniBand连接的机器，发现五个最昂贵的查询花费约65-70%的时间在网络传输元组上，占执行整个分析工作负载（超过1500个查询）总时间的14.7%。
+          </p>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+            <div class="bg-white p-3 rounded text-center">
+              <div class="text-2xl font-bold text-yellow-600">23%</div>
+              <div class="text-xs text-gray-600">查询1</div>
+            </div>
+            <div class="bg-white p-3 rounded text-center">
+              <div class="text-2xl font-bold text-yellow-600">31%</div>
+              <div class="text-xs text-gray-600">查询2</div>
+            </div>
+            <div class="bg-white p-3 rounded text-center">
+              <div class="text-2xl font-bold text-yellow-600">30%</div>
+              <div class="text-xs text-gray-600">查询3</div>
+            </div>
+            <div class="bg-white p-3 rounded text-center">
+              <div class="text-2xl font-bold text-yellow-600">42%</div>
+              <div class="text-xs text-gray-600">查询4</div>
+            </div>
+            <div class="bg-white p-3 rounded text-center">
+              <div class="text-2xl font-bold text-yellow-600">43%</div>
+              <div class="text-xs text-gray-600">查询5</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+          <h4 class="font-bold text-red-700 mb-3 flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>现有方法的局限性
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>Grace哈希连接</strong>：通过网络传输几乎两个表的全部大小，远非网络最优</li>
+            <li>使用预定义哈希函数保证负载均衡，但限制了哈希元组不通过网络传输的概率为1/N（N个节点）</li>
+            <li>现有方法没有充分利用数据局部性</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-exchange-alt text-4xl text-blue-500"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-3 text-center">网络通信瓶颈</h3>
+            <p class="text-gray-700 text-sm text-center">
+              网络带宽远低于内存带宽，成为分布式连接操作的主要瓶颈
+            </p>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-hdd text-4xl text-green-500"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-3 text-center">算法设计过时</h3>
+            <p class="text-gray-700 text-sm text-center">
+              现有分布式连接算法最初为磁盘设计，未充分利用现代硬件特性
+            </p>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-center mb-4">
+              <i class="fas fa-balance-scale text-4xl text-purple-500"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-3 text-center">CPU与网络权衡</h3>
+            <p class="text-gray-700 text-sm text-center">
+              需要在CPU处理成本和网络传输成本之间找到最优平衡点
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center">
+            <i class="fas fa-bullseye mr-2 text-red-500"></i>研究问题
+          </h3>
+          <p class="text-gray-700 mb-4">
+            如何设计一种分布式连接算法，能够最小化网络通信量，同时保持合理的CPU开销，并且不依赖于特定的数据分布或模式特性？
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-2">关键目标</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>最小化网络传输的元组数量</li>
+                <li>为每个不同的连接键生成最优传输调度</li>
+                <li>适应不同的数据局部性情况</li>
+                <li>与现有优化技术（如压缩）兼容</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-2">设计约束</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>不依赖模式特性（如外键连接）</li>
+                <li>兼容行存储和列存储组织</li>
+                <li>不假设有利的预存在元组放置</li>
+                <li>能够与半连接优化共存</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- Track Join算法概述 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-4 flex items-center">
+            <i class="fas fa-project-diagram mr-2 text-blue-500"></i>Track Join算法概述
+          </h3>
+          <p class="text-gray-700 mb-4">
+            Track Join的核心思想是基于每个键的信息决定将行发送到哪里，使用有关给定键的记录位置的信息。算法逐步演进，提供三种版本：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 text-center">2-Phase Track Join</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>发现具有至少一个匹配元组的网络位置</li>
+                <li>选择一个连接侧，将每个元组广播到具有相同连接键的另一个表匹配元组的所有位置</li>
+                <li>使用术语"选择性广播"描述此过程</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-3 text-center">3-Phase Track Join</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>不仅跟踪节点是否具有特定连接键的元组，还跟踪这些元组的数量和总大小</li>
+                <li>为每个键独立选择要选择性广播的最便宜侧</li>
+                <li>双向选择性广播</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-3 text-center">4-Phase Track Join</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>扩展3-phase版本，添加更复杂的调度算法和迁移阶段</li>
+                <li>在选择性广播另一个表的元组之前，将一个表的元组迁移到可能比原始放置更少的节点</li>
+                <li>实现最小有效负载传输</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 2-Phase Track Join -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>2-Phase Track Join
+          </h3>
+          
+          <div class="algorithm-step">
+            <h4 class="font-semibold text-blue-700 mb-2">阶段1：跟踪阶段</h4>
+            <p class="text-gray-700 text-sm mb-2">R和S都投影到它们的连接键并通过网络发送。目的地通过哈希键确定，与哈希连接发送元组的方式相同。重复项被消除。</p>
+            <div class="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono mt-2 overflow-x-auto">
+              // 发送键到跟踪进程<br>
+              for &lt;key, payload&gt; in table R:<br>
+              &nbsp;&nbsp;if key not in T_R:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;send key to process_T (hash(key) mod N)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;T_R ← T_R + &lt;key, payload&gt;
+            </div>
+          </div>
+          
+          <div class="algorithm-step">
+            <h4 class="font-semibold text-blue-700 mb-2">阶段2：选择性广播阶段</h4>
+            <p class="text-gray-700 text-sm mb-2">仅从一个表传输元组。节点T（process_T）向具有匹配R元组的每个位置发送消息，包括键和S元组位置集合。最后，R元组被选择性广播到跟踪的S位置，而不是网络中的所有节点，并在本地连接。</p>
+            <div class="bg-gray-800 text-green-400 p-3 rounded text-sm font-mono mt-2 overflow-x-auto">
+              // 跟踪进程生成调度<br>
+              for all distinct key k in T_R|S:<br>
+              &nbsp;&nbsp;for all &lt;k, process_R n_R&gt; in T_R|S:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;for all &lt;k, process_S n_S&gt; in T_R|S:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;send &lt;k, n_S&gt; to n_R
+            </div>
+          </div>
+        </div>
+        
+        <!-- 算法比较 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="font-bold text-gray-800 text-xl mb-4 flex items-center">
+            <i class="fas fa-balance-scale mr-2 text-blue-500"></i>算法比较
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图1 - 不同算法的网络传输比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 不同算法的网络传输比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 不同算法的网络传输比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同算法对单个键连接的示例网络传输
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>哈希连接:</strong> 假设哈希目的地是第五个节点，所有元组都被发送到该节点</li>
+                  <li><strong>2-phase Track Join:</strong> 选择性广播R元组到匹配的S元组位置</li>
+                  <li><strong>3-phase Track Join:</strong> 选择相反方向，因为它更便宜</li>
+                  <li><strong>4-phase Track Join:</strong> 首先迁移R元组，然后选择性广播S元组</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>4-phase Track Join通过迁移阶段优化网络传输，首先将元组迁移到较少的节点，然后进行选择性广播，从而最小化总网络传输量。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择迁移和广播的组合，而不是简单的哈希或广播，以利用数据局部性并减少不必要的网络传输。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>为每个不同的连接键生成最优传输调度，考虑元组大小、位置和数量，实现网络流量的最小化。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">算法</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">阶段数</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">关键特性</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">适用场景</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">哈希连接</td>
+                  <td class="py-3 px-4 border-b">2</td>
+                  <td class="py-3 px-4 border-b">哈希分区，简单负载均衡</td>
+                  <td class="py-3 px-4 border-b">通用场景，数据分布均匀</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">2-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">2</td>
+                  <td class="py-3 px-4 border-b">选择性广播，跟踪位置</td>
+                  <td class="py-3 px-4 border-b">一个表明显小于另一个表</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">3-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">3</td>
+                  <td class="py-3 px-4 border-b">双向选择性广播，基于成本选择</td>
+                  <td class="py-3 px-4 border-b">表大小相似，但元组大小不同</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">4-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">4</td>
+                  <td class="py-3 px-4 border-b">迁移+选择性广播，最优调度</td>
+                  <td class="py-3 px-4 border-b">复杂数据分布，高局部性场景</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 实验设置 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-4 flex items-center">
+            <i class="fas fa-flask mr-2 text-blue-500"></i>实验设置
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-3">硬件配置</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>8节点集群，通过40 Gbps InfiniBand连接</li>
+                <li>每个节点：2X Intel Xeon E5-2690 (8核，2-way SMT) CPU @ 2.9 GHz</li>
+                <li>256 GB四通道DDR3 RAM @ 1600 MHz</li>
+                <li>1.6 TB闪存存储，7 GB/s带宽</li>
+                <li>4X 300 GB硬盘 @ 10,000 RPM</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-3">工作负载</h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>真实商业工作负载X：超过1500个查询</li>
+                <li>真实商业工作负载Y：约90个分析查询</li>
+                <li>合成数据集：测试不同数据分布和局部性</li>
+                <li>编码方案：固定字节、固定位字典编码、可变字节编码</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 性能结果 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-6 flex items-center">
+            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>性能结果
+          </h3>
+          
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图7 - 真实工作负载X的性能比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 真实工作负载X的性能比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 真实工作负载X的性能比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 真实工作负载X中最慢查询的最慢连接子查询（原始元组排序）
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>输入显示局部性:</strong> 广播R传输了约1/3的R元组，而哈希连接传输整个R表</li>
+                  <li><strong>编码方案影响:</strong> 使用未压缩键增加了Track Join的成本</li>
+                  <li><strong>最优性能:</strong> 使用字典编码和最小位数时，Track Join表现最佳</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 8节点集群，40 Gbps InfiniBand</li>
+                      <li>软件栈: 商业DBMS，Linux操作系统</li>
+                      <li>工作负载: 真实商业工作负载X</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>网络流量减少: 高达53%</li>
+                      <li>CPU开销增加: 25-74%</li>
+                      <li>总体性能提升: 在更快网络上预计29-37%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <div class="mb-6">
+            <h4 class="font-semibold text-gray-700 mb-4">最慢五个查询的网络流量减少</h4>
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>查询1</span>
+                  <span>53% 减少</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 53%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>查询2</span>
+                  <span>45% 减少</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 45%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>查询3</span>
+                  <span>46% 减少</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 46%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>查询4</span>
+                  <span>48% 减少</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 48%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>查询5</span>
+                  <span>52% 减少</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 52%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">工作负载</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">数据顺序</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">算法</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">CPU时间(秒)</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">网络时间(秒)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b" rowspan="4">X</td>
+                  <td class="py-3 px-4 border-b" rowspan="2">原始</td>
+                  <td class="py-3 px-4 border-b">哈希连接</td>
+                  <td class="py-3 px-4 border-b">4.308</td>
+                  <td class="py-3 px-4 border-b">87.754</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">2-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">5.396</td>
+                  <td class="py-3 px-4 border-b">38.857</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b" rowspan="2">洗牌</td>
+                  <td class="py-3 px-4 border-b">哈希连接</td>
+                  <td class="py-3 px-4 border-b">4.598</td>
+                  <td class="py-3 px-4 border-b">87.828</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">2-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">6.457</td>
+                  <td class="py-3 px-4 border-b">61.961</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b" rowspan="4">Y</td>
+                  <td class="py-3 px-4 border-b" rowspan="2">原始</td>
+                  <td class="py-3 px-4 border-b">哈希连接</td>
+                  <td class="py-3 px-4 border-b">2.301</td>
+                  <td class="py-3 px-4 border-b">30.097</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">2-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">2.279</td>
+                  <td class="py-3 px-4 border-b">10.800</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b" rowspan="2">洗牌</td>
+                  <td class="py-3 px-4 border-b">哈希连接</td>
+                  <td class="py-3 px-4 border-b">2.331</td>
+                  <td class="py-3 px-4 border-b">30.191</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">4-Phase Track Join</td>
+                  <td class="py-3 px-4 border-b">2.541</td>
+                  <td class="py-3 px-4 border-b">18.230</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 局限性分析 -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+          <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+            <i class="fas fa-exclamation-triangle mr-2"></i>局限性分析
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>CPU开销:</strong> Track Join在处理键方面比哈希连接花费更多时间，当有效负载较小时，除非有局部性，否则性能可能不如哈希连接</li>
+            <li><strong>局部性依赖:</strong> 当没有数据局部性时，某些Track Join版本可能传输比哈希连接更多的数据</li>
+            <li><strong>负载均衡:</strong> 原始排序中的局部性偏斜可能减少对哈希连接的改进潜力</li>
+            <li><strong>实现复杂性:</strong> 更复杂的算法需要更复杂的实现和优化</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            作者提出了Track Join，一种新颖的分布式连接算法，可以最小化通信，从而减少网络流量。为了最小化通过网络传输的元组数量，Track Join在跟踪元组的初始位置后，为每个不同的连接键生成最优传输调度。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>主要优势
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>显著减少网络流量，在真实工作负载中减少高达53%</li>
+                <li>适应不同的数据局部性情况和程度</li>
+                <li>不依赖于DBMS中的数据组织，不依赖模式特性或预存在有利数据放置</li>
+                <li>与压缩和半连接过滤等现有优化技术兼容</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-road mr-2"></i>未来工作
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>考虑节点间传输平衡，而不仅仅是最小化网络流量</li>
+                <li>流水线实现，通过重叠CPU和网络减少端到端时间</li>
+                <li>在MapReduce等通用分布式系统中重新实现Track Join</li>
+                <li>研究替代实现，以最小化时间为目标重叠CPU和网络</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+            <h4 class="font-semibold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>实际意义
+            </h4>
+            <p class="text-gray-700 text-sm">
+              Track Join为分布式数据库系统提供了一种有效的网络优化方法，特别是在网络带宽成为瓶颈的大规模分析场景中。通过减少网络传输，Track Join可以显著提高查询性能，特别是在最昂贵的查询上，这些查询通常占工作负载总执行时间的很大一部分。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      const observerOptions = {
+        threshold: 0.5
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const performanceBars = entry.target.querySelectorAll('.performance-bar');
+            performanceBars.forEach(bar => {
+              // 确保宽度已经设置，然后触发动画
+              setTimeout(() => {
+                bar.style.width = bar.style.width;
+              }, 100);
+            });
+          }
+        });
+      }, observerOptions);
+      
+      // 观察评估部分
+      const evaluationSection = document.getElementById('evaluation');
+      if (evaluationSection) {
+        observer.observe(evaluationSection);
+      }
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

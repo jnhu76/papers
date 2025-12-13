@@ -1,0 +1,10 @@
+{
+  "id": "a3b5c7d9e1f2",
+  "title": "Analyzing Modern NVIDIA GPU cores",
+  "authors": ["Rodrigo Huerta", "Joselorenzo Cruz", "Mojtaba Abaie Shoushtary", "Antonio Gonzalez"],
+  "year": 2025,
+  "conference": "MICRO",
+  "category": "计算机体系结构",
+  "keywords": ["GPU", "微架构", "逆向工程", "NVIDIA", "模拟器", "编译器指导", "依赖管理"],
+  "abstract": "GPUs are the most popular platform for accelerating HPC workloads, such as artificial intelligence and science simulations. However, most microarchitectural research in academia relies on GPU core pipeline designs based on architectures that are more than 15 years old.\nThis paper reverse engineers modern NVIDIA GPU cores, unveiling many key aspects of its design and explaining how GPUs leverage hardware-compiler techniques where the compiler guides hardware during execution. In particular, it reveals how the issue logic works including the policy of the issue scheduler, the structure of the register file and its associated cache, and multiple features of the memory pipeline. Moreover, it analyses how a simple instruction prefetcher based on a stream buffer fits well with modern NVIDIA GPUs and is likely to be used. Furthermore, we investigate the impact of the register file cache and the number of register file read ports on both simulation accuracy and performance.\nBy modeling all these new discovered microarchitectural details, we achieve 18.24% lower mean absolute percentage error (MAPE) in execution cycles than previous state-of-the-art simulators, resulting in an average of 13.98% MAPE with respect to real hardware (NVIDIA RTX A6000). Also, we demonstrate that this new model stands for other NVIDIA architectures, such as Turing.\nFinally, we show that the software-based dependence management mechanism included in modern NVIDIA GPUs outperforms a hardware mechanism based on scoreboards in terms of performance and area."
+}
