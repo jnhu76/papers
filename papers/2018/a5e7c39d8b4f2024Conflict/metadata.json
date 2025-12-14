@@ -1,0 +1,10 @@
+{
+"id": "a5e7c39d8b4f2024Conflict",
+"title": "Conflict-free Replicated Data Types",
+"authors": ["Nuno Preguica", "Carlos Baquero", "Marc Shapiro"],
+"year": 2018,
+"conference": "ArXiv",
+"category": "分布式系统",
+"keywords": ["冲突无关复制数据类型", "CRDT", "最终一致性", "复制协议", "弱一致性模型", "并发语义", "分布式数据"],
+"abstract": "A conflict-free replicated data type (CRDT) is an abstract data type, with a well defined interface, designed to be replicated at multiple processes and exhibiting the following properties: (i) any replica can be modified without coordinating with another replicas; (ii) when any two replicas have received the same set of updates, they reach the same state, deterministically, by adopting mathematically sound rules to guarantee state convergence."
+}

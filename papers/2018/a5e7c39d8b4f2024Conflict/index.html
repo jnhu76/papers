@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conflict-free Replicated Data Types - 可视化教学工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#applications" class="nav-item whitespace-nowrap">应用与示例</a>
+        <a href="#future-research" class="nav-item whitespace-nowrap">未来研究方向</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Conflict-free Replicated Data Types (CRDTs)
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Nuno Preguica, Carlos Baquero, Marc Shapiro</div>
+                <div class="text-sm text-gray-600 mt-1">Universidade NOVA de Lisboa, Universidade do Minho, Sorbonne-Université & Inria</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>2018年2月20日</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">论文类型</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">综述/教程论文</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分布式系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">数据复制</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">最终一致性</span>
+                  <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">冲突解决</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12 md:mb-16">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>CRDT的核心贡献与解决问题
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <h5 class="font-bold text-blue-700">解决的问题：</h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>分布式数据一致性难题</strong>：多个副本如何在不频繁协调的情况下保持一致</li>
+              <li><strong>网络分区时的可用性</strong>：在CAP定理框架下，如何在网络故障时保持系统可用</li>
+              <li><strong>并发更新的冲突解决</strong>：当多个用户同时修改数据时，如何确保最终状态一致</li>
+              <li><strong>系统复杂性管理</strong>：减少分布式系统开发中的复杂协调逻辑</li>
+            </ul>
+          </div>
+          <div class="space-y-3">
+            <h5 class="font-bold text-green-700">核心创新：</h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>数学保证的收敛性</strong>：使用数学规则确保所有副本最终达到相同状态</li>
+              <li><strong>无需协调的更新</strong>：任何副本都可以独立接受更新操作</li>
+              <li><strong>灵活的并发语义</strong>：提供多种冲突解决策略（add-wins, remove-wins, last-writer-wins）</li>
+              <li><strong>可组合的数据类型</strong>：提供基础的CRDT类型，可以组合成复杂数据结构</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要与核心概念
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+              CRDT的定义（论文原文）
+            </h3>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-gray-700 italic">
+                "A conflict-free replicated data type (CRDT) is an abstract data type, with a well defined interface, designed to be replicated at multiple processes and exhibiting the following properties: (i) any replica can be modified without coordinating with another replicas; (ii) when any two replicas have received the same set of updates, they reach the same state, deterministically, by adopting mathematically sound rules to guarantee state convergence."
+              </p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>
+                CRDT的核心理念（简单理解）
+              </h4>
+              <p class="text-gray-700">
+                想象一下，你和朋友在不同的纸上写购物清单。CRDT就像一种特殊的清单格式，允许你们各自添加物品，即使不互相沟通，最后合并时也不会出现混乱或冲突。
+              </p>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>
+                为什么需要CRDT？
+              </h4>
+              <p class="text-gray-700">
+                在互联网应用中（如在线文档、游戏、社交应用），用户可能在世界各地同时操作。传统方法需要频繁协调，导致延迟；CRDT允许本地操作，稍后自动合并，提高响应速度。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">分布式系统的核心挑战</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
+                <i class="fas fa-network-wired text-red-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-red-700 mb-2">网络问题</h4>
+                <p class="text-sm text-gray-700">延迟、分区、丢包等网络问题难以避免</p>
+              </div>
+              
+              <div class="bg-amber-50 p-4 rounded-lg border border-amber-200 text-center">
+                <i class="fas fa-users text-amber-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-amber-700 mb-2">并发操作</h4>
+                <p class="text-sm text-gray-700">多个用户可能同时修改相同的数据</p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+                <i class="fas fa-balance-scale text-purple-500 text-3xl mb-3"></i>
+                <h4 class="font-bold text-purple-700 mb-2">CAP定理约束</h4>
+                <p class="text-sm text-gray-700">一致性、可用性、分区容忍性三者不可兼得</p>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                CAP定理的启示
+              </h4>
+              <p class="text-gray-700 mb-3">
+                根据CAP定理（Brewer, 2010），分布式系统在面对网络分区时，必须在<strong>一致性</strong>和<strong>可用性</strong>之间做出选择。CRDT选择了<strong>可用性优先</strong>，允许在网络故障时继续接受操作，同时通过数学方法保证最终状态收敛。
+              </p>
+              <div class="flex items-center justify-center text-gray-600 text-sm">
+                <span class="bg-white px-3 py-1 rounded border">一致性</span>
+                <i class="fas fa-times mx-2 text-red-500"></i>
+                <span class="bg-white px-3 py-1 rounded border">可用性</span>
+                <i class="fas fa-times mx-2 text-red-500"></i>
+                <span class="bg-white px-3 py-1 rounded border">分区容忍性</span>
+              </div>
+              <p class="text-center text-xs text-gray-500 mt-2">三者不可同时完美实现</p>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">传统方法的局限性</h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-times text-red-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-bold text-gray-700">协调开销大</h5>
+                  <p class="text-gray-600 text-sm">每次更新都需要多个副本协调，导致高延迟</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-times text-red-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-bold text-gray-700">网络分区时不可用</h5>
+                  <p class="text-gray-600 text-sm">当网络出现问题时，系统可能完全停止工作</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-times text-red-600"></i>
+                </div>
+                <div>
+                  <h5 class="font-bold text-gray-700">冲突解决复杂</h5>
+                  <p class="text-gray-600 text-sm">需要复杂的逻辑来处理并发更新冲突</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">并发语义的挑战</h3>
+            
+            <!-- 技术细节卡片 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-microscope mr-2"></i>技术细节：并发操作冲突问题
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 并发冲突示例 -->
+                <div class="bg-white p-4 rounded-lg border">
+                  <h5 class="font-semibold text-gray-700 mb-3">并发更新冲突示例：</h5>
+                  <div class="space-y-4">
+                    <div class="flex items-center">
+                      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded mr-3">副本A</div>
+                      <div class="flex-1">设置值为 10</div>
+                    </div>
+                    <div class="flex items-center">
+                      <div class="bg-green-100 text-green-800 px-3 py-1 rounded mr-3">副本B</div>
+                      <div class="flex-1">同时设置值为 20</div>
+                    </div>
+                    <div class="text-center text-gray-600">
+                      <i class="fas fa-question text-2xl"></i>
+                    </div>
+                    <div class="text-center">
+                      <div class="inline-block bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg">
+                        最终值应该是多少？
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 解决方案 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i>CRDT的解决方案：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li><strong>多值寄存器</strong>：同时保留10和20两个值</li>
+                    <li><strong>最后写入者获胜</strong>：根据时间戳确定保留哪个值</li>
+                    <li><strong>应用特定语义</strong>：根据业务逻辑确定合并规则</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-3">关键问题1：什么是最終状态？</h4>
+                <p class="text-gray-700 mb-3">
+                  当多个副本独立操作后，系统应该收敛到什么状态？这需要明确定义。
+                </p>
+                <div class="text-sm bg-white p-3 rounded border">
+                  <strong>示例：</strong>两个人同时预订同一会议室，谁应该成功？
+                </div>
+              </div>
+              
+              <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-3">关键问题2：如何保证收敛？</h4>
+                <p class="text-gray-700 mb-3">
+                  需要数学证明，无论操作顺序如何，所有副本最终都会达到相同状态。
+                </p>
+                <div class="text-sm bg-white p-3 rounded border">
+                  <strong>解决方案：</strong>使用交换律、结合律等数学性质设计操作
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">因果关系的挑战</h3>
+            
+            <div class="space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h5 class="font-bold text-gray-700 mb-2">happens-before关系（Lamport, 1978）</h5>
+                <p class="text-gray-600 mb-3">
+                  在分布式系统中，事件e₁发生在事件e₂之前（e₁≺e₂），如果：
+                </p>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700 pl-4">
+                  <li>在同一进程中，e₁在e₂之前发生</li>
+                  <li>e₁是发送消息m的事件，e₂是接收该消息的事件</li>
+                  <li>存在事件e使得e₁≺e且e≺e₂</li>
+                </ol>
+              </div>
+              
+              <!-- 因果一致性示例 -->
+              <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+                <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                  <i class="fas fa-project-diagram mr-2"></i>技术细节：因果一致性问题示例
+                </summary>
+                
+                <div class="mt-6">
+                  <!-- 原图占位符 -->
+                  <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                      <h5 class="font-semibold text-gray-700">
+                        <i class="fas fa-image mr-2 text-blue-500"></i>
+                        因果一致性示例
+                      </h5>
+                      <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">概念图示</span>
+                    </div>
+                    
+                    <!-- 因果图可视化 -->
+                    <div class="architecture-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg">
+                      <div class="flex items-center justify-center mb-4">
+                        <i class="fas fa-sitemap text-3xl text-blue-500 mr-3"></i>
+                        <h6 class="font-semibold text-gray-700">因果依赖关系图</h6>
+                      </div>
+                      
+                      <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-center">
+                          <i class="fas fa-user text-blue-500 mb-2"></i>
+                          <p class="text-sm font-medium">用户A</p>
+                          <p class="text-xs text-gray-600">添加评论</p>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded border border-green-200 text-center">
+                          <i class="fas fa-user text-green-500 mb-2"></i>
+                          <p class="text-sm font-medium">用户B</p>
+                          <p class="text-xs text-gray-600">回复评论</p>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                          <i class="fas fa-user text-purple-500 mb-2"></i>
+                          <p class="text-sm font-medium">用户C</p>
+                          <p class="text-xs text-gray-600">看到回复</p>
+                        </div>
+                      </div>
+                      
+                      <!-- 因果箭头 -->
+                      <div class="flex justify-center items-center text-gray-500 text-sm">
+                        <span>A的评论</span>
+                        <i class="fas fa-arrow-right mx-2"></i>
+                        <span>B的回复</span>
+                        <i class="fas fa-arrow-right mx-2"></i>
+                        <span>C应该看到完整的对话</span>
+                      </div>
+                    </div>
+                    
+                    <!-- 图注 -->
+                    <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                      <strong>技术解释：</strong> 在分布式系统中，因果一致性要求如果事件B依赖于事件A，那么所有看到B的副本也必须看到A。CRDT通过happens-before关系来保持这种因果顺序。
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">CRDT的基本设计模式</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- 状态复制模型 -->
+              <div class="space-y-4">
+                <h4 class="font-bold text-blue-700 text-lg flex items-center">
+                  <i class="fas fa-exchange-alt mr-2"></i>
+                  状态复制模型
+                </h4>
+                
+                <div class="bg-blue-50 p-4 rounded-lg">
+                  <h5 class="font-bold text-blue-700 mb-2">工作原理</h5>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                    <li>副本之间交换完整状态</li>
+                    <li>使用合并函数整合状态</li>
+                    <li>数学保证：状态构成一个半格</li>
+                    <li>操作必须是单调递增的</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg border">
+                  <h5 class="font-bold text-gray-700 mb-1">数学保证</h5>
+                  <p class="text-xs text-gray-600">
+                    如果状态构成一个join半格，且操作是单调递增的，那么使用join操作作为合并函数可以保证收敛。
+                  </p>
+                </div>
+              </div>
+              
+              <!-- 操作复制模型 -->
+              <div class="space-y-4">
+                <h4 class="font-bold text-green-700 text-lg flex items-center">
+                  <i class="fas fa-broadcast-tower mr-2"></i>
+                  操作复制模型
+                </h4>
+                
+                <div class="bg-green-50 p-4 rounded-lg">
+                  <h5 class="font-bold text-green-700 mb-2">工作原理</h5>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                    <li>传播操作而非状态</li>
+                    <li>生成器生成效应器</li>
+                    <li>效应器在所有副本执行</li>
+                    <li>需要因果顺序传递</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg border">
+                  <h5 class="font-bold text-gray-700 mb-1">收敛条件</h5>
+                  <p class="text-xs text-gray-600">
+                    如果并发操作是可交换的，或操作以因果顺序传递，那么副本将收敛到相同状态。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 常见CRDT类型 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">常见CRDT类型及其语义</h3>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-3 px-4 text-left text-gray-700 font-bold">CRDT类型</th>
+                    <th class="py-3 px-4 text-left text-gray-700 font-bold">操作</th>
+                    <th class="py-3 px-4 text-left text-gray-700 font-bold">并发语义</th>
+                    <th class="py-3 px-4 text-left text-gray-700 font-bold">典型应用</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr>
+                    <td class="py-3 px-4 font-medium text-blue-700">计数器</td>
+                    <td class="py-3 px-4">inc(), dec()</td>
+                    <td class="py-3 px-4">操作可交换，自然收敛</td>
+                    <td class="py-3 px-4">点赞数、访问计数</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-3 px-4 font-medium text-green-700">集合(Add-Wins)</td>
+                    <td class="py-3 px-4">add(e), remove(e)</td>
+                    <td class="py-3 px-4">添加优先于并发删除</td>
+                    <td class="py-3 px-4">协作文档中的元素集合</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-medium text-purple-700">集合(Remove-Wins)</td>
+                    <td class="py-3 px-4">add(e), remove(e)</td>
+                    <td class="py-3 px-4">删除优先于并发添加</td>
+                    <td class="py-3 px-4">待办事项列表</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-3 px-4 font-medium text-amber-700">集合(Last-Writer-Wins)</td>
+                    <td class="py-3 px-4">add(e), remove(e)</td>
+                    <td class="py-3 px-4">时间戳最新的操作获胜</td>
+                    <td class="py-3 px-4">配置管理、元数据</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-medium text-red-700">多值寄存器</td>
+                    <td class="py-3 px-4">write(v), read()</td>
+                    <td class="py-3 px-4">保留所有并发写入的值</td>
+                    <td class="py-3 px-4">冲突检测、调试</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- 集合语义对比 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">集合CRDT的并发语义对比</h3>
+            
+            <!-- 技术细节卡片 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-balance-scale mr-2"></i>技术细节：三种集合语义的对比分析
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图占位符 - 论文中的图1 -->
+                <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                    <h5 class="font-semibold text-gray-700">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 图1: Add-wins集合运行示例
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig1.png" alt="论文图1: Add-wins集合运行示例，展示两个副本对元素a的并发添加和删除操作" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 图注 -->
+                  <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> Run with an add-wins set. 图中展示了一个add-wins集合在两个副本中的运行示例，初始状态为{a}。在副本A中，a首先被删除然后又被添加；在副本B中，a被删除。在接收到彼此的更新后，两个副本最终都将a包含在集合中，因为不存在在添加操作之后发生的删除操作。
+                  </div>
+                </div>
+                
+                <!-- 性能分析 -->
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i>语义对比分析：
+                  </h5>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm md:text-base">
+                    <div>
+                      <strong class="text-purple-700">Add-Wins集合:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>添加优先于并发删除</li>
+                        <li>适合协作编辑</li>
+                        <li>可能导致已删除元素重新出现</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong class="text-purple-700">Remove-Wins集合:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>删除优先于并发添加</li>
+                        <li>适合待办事项</li>
+                        <li>可能导致添加被忽略</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong class="text-purple-700">LWW集合:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>时间戳最新的操作获胜</li>
+                        <li>需要时钟同步</li>
+                        <li>简单但可能不公平</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 text-center">Add-Wins集合</h4>
+                <div class="text-center mb-3">
+                  <div class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                    添加获胜
+                  </div>
+                </div>
+                <p class="text-sm text-gray-700 text-center">
+                  当添加和删除同时发生时，元素保留在集合中
+                </p>
+              </div>
+              
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-2 text-center">Remove-Wins集合</h4>
+                <div class="text-center mb-3">
+                  <div class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+                    删除获胜
+                  </div>
+                </div>
+                <p class="text-sm text-gray-700 text-center">
+                  当添加和删除同时发生时，元素从集合中移除
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 text-center">LWW集合</h4>
+                <div class="text-center mb-3">
+                  <div class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                    最后写入者获胜
+                  </div>
+                </div>
+                <p class="text-sm text-gray-700 text-center">
+                  根据时间戳决定哪个操作生效
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="applications" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-laptop-code mr-3 text-blue-500"></i>
+          应用与示例
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">CRDT的实际应用</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <h4 class="font-bold text-blue-700">存储系统集成</h4>
+                
+                <div class="space-y-3">
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-blue-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-database text-blue-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">Riak</h5>
+                      <p class="text-gray-600 text-sm">开源分布式数据库，内置CRDT支持</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-red-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-database text-red-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">Redis</h5>
+                      <p class="text-gray-600 text-sm">内存数据库，通过模块支持CRDT</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-purple-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-database text-purple-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">Akka</h5>
+                      <p class="text-gray-600 text-sm">分布式计算框架，集成CRDT</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="space-y-4">
+                <h4 class="font-bold text-green-700">应用内嵌实现</h4>
+                
+                <div class="space-y-3">
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-green-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-edit text-green-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">协作编辑</h5>
+                      <p class="text-gray-600 text-sm">如Google Docs的实时协作</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-amber-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-shopping-cart text-amber-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">购物车</h5>
+                      <p class="text-gray-600 text-sm">多设备同步购物车内容</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div class="bg-pink-100 p-2 rounded-full mr-3">
+                      <i class="fas fa-heart text-pink-600"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-bold text-gray-700">社交应用</h5>
+                      <p class="text-gray-600 text-sm">点赞、关注等计数和状态同步</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 实际案例：SoundCloud的Roshi -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">案例研究：SoundCloud的Roshi系统</h3>
+            
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-lg">
+              <div class="flex items-start mb-3">
+                <div class="bg-blue-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-music text-blue-600"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-blue-700">Roshi: LWW-element-set CRDT</h4>
+                  <p class="text-gray-700">
+                    SoundCloud使用基于最后写入者获胜（LWW）的集合CRDT来维护其流媒体服务的索引。这个系统能够处理大规模的时间戳事件，确保所有副本最终一致。
+                  </p>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="bg-white p-3 rounded border">
+                  <h5 class="font-bold text-gray-700 mb-1">解决的问题</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-600">
+                    <li>海量事件的时间戳排序</li>
+                    <li>跨地域的数据复制</li>
+                    <li>网络延迟下的数据一致性</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-white p-3 rounded border">
+                  <h5 class="font-bold text-gray-700 mb-1">CRDT的优势</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-600">
+                    <li>无需协调即可接受更新</li>
+                    <li>网络分区时仍可用</li>
+                    <li>自动解决冲突</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="future-research" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-rocket mr-3 text-blue-500"></i>
+          未来研究方向与论文不足
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 未来研究方向 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">未来研究方向</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                    <i class="fas fa-expand-arrows-alt mr-2"></i>
+                    可扩展性挑战
+                  </h4>
+                  <p class="text-gray-700 text-sm">
+                    CRDT元数据随副本数量线性增长，限制了大规模部署（数百个以上副本）。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>研究方向：</strong>更紧凑的因果表示、分层同步机制
+                  </div>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                    <i class="fas fa-undo mr-2"></i>
+                    可逆计算支持
+                  </h4>
+                  <p class="text-gray-700 text-sm">
+                    当前CRDT缺乏统一的撤销操作支持，这在协作编辑等场景中很重要。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>研究方向：</strong>统一的撤销框架、操作压缩技术
+                  </div>
+                </div>
+              </div>
+              
+              <div class="space-y-4">
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    安全性问题
+                  </h4>
+                  <p class="text-gray-700 text-sm">
+                    CRDT状态可能暴露历史操作信息，恶意副本可能通过状态操作攻击系统。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>研究方向：</strong>加密状态合并、可信执行环境集成
+                  </div>
+                </div>
+                
+                <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <h4 class="font-bold text-amber-700 mb-2 flex items-center">
+                    <i class="fas fa-code-branch mr-2"></i>
+                    非均匀复制
+                  </h4>
+                  <p class="text-gray-700 text-sm">
+                    不同副本可能不需要完全相同的数据，如Top-K查询只需前K个元素。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>研究方向：</strong>查询感知的复制策略、部分状态同步
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 论文的不足之处 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">论文的不足之处</h3>
+            
+            <div class="space-y-4">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                  <i class="fas fa-exclamation-circle mr-2"></i>
+                  局限性1：性能开销
+                </h4>
+                <p class="text-gray-700">
+                  论文中提到CRDT需要存储元数据来跟踪因果关系，这可能导致显著的存储和通信开销，特别是在大规模部署时。虽然提到了可扩展性挑战，但没有提供具体的量化分析。
+                </p>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                  <i class="fas fa-exclamation-circle mr-2"></i>
+                  局限性2：复杂数据类型支持有限
+                </h4>
+                <p class="text-gray-700">
+                  论文主要关注基础数据类型（集合、计数器、寄存器），对于更复杂的数据结构（如图形、树形结构）的支持相对有限。虽然提到了JSON CRDT，但没有深入讨论复杂数据类型的通用设计模式。
+                </p>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-exclamation-circle mr-2"></i>
+                  局限性3：实际部署经验不足
+                </h4>
+                <p class="text-gray-700">
+                  论文虽然提到了几个使用CRDT的系统（Riak、Redis、SoundCloud等），但缺乏详细的案例分析，如性能对比、故障处理经验、运维复杂度等实际部署中的挑战。
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-exclamation-circle mr-2"></i>
+                  局限性4：一致性语义的限制
+                </h4>
+                <p class="text-gray-700">
+                  CRDT提供的是最终一致性，对于一些需要强一致性的操作（如拍卖结束、金融交易）无法直接支持。论文提到了需要全局协调，但没有深入讨论如何将CRDT与强一致性操作集成。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 总结评价 -->
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>
+              对博士生的学习建议
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-bold text-purple-700 mb-2">这篇论文的核心价值：</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>系统性介绍</strong>：全面介绍了CRDT的基本概念、设计模式和实现方法</li>
+                  <li><strong>分类清晰</strong>：明确区分了状态复制和操作复制两种模型</li>
+                  <li><strong>实用导向</strong>：提供了多种数据类型的CRDT设计实例</li>
+                  <li><strong>前瞻性</strong>：指出了未来研究方向和技术挑战</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-2">学习重点：</h4>
+                <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>理解CRDT解决的基本问题：分布式数据一致性与可用性的平衡</li>
+                  <li>掌握happens-before关系在并发语义定义中的作用</li>
+                  <li>区分不同CRDT类型的适用场景和限制</li>
+                  <li>了解CRDT在实际系统中的应用方式和局限性</li>
+                </ol>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-bold text-green-700 mb-2">进一步学习建议：</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h5 class="font-bold text-gray-700">理论知识</h5>
+                    <ul class="list-disc list-inside text-gray-600">
+                      <li>CAP定理深入理解</li>
+                      <li>因果一致性模型</li>
+                      <li>半格理论在分布式系统的应用</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700">实践技能</h5>
+                    <ul class="list-disc list-inside text-gray-600">
+                      <li>使用Riak或Redis的CRDT功能</li>
+                      <li>实现简单的CRDT（如计数器）</li>
+                      <li>分析现有系统的CRDT实现</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动展开当前章节的details
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const details = entry.target.querySelector('details');
+            if (details && !details.open) {
+              // 可以在这里添加自动展开逻辑，但考虑到性能，暂时注释
+              // details.open = true;
+            }
+          }
+        });
+      }, { threshold: 0.5 });
+      
+      sections.forEach(section => {
+        observer.observe(section);
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
