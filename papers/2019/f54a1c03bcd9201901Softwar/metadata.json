@@ -1,0 +1,10 @@
+{
+    "id": "f54a1c03bcd9201901Softwar",
+    "title": "Software Prefetching for Indirect Memory Accesses: A Microarchitectural Perspective",
+    "authors": ["SAM AINSWORTH", "TIMOTHY M. JONES"],
+    "year": 2019,
+    "conference": "ACM TOCS",
+    "category": "计算机体系结构与编译器优化",
+    "keywords": ["软件预取", "间接内存访问", "编译器优化", "微架构", "内存延迟", "software prefetching", "indirect memory accesses"],
+    "abstract": "Many modern data processing and HPC workloads are heavily memory-latency bound. A tempting proposition to solve this is software prefetching, where special non-blocking loads are used to bring data into the cache hierarchy just before being required. However, these are difficult to insert to effectively improve performance, and techniques for automatic insertion are currently limited.\n\nThis paper develops a novel compiler pass to automatically generate software prefectches for indirect memory accesses, a special class of irregular memory accesses often seen in high-performance workloads. We evaluate this across a wide set of systems, all of which gain benefit from the technique. We then evaluate the extent to which good prefetch instructions are architecture dependent, and the class of programs that are particularly amenable. Across a set of memory-bound benchmarks, our automated pass achieves average speedups of 1.3x for an Intel Haswell processor, 1.1x for both an ARM Cortex-A57 and Qualcomm Kryo, 1.2x for a Cortex-72 and an Intel Kaby Lake, and 1.35x for an Intel Xeon Phi Knight's Landing, each of which is an out-of-order core, and performance improvements of 2.1x and 2.7x for the in-order ARM Cortex-A53 and first generation Intel Xeon Phi."
+}
