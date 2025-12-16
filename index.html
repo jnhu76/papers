@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
@@ -20,8 +20,8 @@
     <link rel="preload" href="./papers_data.json" as="fetch" crossorigin="anonymous" type="application/json">
     <style>
         body {
-            font-family: 'Inter', 'Noto Sans SC', 'Noto Serif SC', sans-serif;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 40%, #f1f5f9 100%);
+            font-family: 'Inter', 'Noto Serif SC', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
             background-attachment: fixed;
             min-height: 100vh;
             position: relative;
@@ -41,15 +41,6 @@
                 radial-gradient(circle at 80% 60%, rgba(255, 119, 198, 0.05) 0%, transparent 20%),
                 radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.05) 0%, transparent 20%);
             z-index: -1;
-        }
-        
-        /* 确保所有区域都使用透明背景，以便显示body的背景 */
-        .bg-gray-50 {
-            background-color: transparent !important;
-        }
-        
-        .bg-white {
-            background-color: rgba(255, 255, 255, 0.7) !important;
         }
         
         .glass-card {
@@ -117,18 +108,19 @@
         
         #backToTop {
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            color: white;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
             position: fixed;
             bottom: 110px;
             right: 20px;
             z-index: 100;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
         
         #backToTop:hover {
+            background: rgba(255, 255, 255, 1);
             transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
         
         .line-clamp-2 {
@@ -292,7 +284,8 @@
         
         /* 搜索框发光效果 */
         .search-glow:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 0 20px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3), 0 15px 35px rgba(31, 38, 135, 0.3);
+            transform: scale(1.02);
         }
         
         /* 粒子背景 */
@@ -309,25 +302,25 @@
         
         .particle {
             position: absolute;
-            background: rgba(59, 130, 246, 0.1);
+            background: rgba(255, 255, 255, 0.7);
             border-radius: 50%;
             pointer-events: none;
-            animation: float 15s infinite linear;
+            animation: float 20s infinite linear;
         }
         
         @keyframes float {
             0% {
-                transform: translateY(100vh) rotate(0deg);
+                transform: translateY(100vh) translateX(0) scale(0);
                 opacity: 0;
             }
             10% {
-                opacity: 0.4;
+                opacity: 1;
             }
             90% {
-                opacity: 0.4;
+                opacity: 1;
             }
             100% {
-                transform: translateY(-100vh) rotate(720deg);
+                transform: translateY(-100vh) translateX(100px) scale(1.5);
                 opacity: 0;
             }
         }
@@ -427,26 +420,16 @@
     <div class="floating-particles" id="particles"></div>
     
     <!-- 简化的Hero区域 -->
-    <section class="relative py-12 px-4 pt-32">
+    <section class="relative py-12 px-4 pt-24">
         <div class="max-w-7xl mx-auto text-center">
             <h1 class="text-4xl font-bold gradient-text mb-4">学术论文探索平台</h1>
             <p class="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">发现、探索和分享最新的学术研究成果</p>
-
-            <!-- 极简优雅标识 -->
-            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
-                <svg class="w-3.5 h-3.5 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                </svg>
-                <span>AI辅助内容生成</span>
-                <span class="text-gray-400">•</span>
-                <span class="text-gray-500 text-[11px]">请谨慎参考</span>
-            </div>
         </div>
     </section>
 
     <!-- 论文列表区域 -->
-    <section class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white/70 backdrop-blur rounded-xl shadow-lg p-6">
+    <section class="py-8 bg-gray-50 shadow-inner">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-xl shadow-lg p-6">
             <!-- 加载状态 -->
             <div id="loading-state" class="flex justify-center items-center py-12">
                 <div class="text-center">
@@ -525,7 +508,7 @@
         </div>
     </footer>
 
-    <button id="backToTop" class="fixed bottom-8 right-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-full shadow-lg z-10 transition-all hover:scale-110">
+    <button id="backToTop" class="fixed bottom-8 right-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-full shadow-lg opacity-0 z-10 transition-all hover:scale-110">
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
 
@@ -918,7 +901,7 @@
 
         async function fetchLatestPapersFile() {
             try {
-                const path = './papers_data.json'; 
+                const path = '/papers_data.json'; 
                 
                 console.log('🌐 开始请求JSON文件...');
                 const response = await fetch(path, {
@@ -978,7 +961,7 @@
                 return {
                     papers: papers,
                     timestamp: timestamp,
-                    fileUrl: './papers_data.json'
+                    fileUrl: 'papers_data.json'
                 };
             } catch (error) {
                 console.error('❌ 获取论文文件失败:', error);
@@ -1217,11 +1200,21 @@
         // 创建论文卡片
         function createPaperCard(paper) {
             const card = document.createElement('div');
-            card.className = 'paper-card bg-white/90 backdrop-blur-md rounded-xl overflow-hidden shadow-lg';
+            card.className = 'paper-card bg-white/90 backdrop-blur-md rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] relative';
             
             const authors = Array.isArray(paper.authors) 
                 ? paper.authors.slice(0, 2).join(', ') + (paper.authors.length > 2 ? ' 等' : '')
                 : paper.authors;
+            
+            // 创建摘要文本（截断版和完整版）
+            const abstractText = paper.abstract || '暂无摘要';
+            const truncatedAbstract = abstractText.length > 150 ? abstractText.substring(0, 150) + '...' : abstractText;
+            
+            // 创建关键字列表
+            const keywordsHtml = paper.keywords && paper.keywords.length > 0 ? 
+                paper.keywords.map(keyword => 
+                    `<span class="inline-block bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs px-2 py-1 rounded-full">${keyword}</span>`
+                ).join('') : '';
             
             card.innerHTML = `
                 <div class="p-6">
@@ -1243,9 +1236,34 @@
                         <span>${authors}</span>
                     </div>
                     
-                    <p class="text-sm text-gray-700 mb-4 line-clamp-3">
-                        ${paper.abstract || '暂无摘要'}
-                    </p>
+                    <!-- 摘要区域 - 普通状态和悬停状态 -->
+                    <div class="abstract-container relative mb-4">
+                        <p class="text-sm text-gray-700 abstract-normal line-clamp-3">
+                            ${truncatedAbstract}
+                        </p>
+                        <p class="text-sm text-gray-700 abstract-hover absolute inset-0 bg-white/95 backdrop-blur-sm p-0 rounded-lg shadow-lg opacity-0 invisible transition-all duration-300 z-10 max-h-40 overflow-y-auto">
+                            ${abstractText}
+                        </p>
+                    </div>
+                    
+                    <!-- 关键字区域 - 普通状态和悬停状态 -->
+                    <div class="keywords-container relative mb-4">
+                        <div class="keywords-normal flex flex-wrap gap-2">
+                            ${paper.keywords && paper.keywords.length > 0 ? 
+                                paper.keywords.slice(0, 4).map(keyword => 
+                                    `<span class="inline-block bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs px-2 py-1 rounded-full">${keyword}</span>`
+                                ).join('') + 
+                                (paper.keywords.length > 4 ? 
+                                    `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">+${paper.keywords.length - 4}</span>` 
+                                    : '') 
+                                : ''}
+                        </div>
+                        <div class="keywords-hover absolute inset-0 bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg opacity-0 invisible transition-all duration-300 z-10">
+                            <div class="flex flex-wrap gap-2">
+                                ${keywordsHtml}
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="flex justify-end">
                         <a href="${paper.htmlFile || '#'}" 
@@ -1257,6 +1275,37 @@
                     </div>
                 </div>
             `;
+            
+            // 添加悬停事件处理
+            const abstractContainer = card.querySelector('.abstract-container');
+            const abstractNormal = card.querySelector('.abstract-normal');
+            const abstractHover = card.querySelector('.abstract-hover');
+            
+            const keywordsContainer = card.querySelector('.keywords-container');
+            const keywordsNormal = card.querySelector('.keywords-normal');
+            const keywordsHover = card.querySelector('.keywords-hover');
+            
+            // 摘要悬停效果
+            abstractContainer.addEventListener('mouseenter', () => {
+                abstractNormal.classList.add('opacity-0', 'invisible');
+                abstractHover.classList.remove('opacity-0', 'invisible');
+            });
+            
+            abstractContainer.addEventListener('mouseleave', () => {
+                abstractNormal.classList.remove('opacity-0', 'invisible');
+                abstractHover.classList.add('opacity-0', 'invisible');
+            });
+            
+            // 关键字悬停效果
+            keywordsContainer.addEventListener('mouseenter', () => {
+                keywordsNormal.classList.add('opacity-0', 'invisible');
+                keywordsHover.classList.remove('opacity-0', 'invisible');
+            });
+            
+            keywordsContainer.addEventListener('mouseleave', () => {
+                keywordsNormal.classList.remove('opacity-0', 'invisible');
+                keywordsHover.classList.add('opacity-0', 'invisible');
+            });
             
             return card;
         }
