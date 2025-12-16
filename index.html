@@ -1262,8 +1262,14 @@
             
             // 创建摘要气泡
             const abstractBubble = document.createElement('div');
-            abstractBubble.className = 'absolute z-50 bg-white rounded-lg shadow-xl p-4 max-w-md opacity-0 invisible transition-all duration-300 pointer-events-none';
+            abstractBubble.className = 'fixed z-50 bg-white rounded-lg shadow-xl p-4 max-w-md opacity-0 invisible transition-all duration-300';
             abstractBubble.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-semibold text-gray-500">摘要</span>
+                    <button class="close-bubble text-gray-400 hover:text-gray-600 text-xs">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <div class="text-sm text-gray-700 max-h-60 overflow-y-auto">
                     <p>${abstractText}</p>
                 </div>
@@ -1276,29 +1282,70 @@
             const abstractContainer = card.querySelector('.abstract-container');
             const abstractTextElement = card.querySelector('.abstract-text');
             
-            // 将气泡添加到卡片中
-            card.appendChild(abstractBubble);
+            // 将气泡添加到body中，而不是卡片内，避免受到父容器限制
+            document.body.appendChild(abstractBubble);
             
-            // 摘要悬停效果
-            abstractContainer.addEventListener('mouseenter', (e) => {
+            // 获取关闭按钮
+            const closeButton = abstractBubble.querySelector('.close-bubble');
+            
+            // 使用变量跟踪气泡状态
+            let bubbleTimeout = null;
+            
+            // 显示气泡的函数
+            function showBubble() {
+                // 清除任何现有的超时
+                if (bubbleTimeout) {
+                    clearTimeout(bubbleTimeout);
+                    bubbleTimeout = null;
+                }
+                
                 // 计算气泡位置
                 const rect = abstractContainer.getBoundingClientRect();
-                const cardRect = card.getBoundingClientRect();
                 
                 // 设置气泡位置 - 在摘要上方
-                abstractBubble.style.bottom = (cardRect.bottom - rect.top + 10) + 'px';
-                abstractBubble.style.left = '50%';
+                abstractBubble.style.bottom = (window.innerHeight - rect.top + 10) + 'px';
+                abstractBubble.style.left = rect.left + (rect.width / 2) + 'px';
                 abstractBubble.style.transform = 'translateX(-50%)';
                 
                 // 显示气泡
                 abstractBubble.classList.remove('opacity-0', 'invisible');
                 abstractBubble.classList.add('opacity-100', 'visible');
+            }
+            
+            // 隐藏气泡的函数
+            function hideBubble() {
+                // 延迟隐藏，给用户时间移动到气泡上
+                bubbleTimeout = setTimeout(() => {
+                    abstractBubble.classList.remove('opacity-100', 'visible');
+                    abstractBubble.classList.add('opacity-0', 'invisible');
+                    bubbleTimeout = null;
+                }, 300);
+            }
+            
+            // 摘要悬停效果
+            abstractContainer.addEventListener('mouseenter', showBubble);
+            
+            abstractContainer.addEventListener('mouseleave', hideBubble);
+            
+            // 气泡悬停效果 - 保持气泡显示
+            abstractBubble.addEventListener('mouseenter', () => {
+                if (bubbleTimeout) {
+                    clearTimeout(bubbleTimeout);
+                    bubbleTimeout = null;
+                }
             });
             
-            abstractContainer.addEventListener('mouseleave', () => {
-                // 隐藏气泡
+            // 气泡鼠标离开 - 延迟隐藏
+            abstractBubble.addEventListener('mouseleave', hideBubble);
+            
+            // 关闭按钮点击 - 立即隐藏
+            closeButton.addEventListener('click', () => {
                 abstractBubble.classList.remove('opacity-100', 'visible');
                 abstractBubble.classList.add('opacity-0', 'invisible');
+                if (bubbleTimeout) {
+                    clearTimeout(bubbleTimeout);
+                    bubbleTimeout = null;
+                }
             });
             
             return card;
