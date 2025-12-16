@@ -1206,15 +1206,9 @@
                 ? paper.authors.slice(0, 2).join(', ') + (paper.authors.length > 2 ? ' 等' : '')
                 : paper.authors;
             
-            // 创建摘要文本（截断版和完整版）
-            const abstractText = paper.abstract || '暂无摘要';
+            // 创建摘要文本
+            const abstractContent = paper.abstract || '暂无摘要';
             const truncatedAbstract = abstractText.length > 150 ? abstractText.substring(0, 150) + '...' : abstractText;
-            
-            // 创建关键字列表
-            const keywordsHtml = paper.keywords && paper.keywords.length > 0 ? 
-                paper.keywords.map(keyword => 
-                    `<span class="inline-block bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs px-2 py-1 rounded-full">${keyword}</span>`
-                ).join('') : '';
             
             card.innerHTML = `
                 <div class="p-6">
@@ -1236,33 +1230,23 @@
                         <span>${authors}</span>
                     </div>
                     
-                    <!-- 摘要区域 - 普通状态和悬停状态 -->
+                    <!-- 摘要区域 - 悬停显示气泡 -->
                     <div class="abstract-container relative mb-4">
-                        <p class="text-sm text-gray-700 abstract-normal line-clamp-3">
+                        <p class="text-sm text-gray-700 abstract-text line-clamp-3 cursor-help">
                             ${truncatedAbstract}
-                        </p>
-                        <p class="text-sm text-gray-700 abstract-hover absolute inset-0 bg-white/95 backdrop-blur-sm p-0 rounded-lg shadow-lg opacity-0 invisible transition-all duration-300 z-10 max-h-40 overflow-y-auto">
-                            ${abstractText}
                         </p>
                     </div>
                     
-                    <!-- 关键字区域 - 普通状态和悬停状态 -->
-                    <div class="keywords-container relative mb-4">
-                        <div class="keywords-normal flex flex-wrap gap-2">
-                            ${paper.keywords && paper.keywords.length > 0 ? 
-                                paper.keywords.slice(0, 4).map(keyword => 
-                                    `<span class="inline-block bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs px-2 py-1 rounded-full">${keyword}</span>`
-                                ).join('') + 
-                                (paper.keywords.length > 4 ? 
-                                    `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">+${paper.keywords.length - 4}</span>` 
-                                    : '') 
-                                : ''}
-                        </div>
-                        <div class="keywords-hover absolute inset-0 bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg opacity-0 invisible transition-all duration-300 z-10">
-                            <div class="flex flex-wrap gap-2">
-                                ${keywordsHtml}
-                            </div>
-                        </div>
+                    <!-- 关键字区域 - 只显示前4个，多余的显示... -->
+                    <div class="keywords-container flex flex-wrap gap-2 mb-4">
+                        ${paper.keywords && paper.keywords.length > 0 ? 
+                            paper.keywords.slice(0, 4).map(keyword => 
+                                `<span class="inline-block bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-xs px-2 py-1 rounded-full">${keyword}</span>`
+                            ).join('') + 
+                            (paper.keywords.length > 4 ? 
+                                `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">...</span>` 
+                                : '') 
+                            : ''}
                     </div>
                     
                     <div class="flex justify-end">
@@ -1276,35 +1260,45 @@
                 </div>
             `;
             
+            // 创建摘要气泡
+            const abstractBubble = document.createElement('div');
+            abstractBubble.className = 'absolute z-50 bg-white rounded-lg shadow-xl p-4 max-w-md opacity-0 invisible transition-all duration-300 pointer-events-none';
+            abstractBubble.innerHTML = `
+                <div class="text-sm text-gray-700 max-h-60 overflow-y-auto">
+                    <p>${abstractText}</p>
+                </div>
+                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                    <div class="border-8 border-transparent border-t-white"></div>
+                </div>
+            `;
+            
             // 添加悬停事件处理
             const abstractContainer = card.querySelector('.abstract-container');
-            const abstractNormal = card.querySelector('.abstract-normal');
-            const abstractHover = card.querySelector('.abstract-hover');
+            const abstractText = card.querySelector('.abstract-text');
             
-            const keywordsContainer = card.querySelector('.keywords-container');
-            const keywordsNormal = card.querySelector('.keywords-normal');
-            const keywordsHover = card.querySelector('.keywords-hover');
+            // 将气泡添加到卡片中
+            card.appendChild(abstractBubble);
             
             // 摘要悬停效果
-            abstractContainer.addEventListener('mouseenter', () => {
-                abstractNormal.classList.add('opacity-0', 'invisible');
-                abstractHover.classList.remove('opacity-0', 'invisible');
+            abstractContainer.addEventListener('mouseenter', (e) => {
+                // 计算气泡位置
+                const rect = abstractContainer.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                
+                // 设置气泡位置 - 在摘要上方
+                abstractBubble.style.bottom = (cardRect.bottom - rect.top + 10) + 'px';
+                abstractBubble.style.left = '50%';
+                abstractBubble.style.transform = 'translateX(-50%)';
+                
+                // 显示气泡
+                abstractBubble.classList.remove('opacity-0', 'invisible');
+                abstractBubble.classList.add('opacity-100', 'visible');
             });
             
             abstractContainer.addEventListener('mouseleave', () => {
-                abstractNormal.classList.remove('opacity-0', 'invisible');
-                abstractHover.classList.add('opacity-0', 'invisible');
-            });
-            
-            // 关键字悬停效果
-            keywordsContainer.addEventListener('mouseenter', () => {
-                keywordsNormal.classList.add('opacity-0', 'invisible');
-                keywordsHover.classList.remove('opacity-0', 'invisible');
-            });
-            
-            keywordsContainer.addEventListener('mouseleave', () => {
-                keywordsNormal.classList.remove('opacity-0', 'invisible');
-                keywordsHover.classList.add('opacity-0', 'invisible');
+                // 隐藏气泡
+                abstractBubble.classList.remove('opacity-100', 'visible');
+                abstractBubble.classList.add('opacity-0', 'invisible');
             });
             
             return card;
