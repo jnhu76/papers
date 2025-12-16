@@ -1207,7 +1207,7 @@
                 : paper.authors;
             
             // 创建摘要文本
-            const abstractContent = paper.abstract || '暂无摘要';
+            const abstractText = paper.abstract || '暂无摘要';
             const truncatedAbstract = abstractText.length > 150 ? abstractText.substring(0, 150) + '...' : abstractText;
             
             card.innerHTML = `
