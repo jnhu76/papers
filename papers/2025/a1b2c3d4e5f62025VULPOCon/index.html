@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
   <style>
     body { 
       font-family: 'Inter', sans-serif; 
@@ -50,6 +52,9 @@
       background-color: #f9fafb;
       margin: 1rem 0;
     }
+    /* KaTeX样式调整 */
+    .katex { font-size: 1.1em; }
+    .katex-display { overflow: auto hidden; }
   </style>
 </head>
 <body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
@@ -752,10 +757,10 @@
             
             <div class="bg-gray-50 p-6 rounded-lg">
               <div class="overflow-x-auto">
-                <pre class="text-sm font-mono bg-gray-800 text-gray-100 p-4 rounded-lg">
-\[\mathcal{J}_{VULPO}(\theta)=\mathbb{E}_{q\sim P(q),\{o_i\}_{i=1}^G\sim\pi_{\theta,old}}(O|q)\left[\frac{1}{G}\sum_{i=1}^G\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}
-\left(w_l\cdot w_s\cdot \hat{A}_{i,t}-\beta D_{KL}\big[\pi_\theta\big||\pi_{ref}\big]\right)\right],\]
-                </pre>
+                <!-- 使用KaTeX渲染VULPO目标函数 -->
+                <div id="vulpo-equation" class="text-center p-4 bg-gray-800 rounded-lg">
+                  <!-- 这个div将由KaTeX渲染 -->
+                </div>
               </div>
               <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -765,6 +770,7 @@
                     <li>\(w_l\)：标签难度权重（>1）</li>
                     <li>\(w_s\)：样本难度权重</li>
                     <li>\(\beta\)：KL正则化系数</li>
+                    <li>\(D_{KL}\)：KL散度</li>
                   </ul>
                 </div>
                 <div>
@@ -776,6 +782,58 @@
                     <li>保持策略稳定性</li>
                   </ul>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 算法公式详细说明 -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200 mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-calculator text-blue-500 mr-2"></i>
+              算法公式详解
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-medium text-gray-800 mb-2">1. 优势函数计算</h4>
+                <div class="katex-equation mb-2">
+                  \(\hat{A}_{i,t} = r_i - \text{mean}(\mathbf{r})\)
+                </div>
+                <p class="text-sm text-gray-600">
+                  其中\(\mathbf{r}\)是组内所有响应的奖励向量。使用均值中心化而非标准化，避免简单问题权重被放大。
+                </p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-medium text-gray-800 mb-2">2. 难度自适应权重</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div class="katex-equation mb-2">
+                      \(w_l > 1\)
+                    </div>
+                    <p class="text-sm text-gray-600">
+                      标签难度权重，放大漏洞样本的奖励，解决不对称难度问题。
+                    </p>
+                  </div>
+                  <div>
+                    <div class="katex-equation mb-2">
+                      \(w_s = f(r_c)\)
+                    </div>
+                    <p class="text-sm text-gray-600">
+                      样本难度权重，基于正确响应比例\(r_c\)的幂函数映射。
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h4 class="font-medium text-gray-800 mb-2">3. KL正则化项</h4>
+                <div class="katex-equation mb-2">
+                  \(D_{KL}\big[\pi_\theta\big|\big|\pi_{ref}\big]\)
+                </div>
+                <p class="text-sm text-gray-600">
+                  保持当前策略\(\pi_\theta\)与参考策略\(\pi_{ref}\)的一致性，防止策略偏离太远，提高训练稳定性。
+                </p>
               </div>
             </div>
           </div>
@@ -1352,6 +1410,10 @@
     </div>
   </div>
   
+  <!-- 引入KaTeX JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hd1Yr3ddI8LfuA9E2wBw/6RzyxI8SdUde6q1dI6d" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+  
   <!-- 交互脚本 -->
   <script>
     // 智能导航和交互功能
@@ -1406,6 +1468,35 @@
           }
         });
       });
+      
+      // 初始化KaTeX渲染
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      }
+      
+      // 手动渲染VULPO目标函数
+      if (typeof katex !== 'undefined') {
+        const vulpoEquation = document.getElementById('vulpo-equation');
+        if (vulpoEquation) {
+          const equation = String.raw`
+          \mathcal{J}_{VULPO}(\theta)=\mathbb{E}_{q\sim P(q),\{o_i\}_{i=1}^G\sim\pi_{\theta,old}}(O|q)\left[\frac{1}{G}\sum_{i=1}^G\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}
+          \left(w_l\cdot w_s\cdot \hat{A}_{i,t}-\beta D_{KL}\big[\pi_\theta\big||\pi_{ref}\big]\right)\right],
+          `;
+          katex.render(equation, vulpoEquation, {
+            displayMode: true,
+            throwOnError: false,
+            fleqn: true
+          });
+        }
+      }
     });
   </script>
   
