@@ -43,6 +43,13 @@
       background-clip: text;
       color: transparent;
     }
+    .original-figure-container {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      background-color: #f9fafb;
+      margin: 1rem 0;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
@@ -62,38 +69,6 @@
 
   <div class="container mx-auto px-4 py-8">
     <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
-      <!-- AI生成内容标识 -->
-      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
-        <div class="flex items-start gap-3">
-          <div class="flex-shrink-0 mt-0.5">
-            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="flex-1">
-            <div class="flex flex-wrap items-center gap-2 mb-2">
-              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
-                ⚠️ AI生成内容
-              </span>
-              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
-                法律要求标识
-              </span>
-            </div>
-            <p class="text-sm text-gray-700 leading-relaxed">
-              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
-            </p>
-            <div class="mt-3 pt-3 border-t border-amber-200">
-              <p class="text-xs text-gray-600 flex items-start">
-                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 论文标题和元数据 -->
       <div class="mb-12 md:mb-16">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
@@ -131,6 +106,38 @@
           </div>
         </div>
 
+        <!-- AI生成内容标识 - 放在元数据区域后、导航前 -->
+        <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                  ⚠️ AI生成内容
+                </span>
+                <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                  法律要求标识
+                </span>
+              </div>
+              <p class="text-sm text-gray-700 leading-relaxed">
+                根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+              </p>
+              <div class="mt-3 pt-3 border-t border-amber-200">
+                <p class="text-xs text-gray-600 flex items-start">
+                  <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                  建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 核心贡献高亮框 -->
         <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-8">
           <h4 class="font-bold text-green-700 mb-3 flex items-center text-xl">
@@ -156,7 +163,10 @@
         <div class="prose max-w-none">
           <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
             <p class="text-gray-700 leading-relaxed">
-              这篇论文解决了一个关键问题：<strong>如何让AI像人类安全专家一样，通过分析代码的完整上下文来检测漏洞</strong>。现实中的漏洞很少出现在单个函数中，而是源于跨多个文件、模块和调用链的交互。传统方法只能分析孤立的代码片段，导致误报和漏报。
+              这篇论文解决了上下文感知漏洞检测的关键问题。现实中的复杂漏洞很少出现在单个函数中，而是源于跨多个文件、模块和调用链的交互。传统方法只能分析孤立的代码片段，导致误报和漏报。
+            </p>
+            <p class="text-gray-700 leading-relaxed mt-4">
+              论文提出了VULPO框架，通过基于策略的LLM优化实现上下文感知的漏洞检测。关键创新包括：构建ContextVul数据集、设计多维奖励机制、引入难度自适应奖励缩放。实验表明，VULPO-4B在F1分数上比Qwen3-4B提升85%，性能与150倍参数规模的DeepSeek-R1-0528相当。
             </p>
           </div>
 
@@ -228,7 +238,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div class="bg-red-50 p-5 rounded-lg">
                 <h4 class="font-bold text-red-700 mb-3 flex items-center">
-                  <i class="fas fa-times-circle mr-2"></i>人类专家分析方式
+                  <i class="fas fa-user-check mr-2"></i>人类专家分析方式
                 </h4>
                 <ul class="list-disc list-inside space-y-2 text-gray-700">
                   <li>检查<strong>周围逻辑</strong>和验证例程</li>
@@ -240,7 +250,7 @@
               
               <div class="bg-yellow-50 p-5 rounded-lg">
                 <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
-                  <i class="fas fa-exclamation-triangle mr-2"></i>传统AI系统局限
+                  <i class="fas fa-robot mr-2"></i>传统AI系统局限
                 </h4>
                 <ul class="list-disc list-inside space-y-2 text-gray-700">
                   <li>只能分析<strong>孤立函数</strong></li>
@@ -268,55 +278,9 @@
                     <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
                   </div>
                   
-                  <!-- 架构图可视化 -->
-                  <div class="architecture-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
-                    <div class="flex items-center justify-center mb-4">
-                      <i class="fas fa-sitemap text-4xl text-blue-500 mr-3"></i>
-                      <h6 class="font-semibold text-gray-700 text-xl">VULPO系统架构图</h6>
-                    </div>
-                    
-                    <!-- 架构组件可视化 -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
-                        <i class="fas fa-database text-blue-500 text-2xl mb-3"></i>
-                        <p class="text-sm font-medium">ContextVul数据集</p>
-                        <p class="text-xs text-gray-600 mt-1">包含仓库级上下文的漏洞数据</p>
-                      </div>
-                      <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
-                        <i class="fas fa-graduation-cap text-green-500 text-2xl mb-3"></i>
-                        <p class="text-sm font-medium">冷启动阶段</p>
-                        <p class="text-xs text-gray-600 mt-1">SFT初始化学生模型</p>
-                      </div>
-                      <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
-                        <i class="fas fa-robot text-purple-500 text-2xl mb-3"></i>
-                        <p class="text-sm font-medium">VULPO优化</p>
-                        <p class="text-xs text-gray-600 mt-1">基于策略的强化学习</p>
-                      </div>
-                      <div class="bg-pink-50 p-4 rounded-lg border border-pink-200 text-center">
-                        <i class="fas fa-balance-scale text-pink-500 text-2xl mb-3"></i>
-                        <p class="text-sm font-medium">LLM评估</p>
-                        <p class="text-xs text-gray-600 mt-1">多维度奖励评估</p>
-                      </div>
-                    </div>
-                    
-                    <!-- 数据流向 -->
-                    <div class="flex flex-col md:flex-row justify-center items-center text-gray-600 text-sm space-y-2 md:space-y-0 md:space-x-4">
-                      <div class="flex items-center">
-                        <span class="bg-blue-100 px-3 py-1 rounded">数据集构建</span>
-                        <i class="fas fa-arrow-right mx-2"></i>
-                      </div>
-                      <div class="flex items-center">
-                        <span class="bg-green-100 px-3 py-1 rounded">模型初始化</span>
-                        <i class="fas fa-arrow-right mx-2"></i>
-                      </div>
-                      <div class="flex items-center">
-                        <span class="bg-purple-100 px-3 py-1 rounded">强化学习优化</span>
-                        <i class="fas fa-arrow-right mx-2"></i>
-                      </div>
-                      <div class="flex items-center">
-                        <span class="bg-pink-100 px-3 py-1 rounded">评估反馈</span>
-                      </div>
-                    </div>
+                  <!-- 论文原图展示 -->
+                  <div class="image-placeholder text-center">
+                    <img src="./images/fig1.png" alt="论文图1: VULPO系统整体架构" class="max-w-full h-auto rounded-lg mx-auto border border-gray-300">
                   </div>
                   
                   <!-- 原图图注 -->
@@ -336,6 +300,23 @@
                     <li><strong>反馈循环:</strong> LLM评估为强化学习提供多维度的奖励信号</li>
                     <li><strong>上下文集成:</strong> 整个系统设计围绕上下文信息展开</li>
                   </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">实现方法:</strong>
+                      <p>四个组件紧密集成：1) ContextVul数据集提供上下文信息；2) 冷启动阶段通过教师模型初始化学生模型；3) VULPO进行强化学习优化；4) LLM评估提供反馈信号。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">技术选择:</strong>
+                      <p>选择在策略优化而非离策略优化，允许模型基于自身输出进行探索和优化，培养深层上下文洞察力。</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </details>
@@ -737,104 +718,67 @@
                     </p>
                   </div>
                 </div>
+                
+                <!-- 图2: 幂函数图 -->
+                <div class="original-figure-container mt-4">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                      原图 2: 幂函数图
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 论文原图展示 -->
+                  <div class="image-placeholder text-center">
+                    <img src="./images/fig2.png" alt="论文图2: 幂函数用于样本难度权重映射" class="max-w-full h-auto rounded-lg mx-auto border border-gray-300">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 幂函数将组内正确响应比例\(r_c\)映射到样本难度权重\(w_s\)。当所有响应都正确时\(w_s=0\)，所有响应都错误时\(w_s=3\)，一半正确时\(w_s=1\)。
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 算法流程可视化 -->
-          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
-            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
-              <i class="fas fa-code-branch mr-2"></i>技术细节：VULPO算法流程
-            </summary>
+          <!-- VULPO目标函数 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-function text-purple-500 mr-2"></i>
+              VULPO目标函数
+            </h3>
             
-            <div class="mt-6 space-y-6">
-              <!-- 算法可视化 -->
-              <div class="bg-white p-6 rounded-lg border border-gray-200">
-                <h5 class="font-semibold text-gray-700 mb-4 text-center text-lg">
-                  <i class="fas fa-project-diagram mr-2 text-blue-500"></i>
-                  VULPO算法流程图
-                </h5>
-                
-                <div class="algorithm-flow">
-                  <!-- 步骤1 -->
-                  <div class="flex flex-col items-center mb-8">
-                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mb-2">1</div>
-                    <div class="text-center">
-                      <h6 class="font-medium text-gray-800">采样批次</h6>
-                      <p class="text-xs text-gray-600">从数据集D中采样批次问题</p>
-                    </div>
-                    <div class="h-8 w-0.5 bg-gray-300 mt-2"></div>
-                  </div>
-                  
-                  <!-- 步骤2 -->
-                  <div class="flex flex-col items-center mb-8">
-                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold mb-2">2</div>
-                    <div class="text-center">
-                      <h6 class="font-medium text-gray-800">生成响应</h6>
-                      <p class="text-xs text-gray-600">旧策略为每个问题生成G个响应</p>
-                    </div>
-                    <div class="h-8 w-0.5 bg-gray-300 mt-2"></div>
-                  </div>
-                  
-                  <!-- 步骤3 -->
-                  <div class="flex flex-col items-center mb-8">
-                    <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold mb-2">3</div>
-                    <div class="text-center">
-                      <h6 class="font-medium text-gray-800">计算奖励</h6>
-                      <p class="text-xs text-gray-600">LLM法官评估响应，计算多维奖励</p>
-                    </div>
-                    <div class="h-8 w-0.5 bg-gray-300 mt-2"></div>
-                  </div>
-                  
-                  <!-- 步骤4 -->
-                  <div class="flex flex-col items-center mb-8">
-                    <div class="w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center text-white font-bold mb-2">4</div>
-                    <div class="text-center">
-                      <h6 class="font-medium text-gray-800">奖励缩放</h6>
-                      <p class="text-xs text-gray-600">应用标签级和样本级难度自适应缩放</p>
-                    </div>
-                    <div class="h-8 w-0.5 bg-gray-300 mt-2"></div>
-                  </div>
-                  
-                  <!-- 步骤5 -->
-                  <div class="flex flex-col items-center">
-                    <div class="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold mb-2">5</div>
-                    <div class="text-center">
-                      <h6 class="font-medium text-gray-800">策略优化</h6>
-                      <p class="text-xs text-gray-600">最大化目标函数更新策略模型</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- 目标函数展示 -->
-                <div class="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h6 class="font-medium text-gray-700 mb-2">VULPO目标函数</h6>
-                  <div class="overflow-x-auto">
-                    <pre class="text-sm font-mono bg-gray-800 text-gray-100 p-4 rounded-lg">
+            <div class="bg-gray-50 p-6 rounded-lg">
+              <div class="overflow-x-auto">
+                <pre class="text-sm font-mono bg-gray-800 text-gray-100 p-4 rounded-lg">
 \[\mathcal{J}_{VULPO}(\theta)=\mathbb{E}_{q\sim P(q),\{o_i\}_{i=1}^G\sim\pi_{\theta,old}}(O|q)\left[\frac{1}{G}\sum_{i=1}^G\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}
 \left(w_l\cdot w_s\cdot \hat{A}_{i,t}-\beta D_{KL}\big[\pi_\theta\big||\pi_{ref}\big]\right)\right],\]
-                    </pre>
-                  </div>
-                  <p class="text-xs text-gray-600 mt-2">
-                    其中 \(\hat{A}_{i,t}=r_i-\text{mean}(\mathbf{r})\)，\(w_l\) 为标签难度权重，\(w_s\) 为样本难度权重。
-                  </p>
+                </pre>
+              </div>
+              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 class="font-medium text-gray-700 mb-2">参数说明</h5>
+                  <ul class="text-sm text-gray-600 space-y-1">
+                    <li>\(\hat{A}_{i,t}=r_i-\text{mean}(\mathbf{r})\)：优势函数</li>
+                    <li>\(w_l\)：标签难度权重（>1）</li>
+                    <li>\(w_s\)：样本难度权重</li>
+                    <li>\(\beta\)：KL正则化系数</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-medium text-gray-700 mb-2">设计特点</h5>
+                  <ul class="text-sm text-gray-600 space-y-1">
+                    <li>使用均值中心化而非标准化</li>
+                    <li>避免简单问题权重被放大</li>
+                    <li>动态调整不同难度样本的奖励</li>
+                    <li>保持策略稳定性</li>
+                  </ul>
                 </div>
               </div>
-              
-              <!-- 技术解释部分 -->
-              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
-                  <i class="fas fa-info-circle mr-2"></i>算法创新点：
-                </h5>
-                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
-                  <li><strong>纯在策略优化:</strong> 在每个批次步骤中只更新策略模型一次，确保π_θ=π_{θ_old}</li>
-                  <li><strong>奖励中心化:</strong> 使用均值中心化而非标准化，避免简单问题权重被放大</li>
-                  <li><strong>动态难度调整:</strong> 通过 \(w_l\) 和 \(w_s\) 动态调整不同难度样本的奖励权重</li>
-                  <li><strong>KL正则化:</strong> 保持策略模型与参考模型的一致性，提高训练稳定性</li>
-                </ul>
-              </div>
             </div>
-          </details>
+          </div>
 
           <!-- 技术特性网格 -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
@@ -989,51 +933,24 @@
                   </div>
                 </div>
                 
-                <!-- 性能可视化 -->
-                <div class="performance-chart-placeholder bg-white p-4 rounded-lg border border-gray-200">
-                  <div class="flex items-center justify-center mb-4">
-                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
-                    <h6 class="font-semibold text-gray-700">性能对比分析</h6>
+                <!-- 图3: CWE性能分析 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+                      原图 3: CWE性能分析
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
                   </div>
                   
-                  <!-- 性能指标模拟 -->
-                  <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium w-32">VULPO:</span>
-                      <div class="flex-1 bg-gray-200 rounded-full h-4">
-                        <div class="bg-green-500 h-4 rounded-full" style="width: 95%"></div>
-                      </div>
-                      <span class="text-sm font-medium w-12 ml-2">95%</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium w-32">DeepSeek-V3.1:</span>
-                      <div class="flex-1 bg-gray-200 rounded-full h-4">
-                        <div class="bg-blue-500 h-4 rounded-full" style="width: 94%"></div>
-                      </div>
-                      <span class="text-sm font-medium w-12 ml-2">94%</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium w-32">DeepSeek-R1-0528:</span>
-                      <div class="flex-1 bg-gray-200 rounded-full h-4">
-                        <div class="bg-purple-500 h-4 rounded-full" style="width: 92%"></div>
-                      </div>
-                      <span class="text-sm font-medium w-12 ml-2">92%</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium w-32">Qwen3-4B零样本:</span>
-                      <div class="flex-1 bg-gray-200 rounded-full h-4">
-                        <div class="bg-gray-500 h-4 rounded-full" style="width: 84%"></div>
-                      </div>
-                      <span class="text-sm font-medium w-12 ml-2">84%</span>
-                    </div>
+                  <!-- 论文原图展示 -->
+                  <div class="image-placeholder text-center">
+                    <img src="./images/fig3.png" alt="论文图3: 不同CWE类型的召回率对比" class="max-w-full h-auto rounded-lg mx-auto border border-gray-300">
                   </div>
                   
-                  <!-- 性能指标说明 -->
-                  <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
-                    <div><span class="font-medium">测试指标:</span> Pass@8 (多次生成的最高准确率)</div>
-                    <div><span class="font-medium">模型规模:</span> VULPO仅4B参数</div>
-                    <div><span class="font-medium">对比基准:</span> DeepSeek-V3.1约600B参数</div>
-                    <div><span class="font-medium">相对提升:</span> VULPO比基线提升85%</div>
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> VULPO在不同CWE类型漏洞上的召回率表现。在内存安全相关漏洞类型上表现出色，特别是CWE-415 (Double Free)达到84.9%，CWE-119 (Buffer Overflow)达到81.8%。
                   </div>
                 </div>
               </div>
@@ -1081,7 +998,29 @@
             <div class="space-y-6">
               <div class="bg-gray-50 p-5 rounded-lg">
                 <h4 class="font-medium text-gray-800 mb-3">冷启动阶段影响</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- 图4: 冷启动阶段影响 -->
+                <div class="original-figure-container mt-4">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                      原图 4: 冷启动阶段影响
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 论文原图展示 -->
+                  <div class="image-placeholder text-center">
+                    <img src="./images/fig4.png" alt="论文图4: 冷启动阶段对模型性能的影响" class="max-w-full h-auto rounded-lg mx-auto border border-gray-300">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 不同冷启动epoch数对后续RL阶段性能的影响。无冷启动时Pass@1显著降低，但过度冷启动（多个epoch）会限制RL探索能力。
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <h5 class="text-sm font-bold text-gray-700 mb-2">无冷启动</h5>
                     <ul class="list-disc list-inside text-xs text-gray-600 space-y-1">
@@ -1109,7 +1048,28 @@
               <div class="bg-gray-50 p-5 rounded-lg">
                 <h4 class="font-medium text-gray-800 mb-3">标签难度权重影响</h4>
                 
-                <div class="space-y-3">
+                <!-- 图5: 标签难度权重影响 -->
+                <div class="original-figure-container mt-4">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                      原图 5: 标签难度权重影响
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 论文原图展示 -->
+                  <div class="image-placeholder text-center">
+                    <img src="./images/fig5.png" alt="论文图5: 标签难度权重对模型性能的影响" class="max-w-full h-auto rounded-lg mx-auto border border-gray-300">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 不同标签难度权重\(w_l\)对模型性能的影响。\(w_l=2\)时性能最佳，过小导致假阴性增加，过大导致假阳性增加。
+                  </div>
+                </div>
+                
+                <div class="space-y-3 mt-4">
                   <div class="flex items-center justify-between">
                     <span class="text-sm font-medium">权重 \(w_l = 1\) (无缩放):</span>
                     <span class="text-sm text-red-600">假阴性增加</span>
@@ -1347,42 +1307,42 @@
             </div>
           </div>
 
-          <!-- 教学总结 -->
+          <!-- 学习要点总结 -->
           <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200 mt-8">
             <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-              <i class="fas fa-graduation-cap text-purple-500 mr-2"></i>
-              给博士生的关键要点
+              <i class="fas fa-lightbulb text-purple-500 mr-2"></i>
+              学习要点总结
             </h3>
             
             <div class="space-y-4">
               <div class="bg-white p-4 rounded-lg">
                 <h4 class="font-medium text-gray-800 mb-2">📌 核心问题</h4>
                 <p class="text-sm text-gray-600">
-                  传统漏洞检测方法只能看代码的"小片段"，就像只看一句话来判断整个故事的好坏。但真实漏洞往往需要看"整个故事"（跨文件、跨函数的上下文）才能发现。
+                  传统漏洞检测方法缺乏上下文感知能力，只能分析孤立的代码片段。真实漏洞往往涉及跨文件、跨函数的交互，需要完整的程序语义理解。
                 </p>
               </div>
               
               <div class="bg-white p-4 rounded-lg">
                 <h4 class="font-medium text-gray-800 mb-2">💡 解决方案</h4>
                 <p class="text-sm text-gray-600">
-                  VULPO像教小孩子一样：1) 先看老师怎么做（冷启动）；2) 自己尝试并得到详细反馈（多维奖励）；3) 重点练习不会的题目（难度自适应）；4) 逐渐学会看"整个故事"找出漏洞。
+                  VULPO通过基于策略的强化学习实现上下文感知漏洞检测。关键创新包括：ContextVul数据集提供仓库级上下文，多维奖励设计评估推理质量，难度自适应奖励缩放平衡不同案例的学习难度。
                 </p>
               </div>
               
               <div class="bg-white p-4 rounded-lg">
                 <h4 class="font-medium text-gray-800 mb-2">🎯 关键创新</h4>
                 <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
-                  <li><strong>上下文数据集</strong>: 给模型看完整的"故事"而不仅仅是"句子"</li>
-                  <li><strong>详细反馈</strong>: 不只告诉对错，还指出哪里分析得好/不好</li>
-                  <li><strong>智能练习</strong>: 自动调整难度，重点练习薄弱环节</li>
-                  <li><strong>小模型大能力</strong>: 4B小模型做到了600B大模型的效果</li>
+                  <li><strong>上下文数据集</strong>: 首次提供仓库级代码上下文的漏洞检测数据集</li>
+                  <li><strong>多维奖励机制</strong>: 同时评估预测正确性、定位精度和语义相关性</li>
+                  <li><strong>难度自适应</strong>: 动态调整奖励权重，鼓励模型挑战困难案例</li>
+                  <li><strong>性能突破</strong>: 4B小模型达到与150倍规模大模型相当的检测性能</li>
                 </ul>
               </div>
               
               <div class="bg-white p-4 rounded-lg">
-                <h4 class="font-medium text-gray-800 mb-2">🧠 记住这个比喻</h4>
+                <h4 class="font-medium text-gray-800 mb-2">🧠 核心概念理解</h4>
                 <p class="text-sm text-gray-600">
-                  想象你在学找房子的结构问题：传统方法只看一面墙，VULPO带你看整个房子蓝图+水电管道图+结构图，还详细告诉你哪里看对了、哪里漏看了、为什么重要。
+                  将漏洞检测视为一个需要完整上下文理解的推理任务。VULPO通过强化学习训练模型像安全专家一样分析代码：查看完整调用链、考虑跨文件依赖、理解全局状态影响，从而做出准确的漏洞判断。
                 </p>
               </div>
             </div>
