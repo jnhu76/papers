@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FalconFS: Distributed File System for Large-Scale Deep Learning Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+      .hide-on-mobile {
+        display: none;
+      }
+    }
+    @media (min-width: 769px) {
+      .hide-on-desktop {
+        display: none;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-md;
+    }
+    .performance-bar {
+      transition: width 1.5s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-4 md:space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-2xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          FalconFS: Distributed File System for Large-Scale Deep Learning Pipeline
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">作者信息</strong>
+                <div class="text-base md:text-lg">Jingwei Xu, Junbin Kang, Mingkai Dong, 等</div>
+                <div class="text-sm md:text-base text-gray-600 mt-2">
+                  ¹上海交通大学并行与分布式系统研究所<br>
+                  ²华为技术有限公司
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">发表信息</strong>
+                <div>计算机系统领域顶级会议/期刊</div>
+                <div class="text-sm text-gray-600 mt-1">arXiv:2507.10367v3</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">开源地址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border break-all">
+                  https://github.com/falcon-infra/falconfs
+                </div>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border break-all mt-2">
+                  https://gitee.com/openeuler/FalconFS
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分布式文件系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">深度学习</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">元数据管理</span>
+                  <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">无状态客户端</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献高亮框 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700 text-base">
+          <li><strong>分析深度学习工作负载的I/O特性</strong>，指出传统有状态客户端架构在深度学习场景下的低效性</li>
+          <li><strong>提出无状态客户端架构</strong>，解决设计高效分布式文件系统的关键挑战</li>
+          <li><strong>实现FalconFS系统</strong>，专为深度学习工作负载设计的高性能分布式文件系统，并进行全面评估</li>
+          <li><strong>开源实现</strong>，已在华为自动驾驶系统中部署一年，支持10,000个NPU</li>
+        </ul>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            客户端元数据缓存长期以来被认为是加速分布式文件系统(DFS)中元数据操作的有效方法。然而，作者发现客户端状态(如缓存)在深度学习流水线中不仅无效，而且消耗宝贵的内存资源。
+          </p>
+          
+          <p class="text-gray-700 leading-relaxed mb-4">
+            因此，作者提出了FalconFS，这是一种为深度学习流水线优化的分布式文件系统，采用无状态客户端架构。具体来说，FalconFS不执行客户端路径解析和缓存，而是通过<strong>混合元数据索引</strong>和<strong>延迟命名空间复制</strong>在服务器端高效解析路径。
+          </p>
+          
+          <p class="text-gray-700 leading-relaxed mb-4">
+            FalconFS还通过<strong>并发请求合并</strong>提升服务器并发性，并通过<strong>VFS快捷方式</strong>提供简单部署。与CephFS和Lustre的评估对比显示，FalconFS在小文件读写方面实现了高达5.72倍的吞吐量，在深度学习模型训练方面实现了高达12.81倍的吞吐量。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg mt-6">
+            <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>创新点总结
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="flex items-start">
+                <div class="bg-blue-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-bolt text-blue-600"></i>
+                </div>
+                <div>
+                  <strong class="text-blue-800">无状态客户端架构</strong>
+                  <p class="text-sm text-gray-600 mt-1">消除客户端缓存，将路径解析移至服务器端</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 p-2 rounded-full mr-3">
+                  <i class="fas fa-project-diagram text-green-600"></i>
+                </div>
+                <div>
+                  <strong class="text-green-800">混合元数据索引</strong>
+                  <p class="text-sm text-gray-600 mt-1">结合文件名哈希和选择性重定向实现负载均衡</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-brain mr-2 text-purple-500"></i>
+              深度学习流水线架构
+            </h3>
+            
+            <!-- 原图占位符：图3 - DL Pipeline Overview -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 自动驾驶深度学习流水线概述
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图展示区域 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 自动驾驶深度学习流水线概述" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 自动驾驶深度学习流水线架构，包含四个关键阶段：数据采集(ingestion)、数据标注(labeling)、模型训练(training)和数据归档(archiving)
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-3">深度学习工作负载特点</h4>
+                <ul class="space-y-2 text-sm">
+                  <li class="flex items-start">
+                    <i class="fas fa-folder mt-1 mr-2 text-purple-500"></i>
+                    <span><strong>海量小文件:</strong> 生产环境中包含数百亿个小文件(几KB到几MB)</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-random mt-1 mr-2 text-purple-500"></i>
+                    <span><strong>随机文件遍历:</strong> 训练阶段每个文件在每个epoch中随机访问一次</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-bolt mt-1 mr-2 text-purple-500"></i>
+                    <span><strong>突发文件访问:</strong> 标注阶段同一目录下的批量文件访问导致瞬时负载不均衡</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-microchip mt-1 mr-2 text-purple-500"></i>
+                    <span><strong>资源紧张:</strong> 计算节点的CPU和内存资源有限，数据增强消耗大量CPU周期</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3">传统DFS的问题</h4>
+                <ul class="space-y-2 text-sm">
+                  <li class="flex items-start">
+                    <i class="fas fa-search mt-1 mr-2 text-blue-500"></i>
+                    <span><strong>路径解析开销:</strong> 树形目录结构需要逐级路径解析，导致多次网络往返</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-memory mt-1 mr-2 text-blue-500"></i>
+                    <span><strong>客户端缓存低效:</strong> 深度学习工作负载的随机访问模式导致缓存命中率低</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-balance-scale mt-1 mr-2 text-blue-500"></i>
+                    <span><strong>负载不均衡:</strong> 同一目录下的突发访问导致元数据服务器瞬时拥塞</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 技术机制可视化：路径解析 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">传统DFS路径解析机制</h3>
+            
+            <!-- 原图占位符：图1 - Path Resolution -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: 典型分布式文件系统中的路径解析
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图展示区域 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: 典型分布式文件系统中的路径解析" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 典型分布式文件系统操作中的路径解析。客户端通过查找每个路径组件来检查路径存在性和权限，这可能涉及多个远程请求。
+              </div>
+            </div>
+            
+            <div class="architecture-placeholder bg-gray-50 p-6 rounded-lg">
+              <div class="flex items-center justify-center mb-6">
+                <i class="fas fa-sitemap text-3xl text-blue-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-lg">路径解析流程可视化</h6>
+              </div>
+              
+              <!-- 路径解析步骤 -->
+              <div class="space-y-4">
+                <div class="flex items-center">
+                  <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4">1</div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">客户端发起文件访问请求</div>
+                    <div class="text-sm text-gray-600">例如：访问路径 /a/b/c/file.txt</div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center">
+                  <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4">2</div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">逐级路径组件解析</div>
+                    <div class="text-sm text-gray-600">需要检查：/a → /a/b → /a/b/c → /a/b/c/file.txt</div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center">
+                  <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4">3</div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">多轮网络往返</div>
+                    <div class="text-sm text-gray-600">每个组件可能位于不同的元数据服务器</div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center">
+                  <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4">4</div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">请求放大效应</div>
+                    <div class="text-sm text-gray-600">单个文件操作触发多个元数据请求</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div class="flex items-start">
+                  <i class="fas fa-exclamation-triangle text-amber-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong class="text-amber-700">关键问题:</strong> 在深度学习工作负载中，这种逐级路径解析机制导致严重的请求放大效应，成为性能瓶颈。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- 挑战1：查找开销 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm tech-card">
+            <div class="flex items-center mb-4">
+              <div class="bg-red-100 p-3 rounded-full mr-4">
+                <i class="fas fa-search text-red-600 text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-800">挑战1: 查找开销</h3>
+            </div>
+            
+            <p class="text-gray-700 mb-4">
+              在深度学习训练任务中，大规模的工作集在有状态客户端架构下面临两难选择：要么因请求放大导致性能下降，要么为缓存目录元数据消耗过多的客户端内存。
+            </p>
+            
+            <!-- 原图占位符：图2 - CephFS Performance -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 大型目录树下随机遍历64KiB文件的CephFS性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图展示区域 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 大型目录树下随机遍历64KiB文件的CephFS性能" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 大型目录树下随机遍历64KiB文件的CephFS性能。左y轴表示读取吞吐量，右y轴表示发送到MDS的请求数(即查找和关闭)。虚线表示文件数量。
+              </div>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg">
+              <h5 class="font-semibold text-red-700 mb-2">关键发现</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>客户端缓存大小对读取吞吐量有显著影响</li>
+                <li>仅缓存10%目录时，吞吐量降低32.5%</li>
+                <li>查找请求增加1.50倍</li>
+                <li>即使缓存90%目录，每个文件打开平均需要1.70个网络跳数</li>
+              </ul>
+            </div>
+            
+            <div class="mt-4 bg-blue-50 p-4 rounded-lg">
+              <h5 class="font-semibold text-blue-700 mb-2">资源成本分析</h5>
+              <div class="text-sm text-gray-700">
+                <p>在Linux VFS中，缓存一个目录需要800字节(608字节用于inode，192字节用于dentry)。</p>
+                <p class="mt-2"><strong>生产环境示例:</strong></p>
+                <ul class="list-disc list-inside ml-2 mt-1">
+                  <li>10亿个目录的10% = 1亿个目录</li>
+                  <li>每个节点: 1亿 × 800字节 = 80 GiB</li>
+                  <li>1000个客户端节点: 80 TiB总内存</li>
+                </ul>
+                <p class="mt-2 text-red-600 font-medium">内存成本过高，不可行!</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 挑战2：瞬时负载不均衡 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm tech-card">
+            <div class="flex items-center mb-4">
+              <div class="bg-orange-100 p-3 rounded-full mr-4">
+                <i class="fas fa-balance-scale text-orange-600 text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-800">挑战2: 瞬时负载不均衡</h3>
+            </div>
+            
+            <p class="text-gray-700 mb-4">
+              在标注阶段，推理任务以目录为单位扫描和加载/存储数据对象，一次访问一个目录中的所有文件，然后访问另一个目录。这种按目录的I/O模式导致瞬时负载不均衡，限制了性能可扩展性。
+            </p>
+            
+            <!-- 原图占位符：图4 - CephFS Burst Performance -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 4: 不同突发大小下访问64KiB文件的CephFS性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图展示区域 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig4.png" alt="论文图4: 不同突发大小下访问64KiB文件的CephFS性能" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 不同突发大小下访问64KiB文件的CephFS性能。大突发大小导致负载不均衡和性能下降。图4(b)显示在突发大小为100时执行读取操作时MDS的负载方差。
+              </div>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg">
+              <h5 class="font-semibold text-orange-700 mb-2">问题根源</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>CephFS倾向于将同一目录下的文件元数据存储在一起</li>
+                <li>同一目录下的突发操作可能使单个MDS拥塞</li>
+                <li>目录大小超过任务I/O并行度时性能下降</li>
+                <li>目录大小为100时，MDS在读取操作期间经历严重的负载不均衡</li>
+              </ul>
+            </div>
+            
+            <div class="mt-4 bg-purple-50 p-4 rounded-lg">
+              <h5 class="font-semibold text-purple-700 mb-2">影响范围</h5>
+              <div class="text-sm text-gray-700">
+                <p>类似模式也存在于其他DFS中，如BeeGFS、Gluster、TectonicFS等。这表明这是一个分布式文件系统中的普遍问题，特别是在处理深度学习标注工作负载时。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 解决方案概览 -->
+        <div class="mt-8 bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-300">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-lightbulb mr-3 text-green-600"></i>
+            解决方案: 无状态客户端架构
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <div class="text-center mb-3">
+                <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-server text-blue-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">服务器端路径解析</h4>
+              </div>
+              <p class="text-sm text-gray-600 text-center">将路径解析从客户端移至服务器端，消除客户端缓存需求</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <div class="text-center mb-3">
+                <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-project-diagram text-green-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">混合元数据索引</h4>
+              </div>
+              <p class="text-sm text-gray-600 text-center">结合文件名哈希和选择性重定向，实现负载均衡和单跳访问</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <div class="text-center mb-3">
+                <div class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-copy text-purple-600 text-xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">延迟命名空间复制</h4>
+              </div>
+              <p class="text-sm text-gray-600 text-center">在所有元数据服务器上复制整个命名空间，支持本地路径解析</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 系统架构 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+            系统架构
+          </h3>
+          
+          <!-- 原图占位符：图5 - FalconFS Architecture -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 5: FalconFS架构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig5.png" alt="论文图5: FalconFS架构" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> FalconFS架构，包含客户端模块、MNode、协调器和文件存储。
+            </div>
+          </div>
+          
+          <!-- 架构组件可视化 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-desktop mr-2"></i>客户端模块
+              </h4>
+              <p class="text-sm text-gray-700">提供POSIX接口的内核模块，通过VFS快捷方式避免客户端路径解析</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-server mr-2"></i>MNode
+              </h4>
+              <p class="text-sm text-gray-700">元数据服务器节点，存储inode并执行路径解析</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-network-wired mr-2"></i>协调器
+              </h4>
+              <p class="text-sm text-gray-700">集中式组件，处理目录删除、权限更改和重命名操作</p>
+            </div>
+            
+            <div class="tech-card bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <h4 class="font-bold text-amber-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-database mr-2"></i>文件存储
+              </h4>
+              <p class="text-sm text-gray-700">存储文件数据的后端存储系统</p>
+            </div>
+          </div>
+          
+          <!-- 元数据方案表 -->
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">类型</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">键(Key)</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">值(Value)</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">分区方式</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b"><code class="bg-blue-100 text-blue-800 px-2 py-1 rounded">dentry</code></td>
+                  <td class="py-3 px-4 border-b font-mono text-sm">pid, name</td>
+                  <td class="py-3 px-4 border-b">id, perm.</td>
+                  <td class="py-3 px-4 border-b"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">复制</span></td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4"><code class="bg-green-100 text-green-800 px-2 py-1 rounded">inode</code></td>
+                  <td class="py-3 px-4 font-mono text-sm">pid, name</td>
+                  <td class="py-3 px-4">id, attr</td>
+                  <td class="py-3 px-4">§4.2</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-sm text-gray-600 mt-2">表1: FalconFS的元数据方案</div>
+          </div>
+        </div>
+        
+        <!-- 混合元数据索引 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-project-diagram mr-2 text-green-500"></i>
+            混合元数据索引
+          </h3>
+          
+          <!-- 原图占位符：图6 - Hybrid Metadata Indexing -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 6: 混合元数据索引
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig6.png" alt="论文图6: 混合元数据索引" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 混合元数据索引。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>常见情况：文件名哈希
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><strong>基本原理:</strong> 通过文件名哈希确定inode位置</li>
+                <li><strong>优点:</strong> 无需客户端状态，支持高效重命名</li>
+                <li><strong>适用性:</strong> DL数据集通常具有大目录大小，满足大数定律</li>
+                <li><strong>均匀性保证:</strong> 目录大小远大于MNode数量时，文件分布统计均匀</li>
+              </ul>
+              
+              <div class="mt-4 p-3 bg-white rounded border">
+                <p class="text-xs text-gray-600"><strong>大数定律应用:</strong> 给定大目录大小(数百到数十万文件)，每个目录中的文件到MNodes的分布很可能均匀。整个命名空间作为每个目录分布的叠加，在统计上是均匀分布的。</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>特殊情况：选择性重定向
+              </h4>
+              
+              <div class="mb-4">
+                <h5 class="font-semibold text-blue-600 mb-2">两种需要重定向的情况:</h5>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-start">
+                    <div class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded mr-2 mt-0.5">热文件名</div>
+                    <div>应用的命名约定可能导致某些文件名比其他文件名更频繁</div>
+                  </div>
+                  <div class="flex items-start">
+                    <div class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded mr-2 mt-0.5">哈希方差</div>
+                    <div>唯一文件名数量不多于MNode数量，可能导致分布不平衡</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="space-y-3">
+                <div class="bg-white p-3 rounded border">
+                  <h6 class="font-semibold text-gray-700 mb-1">路径遍历重定向</h6>
+                  <p class="text-xs text-gray-600">对于热文件名，FalconFS不仅使用文件名，还使用其父目录ID计算哈希值</p>
+                </div>
+                
+                <div class="bg-white p-3 rounded border">
+                  <h6 class="font-semibold text-gray-700 mb-1">覆盖重定向</h6>
+                  <p class="text-xs text-gray-600">当哈希方差导致文件名分布不均匀时，将选定的文件名重新分配给指定节点</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 异常表机制 -->
+          <div class="mt-6 bg-gradient-to-r from-gray-50 to-blue-50 p-5 rounded-lg border border-gray-300">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-table mr-2"></i>异常表机制
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="text-center">
+                <div class="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-sync-alt text-blue-600"></i>
+                </div>
+                <p class="text-sm font-medium">协调器更新</p>
+                <p class="text-xs text-gray-600">根据负载均衡算法更新异常表</p>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-arrow-up text-green-600"></i>
+                </div>
+                <p class="text-sm font-medium">主动推送</p>
+                <p class="text-xs text-gray-600">最新表被主动推送到所有MNodes</p>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-download text-purple-600"></i>
+                </div>
+                <p class="text-sm font-medium">延迟获取</p>
+                <p class="text-xs text-gray-600">客户端在收到操作响应时延迟获取更新</p>
+              </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-white rounded border">
+              <p class="text-xs text-gray-600"><strong>理论保证:</strong> 常数数量的异常表条目足以平衡任意目录结构的inode分布。通过将路径遍历重定向应用于最热的O(nlogn)个文件名，可以将剩余文件均匀分布在所有节点上。</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 延迟命名空间复制 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-copy mr-2 text-purple-500"></i>
+            延迟命名空间复制
+          </h3>
+          
+          <!-- 原图占位符：图7 - Namespace Synchronization -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 7: 命名空间同步
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig7.png" alt="论文图7: 命名空间同步" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 命名空间同步。蓝色箭头表示远程查找，红色箭头表示无效化。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3">设计原则</h4>
+              
+              <div class="space-y-4">
+                <div>
+                  <h5 class="font-semibold text-purple-600 mb-2 flex items-center">
+                    <i class="fas fa-clock mr-2"></i>延迟同步直到访问
+                  </h5>
+                  <p class="text-sm text-gray-700">目录创建对DL数据集初始化至关重要，因此性能很重要。急切地在所有MNodes之间复制目录创建需要昂贵且不可扩展的两阶段提交。FalconFS通过延迟同步直到访问来分摊开销。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-purple-600 mb-2 flex items-center">
+                    <i class="fas fa-lock mr-2"></i>使用无效化作为轻量级锁定
+                  </h5>
+                  <p class="text-sm text-gray-700">当操作修改目录结构或权限时，必须阻止修改目录下子树中的并发操作以确保一致性。为此，我们在所有节点上无效化相应的副本条目，而不是使用传统的两阶段锁定，节省了一轮请求广播。</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">操作示例</h4>
+              
+              <div class="space-y-4">
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">创建目录 (mkdir)</h5>
+                  <p class="text-xs text-gray-700">MNode₀创建目录/b，不主动广播新dentry。其他MNodes在需要时按需获取dentry信息。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">删除目录 (rmdir)</h5>
+                  <p class="text-xs text-gray-700">协调器负责删除目录，并向所有命名空间副本广播无效化请求以删除相应dentry。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">重命名 (rename)</h5>
+                  <p class="text-xs text-gray-700">通过协调器使用传统的两阶段锁定和两阶段提交协议确保一致性。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <div class="flex items-start">
+              <i class="fas fa-info-circle text-amber-500 mt-1 mr-3"></i>
+              <div>
+                <strong class="text-amber-700">设计权衡:</strong> 延迟命名空间复制为非存在路径的访问引入了一次远程查找。然而，在深度学习工作负载中，这种负访问是罕见的。这个权衡是值得的，因为它显著减少了常见操作的开销。
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 并发请求合并 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-merge mr-2 text-green-500"></i>
+            并发请求合并
+          </h3>
+          
+          <!-- 原图占位符：图8 - Concurrent Request Merging -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 8: 并发请求合并概述
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig8.png" alt="论文图8: 并发请求合并概述" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 并发请求合并概述。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">锁合并</h4>
+              <p class="text-sm text-gray-700 mb-3">在路径解析期间，工作线程获取路径上所有目录的共享锁，以在操作期间保持路径有效性。</p>
+              
+              <div class="bg-white p-4 rounded border">
+                <h5 class="font-semibold text-gray-700 mb-2">优化原理</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li>文件系统命名空间的树形结构特性使得请求可以共享共同的近根路径前缀</li>
+                  <li>随着请求队列积累多个操作，工作线程合并共享路径前缀</li>
+                  <li>消除冗余锁获取，减少开销</li>
+                </ul>
+                
+                <div class="mt-3 p-3 bg-gray-100 rounded">
+                  <p class="text-xs text-gray-700"><strong>示例:</strong> 三个创建操作各遍历两个目录和一个文件。不是单独获取9个锁，工作线程消除冗余锁获取，只获取6个锁。</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">预写日志合并</h4>
+              <p class="text-sm text-gray-700 mb-3">mkdir、create和close等操作修改inode表。为了维护文件系统元数据一致性，DFS通常将每个操作包装到单独的事务中以原子方式持久化。</p>
+              
+              <div class="bg-white p-4 rounded border">
+                <h5 class="font-semibold text-gray-700 mb-2">优化效果</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li>事务提交时同步追加预写日志，导致对存储不友好的小写操作</li>
+                  <li>在FalconFS中，由于并发操作被批处理到单个事务中，工作线程将小日志追加合并为更大的追加</li>
+                  <li>提高存储效率，减少I/O开销</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-lg border border-blue-300">
+            <h4 class="font-bold text-gray-700 mb-3">工作机制</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="text-center">
+                <div class="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span class="font-bold text-blue-700">1</span>
+                </div>
+                <p class="text-sm font-medium">请求接收</p>
+                <p class="text-xs text-gray-600">连接池接收传入请求并放入请求队列</p>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span class="font-bold text-green-700">2</span>
+                </div>
+                <p class="text-sm font-medium">批处理执行</p>
+                <p class="text-xs text-gray-600">空闲工作线程检索队列并在单个数据库事务中执行所有请求</p>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span class="font-bold text-purple-700">3</span>
+                </div>
+                <p class="text-sm font-medium">优化应用</p>
+                <p class="text-xs text-gray-600">应用锁合并和预写日志合并优化</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 测试环境 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-vial mr-2 text-blue-500"></i>
+            测试环境
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-bold text-gray-700 mb-3">硬件配置</h4>
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <ul class="space-y-2 text-sm">
+                  <li class="flex justify-between">
+                    <span class="text-gray-600">CPU:</span>
+                    <span class="font-medium">2 × Intel Xeon 3.00 GHz, 12 cores</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span class="text-gray-600">内存:</span>
+                    <span class="font-medium">16 × DDR4 2933 MHz 16 GB</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span class="text-gray-600">存储:</span>
+                    <span class="font-medium">2 × NVMe SSD 960 GB</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span class="text-gray-600">网络:</span>
+                    <span class="font-medium">2 × 100 GbE</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="text-sm text-gray-600 mt-2">表2: 集群硬件配置</div>
+            </div>
+            
+            <div>
+              <h4 class="font-bold text-gray-700 mb-3">对比系统</h4>
+              <div class="space-y-3">
+                <div class="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div class="bg-blue-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-server text-blue-600"></i>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">CephFS 12.2.13</strong>
+                    <p class="text-xs text-gray-600">数据中心广泛部署的DFS</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div class="bg-green-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-robot text-green-600"></i>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">JuiceFS 1.2.1</strong>
+                    <p class="text-xs text-gray-600">面向AI和数据分析的DFS</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div class="bg-purple-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-bolt text-purple-600"></i>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">Lustre 2.15.6</strong>
+                    <p class="text-xs text-gray-600">HPC和数据中心广泛使用的高性能DFS</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 元数据性能 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">元数据性能</h3>
+          
+          <!-- 原图占位符：图10 - Metadata Performance -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 10: 元数据操作的性能和可扩展性
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig10.png" alt="论文图10: 元数据操作的性能和可扩展性" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 元数据操作的性能和可扩展性。
+            </div>
+          </div>
+          
+          <!-- 性能对比可视化 -->
+          <div class="performance-chart-placeholder bg-gray-50 p-6 rounded-lg mb-6">
+            <div class="flex items-center justify-center mb-6">
+              <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700 text-lg">关键元数据操作性能对比</h6>
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium text-gray-700">create操作 (16 MDS):</span>
+                  <span class="text-sm font-bold text-gray-800">FalconFS最快</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-600 mt-1">
+                  <span>性能提升: CephFS(2.26×), Lustre(0.82×)</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium text-gray-700">getattr操作 (16 MDS):</span>
+                  <span class="text-sm font-bold text-gray-800">与Lustre相当</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 93%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-600 mt-1">
+                  <span>性能对比: Lustre的0.93×</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm font-medium text-gray-700">mkdir操作 (16 MDS):</span>
+                  <span class="text-sm font-bold text-gray-800">显著领先</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                  <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-600 mt-1">
+                  <span>性能提升: CephFS(7.35×), Lustre(1.12×)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-2 gap-4 text-xs text-gray-600">
+              <div><span class="font-medium">测试环境:</span> 13台双路服务器</div>
+              <div><span class="font-medium">工作负载:</span> 每个客户端访问私有目录</div>
+              <div><span class="font-medium">度量指标:</span> 操作吞吐量(ops/s)</div>
+              <div><span class="font-medium">扩展性:</span> MDS从4个扩展到16个</div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-2">性能提升原因</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>不维护目录的atime和mtime，无需更新目录元数据</li>
+                <li>并发请求合并将多个预写日志操作合并持久化</li>
+                <li>无状态客户端架构无需获取缓存一致性锁</li>
+                <li>并发请求合并提升服务器并发性，减少请求分发开销</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-2">可扩展性表现</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>mkdir操作随着MDS数量增加线性扩展</li>
+                <li>16个MDS时达到最佳性能</li>
+                <li>与其他DFS相比，展示了更好的可扩展性</li>
+                <li>能够充分利用增加的元数据服务器资源</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 文件数据IO性能 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">文件数据IO性能</h3>
+          
+          <!-- 原图占位符：图13 - File Data IO Throughput -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 13: 文件数据IO的吞吐量
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig13.png" alt="论文图13: 文件数据IO的吞吐量" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 文件数据IO的吞吐量。Y轴是归一化到FalconFS的吞吐量。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">小文件性能优势</h4>
+              
+              <div class="space-y-3">
+                <div class="bg-white p-3 rounded border">
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-700">文件大小 ≤ 64 KiB:</span>
+                    <span class="font-bold text-green-700">显著领先</span>
+                  </div>
+                  <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+                    <div class="text-center bg-green-100 text-green-800 p-2 rounded">
+                      <div class="font-bold">CephFS</div>
+                      <div>7.35-21.23×</div>
+                    </div>
+                    <div class="text-center bg-blue-100 text-blue-800 p-2 rounded">
+                      <div class="font-bold">JuiceFS</div>
+                      <div>2.94-23.53×</div>
+                    </div>
+                    <div class="text-center bg-purple-100 text-purple-800 p-2 rounded">
+                      <div class="font-bold">Lustre</div>
+                      <div>1.12-1.85×</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bg-white p-3 rounded border">
+                  <h5 class="font-semibold text-gray-700 mb-1">瓶颈分析</h5>
+                  <p class="text-xs text-gray-600">当文件大小小于256 KiB时，吞吐量与文件大小成比例增加，表明元数据操作IOPS是瓶颈。当文件大小大于256 KiB时，CephFS、Lustre和FalconFS的吞吐量达到SSD带宽瓶颈(读取43 GiB/s，写入16 GiB/s)。</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">性能模式分析</h4>
+              
+              <div class="space-y-4">
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">小文件场景</h5>
+                  <p class="text-sm text-gray-700">FalconFS凭借其更高的元数据性能，在小文件访问方面优于其他DFS。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">大文件场景</h5>
+                  <p class="text-sm text-gray-700">所有系统在文件大小超过256 KiB时都达到存储带宽瓶颈，性能差异缩小。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-blue-600 mb-1">JuiceFS表现</h5>
+                  <p class="text-sm text-gray-700">JuiceFS在小文件访问方面表现不佳，原因是数据存储效率低下。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 客户端内存预算影响 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">客户端内存预算影响</h3>
+          
+          <!-- 原图占位符：图14 - Random File Traversal -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 14: 大型目录树中的随机文件遍历
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig14.png" alt="论文图14: 大型目录树中的随机文件遍历" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 大型目录树中的随机文件遍历。X轴表示客户端元数据缓存大小与所有目录inode和dentry总大小的比率。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3">有状态客户端DFS的敏感性</h4>
+              
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <div class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded mr-2 mt-0.5">性能差距</div>
+                  <div class="text-sm text-gray-700">10%和100%内存预算配置之间存在1.4-1.5×的性能差距</div>
+                </li>
+                
+                <li class="flex items-start">
+                  <div class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded mr-2 mt-0.5">缓存影响</div>
+                  <div class="text-sm text-gray-700">内存预算受限时，客户端缓存的目录更少，导致更频繁的查找操作</div>
+                </li>
+                
+                <li class="flex items-start">
+                  <div class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded mr-2 mt-0.5">请求放大</div>
+                  <div class="text-sm text-gray-700">每次文件访问的请求数增加，吞吐量下降</div>
+                </li>
+              </ul>
+              
+              <div class="mt-4 bg-white p-3 rounded border">
+                <p class="text-xs text-gray-600"><strong>关键发现:</strong> 即使有100%缓存，FalconFS-NoBypass仍比FalconFS慢19.4%。尽管这个缓存足够大，可以容纳工作负载中的所有目录inode，但文件inode会竞争缓存。因此，目录查找仍然经常错过缓存并生成远程请求。</p>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">FalconFS的优势</h4>
+              
+              <div class="space-y-4">
+                <div>
+                  <h5 class="font-semibold text-green-600 mb-1">内存不敏感性</h5>
+                  <p class="text-sm text-gray-700">FalconFS即使在严格的内存预算下也能实现高性能，并且优于FalconFS-NoBypass，表明无状态客户端设计有效提升了性能。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-green-600 mb-1">恒定请求数</h5>
+                  <p class="text-sm text-gray-700">FalconFS随着缓存大小变化，生成恒定数量的元数据服务器请求。</p>
+                </div>
+                
+                <div>
+                  <h5 class="font-semibold text-green-600 mb-1">性能提升</h5>
+                  <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div class="bg-white p-2 rounded border text-center">
+                      <div class="font-bold text-green-700">vs CephFS</div>
+                      <div class="text-sm">2.92-4.72×</div>
+                    </div>
+                    <div class="bg-white p-2 rounded border text-center">
+                      <div class="font-bold text-green-700">vs Lustre</div>
+                      <div class="text-sm">2.08-3.34×</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 瞬时负载不均衡影响 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">瞬时负载不均衡影响</h3>
+          
+          <!-- 原图占位符：图15 - Burst File IO -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 15: 突发文件IO的吞吐量
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig15.png" alt="论文图15: 突发文件IO的吞吐量" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 突发文件IO的吞吐量。
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h5 class="font-bold text-red-700 mb-2">CephFS & Lustre</h5>
+              <p class="text-sm text-gray-700">随着突发大小的增加，读取和写入性能下降。大突发导致元数据服务器之间的瞬时负载不均衡。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-2">FalconFS</h5>
+              <p class="text-sm text-gray-700">不受大突发影响，因为它均匀分布同一目录内的文件元数据，实现了良好的可扩展性。</p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-bold text-blue-700 mb-2">JuiceFS</h5>
+              <p class="text-sm text-gray-700">性能也不随突发大小增加而下降，因为其元数据引擎节点之间存在恒定的负载不均衡。</p>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-300">
+            <h4 class="font-bold text-gray-700 mb-3">FalconFS的优势机制</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h5 class="font-semibold text-purple-600 mb-1">均匀分布</h5>
+                <p class="text-sm text-gray-700">通过文件名哈希，即使同一目录内的文件也会均匀分布在不同的MNode上</p>
+              </div>
+              
+              <div>
+                <h5 class="font-semibold text-purple-600 mb-1">避免热点</h5>
+                <p class="text-sm text-gray-700">选择性重定向机制处理热文件名，防止单个MNode拥塞</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 负载均衡评估 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">负载均衡评估</h3>
+          
+          <!-- 负载均衡结果表 -->
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg overflow-hidden">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">工作负载</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">inode数量</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">inode分布 (16 MDS)</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">异常条目数</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b font-medium">标注任务 (生产)</td>
+                  <td class="py-3 px-4 border-b">33,320</td>
+                  <td class="py-3 px-4 border-b">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 90%"></div>
+                      </div>
+                      <span class="text-xs">6.99% - 5.30%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 border-b">
+                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">0</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b font-medium">ImageNet</td>
+                  <td class="py-3 px-4 border-b">2,027,728</td>
+                  <td class="py-3 px-4 border-b">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 98%"></div>
+                      </div>
+                      <span class="text-xs">6.29% - 6.21%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 border-b">
+                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">0</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b font-medium">KITTI</td>
+                  <td class="py-3 px-4 border-b">15,003</td>
+                  <td class="py-3 px-4 border-b">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
+                      </div>
+                      <span class="text-xs">7.01% - 5.47%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 border-b">
+                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">0</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b font-medium">Linux-6.8代码</td>
+                  <td class="py-3 px-4 border-b">88,936</td>
+                  <td class="py-3 px-4 border-b">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 92%"></div>
+                      </div>
+                      <span class="text-xs">6.49% - 5.96%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 border-b">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">2</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 font-medium">FSL homes</td>
+                  <td class="py-3 px-4">655,177</td>
+                  <td class="py-3 px-4">
+                    <div class="flex items-center">
+                      <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 87%"></div>
+                      </div>
+                      <span class="text-xs">6.83% - 5.45%</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">1</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-sm text-gray-600 mt-2">表3: 各种目录结构在16个元数据服务器上的文件和目录inode分布</div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-2">深度学习工作负载</h5>
+              <p class="text-sm text-gray-700 mb-3">分析了华为生产环境收集的数据集以及六个流行的开源图像数据集。大多数工作负载在零异常条目的情况下表现出小的最大-最小差距。</p>
+              
+              <div class="bg-white p-3 rounded border">
+                <p class="text-xs text-gray-600"><strong>关键发现:</strong> 深度学习工作负载由于其大目录大小和大量唯一文件名，天然适合文件名哈希，从而实现均匀的inode分布，无需异常条目。</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-bold text-blue-700 mb-2">通用工作负载</h5>
+              <p class="text-sm text-gray-700 mb-3">选择了Linux 6.8源代码树和FSL home traces。这些工作负载需要少量异常条目(1-2个)来保持负载均衡。</p>
+              
+              <div class="bg-white p-3 rounded border">
+                <p class="text-xs text-gray-600"><strong>结论:</strong> 混合元数据索引在各种目录结构上实现了均衡的inode分布，只有一小部分文件名需要特殊处理。这验证了混合索引方法在实践中的有效性。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="space-y-6">
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-300">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-trophy mr-3 text-green-600"></i>
+                主要贡献总结
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <div class="text-center mb-3">
+                    <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <i class="fas fa-chart-bar text-blue-600"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">问题分析</h4>
+                  </div>
+                  <p class="text-sm text-gray-600">深入分析了深度学习工作负载的I/O特性，指出传统有状态客户端架构在深度学习场景下的低效性</p>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <div class="text-center mb-3">
+                    <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <i class="fas fa-archway text-green-600"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">架构创新</h4>
+                  </div>
+                  <p class="text-sm text-gray-600">提出了无状态客户端架构，解决了设计高效分布式文件系统的关键挑战</p>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <div class="text-center mb-3">
+                    <div class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <i class="fas fa-cogs text-purple-600"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">系统实现</h4>
+                  </div>
+                  <p class="text-sm text-gray-600">实现了FalconFS系统，专为深度学习工作负载设计，并进行全面评估和开源</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-300">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-bolt mr-3 text-blue-600"></i>
+                性能成果
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                  <h4 class="font-bold text-blue-700 mb-3 text-center">小文件随机访问</h4>
+                  <div class="flex justify-center items-center">
+                    <div class="text-4xl font-bold text-blue-700 mr-4">4.72×</div>
+                    <div class="text-gray-600">
+                      <div>优于CephFS</div>
+                      <div class="text-sm mt-1">大型目录树随机遍历</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                  <h4 class="font-bold text-green-700 mb-3 text-center">深度学习训练</h4>
+                  <div class="flex justify-center items-center">
+                    <div class="text-4xl font-bold text-green-700 mr-4">11.81×</div>
+                    <div class="text-gray-600">
+                      <div>优于CephFS</div>
+                      <div class="text-sm mt-1">GPU利用率提升</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4 text-center">
+                <p class="text-gray-700">与Lustre相比，FalconFS在小文件随机访问方面提升3.34×，在深度学习训练方面提升1.23×</p>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-300">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-industry mr-3 text-amber-600"></i>
+                生产部署
+              </h3>
+              
+              <div class="flex flex-col md:flex-row items-center">
+                <div class="md:w-1/3 mb-4 md:mb-0">
+                  <div class="bg-white p-6 rounded-lg shadow-sm text-center">
+                    <div class="text-3xl font-bold text-amber-700 mb-2">10,000+</div>
+                    <div class="text-gray-700">NPU规模</div>
+                  </div>
+                </div>
+                
+                <div class="md:w-2/3 md:pl-6">
+                  <p class="text-gray-700 mb-3">
+                    FalconFS已在华为的AI集群中部署一年，用于自动驾驶解决方案的数据标注和模型训练，支持超过10,000个NPU。
+                  </p>
+                  
+                  <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                    <span>开源地址: https://github.com/falcon-infra/falconfs</span>
+                  </div>
+                  
+                  <div class="flex items-center text-sm text-gray-600 mt-1">
+                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                    <span>国内镜像: https://gitee.com/openeuler/FalconFS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 论文不足之处 -->
+            <div class="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-lg border border-red-300">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-exclamation-circle mr-3 text-red-600"></i>
+                论文不足之处
+              </h3>
+              
+              <div class="space-y-4">
+                <div class="bg-white p-4 rounded-lg border border-red-200">
+                  <h4 class="font-bold text-red-700 mb-2">技术局限性</h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                    <li><strong>符号链接不支持:</strong> 客户端不跟踪链接，可能限制某些应用的兼容性</li>
+                    <li><strong>嵌套挂载点需要特殊处理:</strong> 传递嵌套挂载点时需要重新检查目录权限，目前尚未支持</li>
+                    <li><strong>实时迁移不支持:</strong> FalconFS不支持实时迁移，因为这会为访问inode的关键路径引入额外开销</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg border border-amber-200">
+                  <h4 class="font-bold text-amber-700 mb-2">评估局限性</h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                    <li><strong>特定工作负载优化:</strong> 主要针对深度学习工作负载优化，在其他类型工作负载下的表现评估有限</li>
+                    <li><strong>扩展性上限未探索:</strong> 论文中最多测试了16个MNode，更大规模(如100+节点)下的表现未知</li>
+                    <li><strong>故障恢复开销:</strong> 故障恢复机制的具体性能开销和恢复时间未详细评估</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg border border-blue-200">
+                  <h4 class="font-bold text-blue-700 mb-2">设计权衡</h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                    <li><strong>内存使用:</strong> 延迟命名空间复制在所有MNodes上维护完整命名空间副本，增加了服务器内存使用</li>
+                    <li><strong>非存在路径访问开销:</strong> 访问不存在的路径需要额外的远程查找</li>
+                    <li><strong>协调器单点:</strong> 虽然协调器支持高可用，但某些操作仍依赖集中式协调，可能成为瓶颈</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-700">
+                  <strong>总体评价:</strong> FalconFS针对深度学习工作负载提供了创新的解决方案，在小文件性能和资源效率方面表现优异。然而，其设计针对特定工作负载进行了优化，在通用性和某些高级功能支持方面存在权衡。这些不足之处为未来的研究和改进提供了方向。
+                </p>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-50 to-teal-50 p-6 rounded-lg border border-green-300">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-road mr-3 text-green-600"></i>
+                未来方向
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <h4 class="font-bold text-green-700 mb-2">技术扩展</h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                    <li>支持符号链接和嵌套挂载点</li>
+                    <li>探索更大规模(100+节点)的扩展性</li>
+                    <li>优化故障恢复机制，减少恢复时间</li>
+                    <li>研究跨区域部署的优化策略</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <h4 class="font-bold text-blue-700 mb-2">应用扩展</h4>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                    <li>扩展到其他类型的工作负载(如大数据分析、科学计算)</li>
+                    <li>与更多深度学习框架深度集成</li>
+                    <li>探索在多云环境中的部署方案</li>
+                    <li>研究与其他存储系统(如对象存储)的协同工作</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      setTimeout(() => {
+        const performanceBars = document.querySelectorAll('.performance-bar');
+        performanceBars.forEach(bar => {
+          bar.style.width = bar.style.width;
+        });
+      }, 500);
+      
+      // 技术卡片悬停效果
+      const techCards = document.querySelectorAll('.tech-card');
+      techCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'scale(1.02)';
+          this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'scale(1)';
+          this.style.boxShadow = '';
+        });
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function() {
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position: absolute; bottom: 50px; right: 0; background: white; color: #333; padding: 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); width: 200px; font-size: 12px; line-height: 1.5; border: 1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight: 600; margin-bottom: 8px; color: #6366f1">人工智能生成内容</div><div style="color: #666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
