@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mist: Efficient Distributed Training of Large Language Models via Memory-Parallelism Co-Optimization</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+    }
+    .tech-card {
+      @apply bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Mist: Efficient Distributed Training of Large Language Models via Memory-Parallelism Co-Optimization
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">作者信息</strong>
+                <div class="text-lg">Zhanda Zhu, Christina Giannoula, Muralidhar Andoorveedu, Qidong Su, Karttikeya Mangalam, Bojian Zheng, Gennady Pekhimenko</div>
+                <div class="text-sm text-gray-600 mt-2">University of Toronto, Vector Institute, CentML, SigIQ.ai</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">发表信息</strong>
+                <div>EuroSys '25, March 30-April 3, 2025, Rotterdam, Netherlands</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3689031.3717461</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-2">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">LLM</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">分布式训练</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">内存优化</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">并行计算</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">自动调优</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>提出了Mist系统</strong>：首个全面协同优化内存优化技术与并行策略的自动分布式训练框架</li>
+          <li><strong>细粒度重叠感知调度</strong>：最大化计算与通信重叠，显著减少空闲时间</li>
+          <li><strong>符号化性能分析系统</strong>：通过符号表达式实现快速性能预测，搜索效率提升10^5倍</li>
+          <li><strong>不平衡感知分层调优</strong>：考虑微批次间不平衡，通过帕累托前沿采样优化流水线并行</li>
+          <li><strong>显著的性能提升</strong>：相比现有最佳手动系统Megatron-LM平均提升1.28倍，相比最佳自动系统Aceso平均提升1.27倍</li>
+        </ul>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            大语言模型（LLM）的训练需要巨大的计算和内存资源。虽然已有多种并行技术（数据并行、张量并行、流水线并行）和内存优化技术（激活检查点、ZeRO、卸载）被提出，但现有自动分布式训练系统仅调优这些技术的一个子集，导致性能不佳。
+          </p>
+          
+          <p class="text-gray-700 leading-relaxed mb-6">
+            论文作者提出了<strong>Mist</strong>，一个内存、重叠和不平衡感知的自动分布式训练系统，全面协同优化所有内存占用减少技术与并行策略。Mist基于三个关键思想：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+            <div class="tech-card">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-calendar-alt mr-2"></i>重叠感知调度
+              </h4>
+              <p class="text-sm text-gray-700">精细协调内存优化和并行技术，最大化计算-通信重叠</p>
+            </div>
+            <div class="tech-card">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-calculator mr-2"></i>符号化分析
+              </h4>
+              <p class="text-sm text-gray-700">使用符号表达式预测运行时和内存使用，快速探索巨大搜索空间</p>
+            </div>
+            <div class="tech-card">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-balance-scale mr-2"></i>不平衡感知调优
+              </h4>
+              <p class="text-sm text-gray-700">考虑微批次间不平衡，通过帕累托前沿采样优化流水线并行</p>
+            </div>
+          </div>
+          
+          <p class="text-gray-700 leading-relaxed">
+            实验结果显示，Mist相比最先进的手动系统Megatron-LM平均提升1.28倍（最高1.73倍），相比最先进的自动系统Aceso平均提升1.27倍（最高2.04倍）。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-microchip mr-2"></i>LLM训练的挑战
+          </h3>
+          
+          <div class="space-y-4 mb-8">
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3 text-red-500">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div>
+                <p class="text-gray-700"><strong>巨大的计算需求：</strong>训练LLaMa-3.1-405B需要累计3084万GPU小时（NVIDIA H100）</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3 text-red-500">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div>
+                <p class="text-gray-700"><strong>内存限制：</strong>持续预训练或监督微调每10亿token需要超过2000个NVIDIA H100 GPU小时</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3 text-red-500">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div>
+                <p class="text-gray-700"><strong>分布式训练复杂性：</strong>需要结合多种并行技术和内存优化策略</p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-cubes mr-2"></i>现有并行技术
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2"></i>数据并行 (DP)
+              </h4>
+              <p class="text-sm text-gray-700">将输入数据分割到多个设备，每个设备有完整的模型副本</p>
+              <div class="mt-3 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block">
+                通信开销低
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-th mr-2"></i>张量并行 (TP)
+              </h4>
+              <p class="text-sm text-gray-700">将每层的参数分割到多个设备，需要all-reduce通信</p>
+              <div class="mt-3 text-xs text-green-600 bg-green-100 px-2 py-1 rounded inline-block">
+                减少单设备内存
+              </div>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-stream mr-2"></i>流水线并行 (PP)
+              </h4>
+              <p class="text-sm text-gray-700">将模型分割成阶段，阶段间通过p2p通信传递数据</p>
+              <div class="mt-3 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded inline-block">
+                流水线气泡问题
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-memory mr-2"></i>内存优化技术
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-save mr-2"></i>激活检查点 (CKPT)
+              </h4>
+              <p class="text-sm text-gray-700">在反向传播时重新计算某些激活，减少内存占用</p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i>ZeRO冗余消除
+              </h4>
+              <p class="text-sm text-gray-700">通过分区优化器状态、梯度和权重来消除冗余</p>
+            </div>
+            
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 mb-3 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>卸载 (Offloading)
+              </h4>
+              <p class="text-sm text-gray-700">将未使用的张量临时转移到CPU，释放GPU内存</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-search-minus mr-2"></i>现有系统的局限性
+          </h3>
+          
+          <div class="space-y-8">
+            <!-- 挑战1 -->
+            <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center text-lg">
+                <i class="fas fa-times-circle mr-2"></i>挑战1：缺乏重叠感知
+              </h4>
+              <p class="text-gray-700 mb-4">
+                现有自动分布式训练方法除了基本的梯度同步外，未能考虑计算-通信重叠。这会导致严重的性能下降，特别是在使用ZeRO和卸载等技术时，额外的通信开销无法与计算或流水线气泡重叠。
+              </p>
+              <div class="bg-white p-3 rounded border">
+                <p class="text-sm text-gray-600">
+                  <strong>影响：</strong>在作者的实验中，Aceso在10个案例中有6个表现不如手动实现的Megatron-LM（有重叠），尽管有更大的搜索空间。
+                </p>
+              </div>
+            </div>
+            
+            <!-- 挑战2 -->
+            <div class="bg-orange-50 p-5 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center text-lg">
+                <i class="fas fa-space-shuttle mr-2"></i>挑战2：搜索空间爆炸
+              </h4>
+              <p class="text-gray-700 mb-4">
+                协同优化内存占用减少技术与并行策略会显著扩大搜索空间，使得高效找到最佳组合变得困难。例如，Alpa需要超过40小时来为GPT-3-39B在64个GPU上找到最佳并行策略。
+              </p>
+              <div class="flex items-center justify-center my-4">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-orange-600 mb-2">指数级增长</div>
+                  <div class="text-sm text-gray-600">每增加一种优化技术，搜索空间呈指数级扩大</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 挑战3 -->
+            <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center text-lg">
+                <i class="fas fa-unbalance-scale mr-2"></i>挑战3：微批次间不平衡
+              </h4>
+              <p class="text-gray-700 mb-4">
+                现有系统假设流水线阶段内微批次执行时间均匀，但第一个和最后一个微批次由于额外的操作（如参数all-gathering、梯度reduce-scattering、优化器卸载）需要更长时间。这导致性能预测不准确。
+              </p>
+              <div class="bg-white p-3 rounded border">
+                <p class="text-sm text-gray-600">
+                  <strong>影响：</strong>在GPT-3-7B调优示例中，简单平均微批次时间导致高达21.55%的性能预测误差，可能造成两倍的性能下降。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-10 mb-6 flex items-center">
+            <i class="fas fa-table mr-2"></i>现有系统比较
+          </h3>
+          
+          <!-- 系统比较表 -->
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">系统</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">并行支持</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">内存优化</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">自动调优</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">局限性</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">Megatron-LM</td>
+                  <td class="py-3 px-4 border-b">DP, TP, PP</td>
+                  <td class="py-3 px-4 border-b">CKPT</td>
+                  <td class="py-3 px-4 border-b">❌ 手动</td>
+                  <td class="py-3 px-4 border-b text-sm">需要手动配置，调优复杂</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">DeepSpeed</td>
+                  <td class="py-3 px-4 border-b">DP, TP, PP</td>
+                  <td class="py-3 px-4 border-b">CKPT, ZeRO</td>
+                  <td class="py-3 px-4 border-b">❌ 手动</td>
+                  <td class="py-3 px-4 border-b text-sm">不支持全面协同优化</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">Alpa</td>
+                  <td class="py-3 px-4 border-b">DP, TP, PP</td>
+                  <td class="py-3 px-4 border-b">CKPT</td>
+                  <td class="py-3 px-4 border-b">✅ 自动</td>
+                  <td class="py-3 px-4 border-b text-sm">调优时间长，搜索空间有限</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">Aceso</td>
+                  <td class="py-3 px-4 border-b">DP, TP, PP</td>
+                  <td class="py-3 px-4 border-b">CKPT</td>
+                  <td class="py-3 px-4 border-b">✅ 自动</td>
+                  <td class="py-3 px-4 border-b text-sm">不支持ZeRO或卸载</td>
+                </tr>
+                <tr class="hover:bg-gray-50 bg-green-50">
+                  <td class="py-3 px-4 border-b font-semibold">Mist (本文)</td>
+                  <td class="py-3 px-4 border-b font-semibold">DP, TP, PP</td>
+                  <td class="py-3 px-4 border-b font-semibold">CKPT, ZeRO, Offloading</td>
+                  <td class="py-3 px-4 border-b font-semibold">✅ 全面自动</td>
+                  <td class="py-3 px-4 border-b text-sm font-semibold text-green-700">全面协同优化所有技术</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-archway mr-2"></i>系统架构概览
+          </h3>
+          
+          <!-- 系统架构图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700 text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                图6: Mist系统高层概览
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图示意</span>
+            </div>
+            
+            <!-- 系统架构可视化 -->
+            <div class="architecture-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300 mb-4">
+              <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
+                <!-- 输入层 -->
+                <div class="bg-blue-100 p-4 rounded-lg border-2 border-blue-300 w-48">
+                  <i class="fas fa-code text-2xl text-blue-600 mb-2"></i>
+                  <p class="font-semibold text-blue-800">模型与输入</p>
+                  <p class="text-xs text-blue-600 mt-2">符号形状标注</p>
+                </div>
+                
+                <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i>
+                <i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                
+                <!-- 核心处理 -->
+                <div class="bg-green-100 p-4 rounded-lg border-2 border-green-300 w-64">
+                  <i class="fas fa-cogs text-2xl text-green-600 mb-2"></i>
+                  <p class="font-semibold text-green-800">符号性能分析器</p>
+                  <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div class="bg-white p-1 rounded text-xs">重叠感知调度</div>
+                    <div class="bg-white p-1 rounded text-xs">内存分析</div>
+                    <div class="bg-white p-1 rounded text-xs">运行时分析</div>
+                    <div class="bg-white p-1 rounded text-xs">干扰模型</div>
+                  </div>
+                </div>
+                
+                <i class="fas fa-arrow-right text-2xl text-gray-400 hidden md:block"></i>
+                <i class="fas fa-arrow-down text-2xl text-gray-400 md:hidden"></i>
+                
+                <!-- 调优层 -->
+                <div class="bg-purple-100 p-4 rounded-lg border-2 border-purple-300 w-64">
+                  <i class="fas fa-sliders-h text-2xl text-purple-600 mb-2"></i>
+                  <p class="font-semibold text-purple-800">分层调优</p>
+                  <div class="flex justify-around mt-2">
+                    <div class="text-center">
+                      <div class="text-xs font-semibold">阶段内</div>
+                      <div class="text-xs">帕累托采样</div>
+                    </div>
+                    <div class="text-center">
+                      <div class="text-xs font-semibold">阶段间</div>
+                      <div class="text-xs">MILP求解</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 数据流向 -->
+              <div class="mt-6 flex flex-col md:flex-row justify-center items-center text-gray-600 text-sm">
+                <span>符号计算图</span>
+                <i class="fas fa-arrow-right mx-2 hidden md:block"></i>
+                <i class="fas fa-arrow-down mx-2 md:hidden"></i>
+                <span>性能预测</span>
+                <i class="fas fa-arrow-right mx-2 hidden md:block"></i>
+                <i class="fas fa-arrow-down mx-2 md:hidden"></i>
+                <span>最优配置</span>
+                <i class="fas fa-arrow-right mx-2 hidden md:block"></i>
+                <i class="fas fa-arrow-down mx-2 md:hidden"></i>
+                <span>执行引擎</span>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>技术解释：</strong> Mist系统首先对模型和输入数据进行符号形状标注和追踪，生成符号形状计算图。通过重叠感知调度和符号性能分析器，系统能够快速预测不同配置的性能和内存使用。然后通过分层调优（阶段内帕累托采样和阶段间MILP求解）找到最优配置，最后通过执行引擎执行。
+            </div>
+          </div>
+          
+          <!-- 三个关键技术 -->
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-key mr-2"></i>三大关键技术
+          </h3>
+          
+          <div class="space-y-8 mb-10">
+            <!-- 技术1 -->
+            <div class="tech-card">
+              <div class="flex items-start mb-4">
+                <div class="flex-shrink-0 bg-blue-100 p-3 rounded-lg mr-4">
+                  <i class="fas fa-calendar-alt text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-blue-700 text-xl mb-2">1. 细粒度重叠感知调度</h4>
+                  <p class="text-gray-700 mb-3">
+                    精细协调内存优化和并行技术的实现，最大化计算-通信重叠。通过重叠计算、GPU-GPU通信和CPU-GPU通信，减少空闲时间。
+                  </p>
+                  
+                  <!-- 重叠调度可视化 -->
+                  <div class="bg-gray-50 p-4 rounded-lg my-4">
+                    <h5 class="font-semibold text-gray-800 mb-3 flex items-center">
+                      <i class="fas fa-project-diagram mr-2"></i>重叠调度模板
+                    </h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                        <h6 class="font-semibold text-blue-700 text-sm mb-2">前向传播重叠</h6>
+                        <ul class="text-xs text-gray-700 space-y-1">
+                          <li>层k计算</li>
+                          <li>+ 层k-1激活换出</li>
+                          <li>+ 层k+1参数换入与all-gathering</li>
+                        </ul>
+                      </div>
+                      <div class="bg-green-50 p-3 rounded border border-green-200">
+                        <h6 class="font-semibold text-green-700 text-sm mb-2">反向传播重叠</h6>
+                        <ul class="text-xs text-gray-700 space-y-1">
+                          <li>层k计算</li>
+                          <li>+ 层k+1梯度减少与换出</li>
+                          <li>+ 层k-1参数、梯度、激活换入</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 技术2 -->
+            <div class="tech-card">
+              <div class="flex items-start mb-4">
+                <div class="flex-shrink-0 bg-green-100 p-3 rounded-lg mr-4">
+                  <i class="fas fa-calculator text-green-600 text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-green-700 text-xl mb-2">2. 符号化高效性能分析</h4>
+                  <p class="text-gray-700 mb-3">
+                    通过符号表达式预测运行时和内存使用，实现快速探索巨大的搜索空间。相比传统模拟器，性能预测速度提升超过10^5倍。
+                  </p>
+                  
+                  <div class="bg-green-50 p-4 rounded-lg my-4">
+                    <h5 class="font-semibold text-gray-800 mb-3 flex items-center">
+                      <i class="fas fa-bolt mr-2"></i>符号分析优势
+                    </h5>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                      <div class="flex items-center">
+                        <i class="fas fa-check text-green-500 mr-2"></i>
+                        <span>单次符号模拟</span>
+                      </div>
+                      <div class="flex items-center">
+                        <i class="fas fa-check text-green-500 mr-2"></i>
+                        <span>批量评估</span>
+                      </div>
+                      <div class="flex items-center">
+                        <i class="fas fa-check text-green-500 mr-2"></i>
+                        <span>编译优化</span>
+                      </div>
+                      <div class="flex items-center">
+                        <i class="fas fa-check text-green-500 mr-2"></i>
+                        <span>快速替代</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="code-block my-4">
+// 符号分析示例：内存表达式生成<br/>
+// 传统方法：每个配置单独模拟，~6秒/配置<br/>
+// Mist方法：生成符号表达式，批量评估<br/><br/>
+Memory<sub>peak</sub> = f(DP, TP, PP, CKPT, ZeRO, Offloading)<br/>
+Runtime = g(computation, communication, overlap)
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 技术3 -->
+            <div class="tech-card">
+              <div class="flex items-start mb-4">
+                <div class="flex-shrink-0 bg-purple-100 p-3 rounded-lg mr-4">
+                  <i class="fas fa-balance-scale text-purple-600 text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-purple-700 text-xl mb-2">3. 不平衡感知分层调优</h4>
+                  <p class="text-gray-700 mb-3">
+                    考虑微批次间不平衡，将优化过程解耦为阶段内双目标约束优化问题和阶段间混合整数线性规划问题，通过帕累托前沿采样连接。
+                  </p>
+                  
+                  <div class="bg-purple-50 p-4 rounded-lg my-4">
+                    <h5 class="font-semibold text-gray-800 mb-3 flex items-center">
+                      <i class="fas fa-sitemap mr-2"></i>分层调优流程
+                    </h5>
+                    <div class="flex flex-col md:flex-row items-center justify-between">
+                      <div class="text-center mb-4 md:mb-0">
+                        <div class="bg-white p-3 rounded-lg shadow-sm w-32">
+                          <div class="text-xs font-semibold text-purple-700">阶段内调优</div>
+                          <div class="text-xs text-gray-600 mt-1">帕累托前沿采样</div>
+                        </div>
+                      </div>
+                      <i class="fas fa-arrow-right text-purple-500 mx-4 hidden md:block"></i>
+                      <i class="fas fa-arrow-down text-purple-500 my-2 md:hidden"></i>
+                      <div class="text-center">
+                        <div class="bg-white p-3 rounded-lg shadow-sm w-32">
+                          <div class="text-xs font-semibold text-purple-700">阶段间调优</div>
+                          <div class="text-xs text-gray-600 mt-1">MILP求解</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="code-block my-4">
+// 调优目标函数<br/>
+min<sub>1≤i≤S</sub> { (G-1)·max{t_i} + Σt_i + max{d_i - Σ<sub>j&lt;i</sub>t_j} }<br/><br/>
+// 其中：<br/>
+// G: 梯度累积步数<br/>
+// t_i: 稳定微批次运行时<br/>
+// d_i: 首尾微批次额外开销<br/>
+// S: 流水线阶段数
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 优化变量表 -->
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-sliders-h mr-2"></i>优化变量配置
+          </h3>
+          
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">变量名</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">类型</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">含义</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">L<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">整数</td>
+                  <td class="py-2 px-4 border-b">阶段i中的层数</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">b<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">整数</td>
+                  <td class="py-2 px-4 border-b">阶段i的微批次大小</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">DP<sub>i</sub>, TP<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">整数</td>
+                  <td class="py-2 px-4 border-b">数据/张量并行大小</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">ZeRO<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">One-Hot [0-3]</td>
+                  <td class="py-2 px-4 border-b">ZeRO级别（0-3）</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">CKPT<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">整数</td>
+                  <td class="py-2 px-4 border-b">重新计算的层数</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b font-mono">WO<sub>i</sub>, GO<sub>i</sub>, OO<sub>i</sub>, AO<sub>i</sub></td>
+                  <td class="py-2 px-4 border-b">浮点数 [0,1]</td>
+                  <td class="py-2 px-4 border-b">权重/梯度/优化器状态/激活卸载比例</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-flask mr-2"></i>实验设置
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-server mr-2"></i>硬件配置
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><strong>PCIe系统：</strong>最多32个NVIDIA L4 GPU</li>
+                <li><strong>NVLink系统：</strong>最多32个NVIDIA A100 GPU</li>
+                <li><strong>内存容量：</strong>L4: ~24GB, A100: 40GB/80GB</li>
+                <li><strong>互联：</strong>PCIe vs NVLink+InfiniBand</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-brain mr-2"></i>工作负载
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><strong>模型：</strong>GPT-3, LLaMa, Falcon</li>
+                <li><strong>参数量：</strong>1.3B, 2.6B, 6.7B, 13B, 22B</li>
+                <li><strong>序列长度：</strong>2048 (L4), 4096 (A100)</li>
+                <li><strong>全局批次大小：</strong>32, 64, 128, 256, 512</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2"></i>端到端训练性能
+          </h3>
+          
+          <!-- 性能对比图1 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700 text-lg">
+                <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+                图11: 启用FlashAttention时的端到端训练吞吐量
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">性能对比</span>
+            </div>
+            
+            <!-- 性能对比可视化 -->
+            <div class="performance-chart-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg border-2 border-dashed border-gray-300 mb-4">
+              <div class="flex items-center justify-center mb-6">
+                <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-lg">训练吞吐量对比 (样本/秒)</h6>
+              </div>
+              
+              <!-- 性能指标模拟 -->
+              <div class="space-y-6">
+                <!-- L4 GPU结果 -->
+                <div>
+                  <h6 class="font-semibold text-gray-700 mb-3 text-center">NVIDIA L4 GPUs</h6>
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">Mist:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-5">
+                        <div class="bg-green-500 h-5 rounded-full" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-3 text-green-600">基准 1.00×</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">Megatron-LM:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-5">
+                        <div class="bg-blue-500 h-5 rounded-full" style="width: 76%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-3">平均 1.32× 加速</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">DeepSpeed:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-5">
+                        <div class="bg-red-500 h-5 rounded-full" style="width: 66%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-3">平均 1.51× 加速</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- A100 GPU结果 -->
+                <div>
+                  <h6 class="font-semibold text-gray-700 mb-3 text-center mt-6">NVIDIA A100 GPUs</h6>
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">Mist:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-5">
+                        <div class="bg-green-500 h-5 rounded-full" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-3 text-green-600">基准 1.00×</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">Megatron-LM:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-5">
+                        <div class="bg-blue-500 h-5 rounded-full" style="width: 75%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-3">平均 1.34× 加速</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能指标说明 -->
+              <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600">
+                <div><span class="font-medium">测试环境:</span> 多种GPU配置 (L4/A100)</div>
+                <div><span class="font-medium">工作负载:</span> GPT-3, LLaMa, Falcon模型</div>
+                <div><span class="font-medium">度量指标:</span> 训练吞吐量 (样本/秒)</div>
+                <div><span class="font-medium">最大加速:</span> 相比Megatron-LM最高1.73×</div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>关键发现：</strong> 在启用FlashAttention的真实场景中，Mist相比Megatron-LM在L4 GPU上平均获得1.32×加速（最高1.59×），在A100 GPU上平均获得1.34×加速（最高1.72×）。Megatron-LM在多数情况下优于DeepSpeed，因为DeepSpeed的并行化计划会导致内存不足问题。
+            </div>
+          </div>
+          
+          <!-- 性能对比图2 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700 text-lg">
+                <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+                图12: 未启用FlashAttention时的训练吞吐量
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">性能对比</span>
+            </div>
+            
+            <div class="performance-chart-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg border-2 border-dashed border-gray-300 mb-4">
+              <div class="flex items-center justify-center mb-6">
+                <i class="fas fa-balance-scale text-3xl text-blue-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-lg">与自动系统的性能对比</h6>
+              </div>
+              
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">Mist:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-green-500 h-5 rounded-full" style="width: 100%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-16 ml-3 text-green-600">基准 1.00×</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">Megatron-LM:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-blue-500 h-5 rounded-full" style="width: 88%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-16 ml-3">平均 1.14× 加速</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">Aceso:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-purple-500 h-5 rounded-full" style="width: 79%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-16 ml-3">平均 1.27× 加速</span>
+                </div>
+              </div>
+              
+              <div class="mt-6 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <p class="text-xs text-yellow-800">
+                  <strong>重要发现：</strong> Aceso尽管有更大的搜索空间（细粒度激活检查点调优），但并未始终优于Megatron-LM。根本原因是Aceso未在搜索空间中包含分片数据并行，并且错过了几个重要的通信-计算重叠机会。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-puzzle-piece mr-2"></i>加速分解分析
+          </h3>
+          
+          <!-- 加速分解图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700 text-lg">
+                <i class="fas fa-chart-pie mr-2 text-blue-500"></i>
+                图13: 不同搜索空间的相对平均加速
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">加速分解</span>
+            </div>
+            
+            <div class="bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg border-2 border-dashed border-gray-300 mb-4">
+              <div class="space-y-6">
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">Megatron-LM搜索空间</span>
+                    <span class="text-sm font-medium">1.00×</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-gray-400 h-4 rounded-full" style="width: 100%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">Mist的实现开销使其略慢于Megatron-LM</p>
+                </div>
+                
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">+ 激活检查点调优</span>
+                    <span class="text-sm font-medium">1.12×</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-blue-400 h-4 rounded-full" style="width: 112%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">提供平均1.12×加速，优化资源权衡</p>
+                </div>
+                
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">+ 卸载调优</span>
+                    <span class="text-sm font-medium">1.19×</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-green-400 h-4 rounded-full" style="width: 119%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">额外提供7%加速，进一步优化内存-性能权衡</p>
+                </div>
+                
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">+ 不平衡感知</span>
+                    <span class="text-sm font-medium">1.28×</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-purple-400 h-4 rounded-full" style="width: 128%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">额外提供9%加速，提供准确的流水线并行运行时预测</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>关键洞察：</strong> 大部分加速来自减少激活检查点和消除流水线气泡。然而，简单地禁用检查点通常会导致内存不足错误，而调优检查点（如Aceso所做）只能部分解决问题。提高ZeRO级别或增加卸载的进一步改进是必要的，因为它们有助于进一步减少重新计算。只要这些开销可以与计算重叠或在多个微批次中分摊，性能就会显著提高。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-clock mr-2"></i>调优时间对比
+          </h3>
+          
+          <!-- 调优时间图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700 text-lg">
+                <i class="fas fa-hourglass-half mr-2 text-blue-500"></i>
+                图16: GPT-3 22B模型在32个GPU上的调优时间
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">调优效率</span>
+            </div>
+            
+            <div class="bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg border-2 border-dashed border-gray-300 mb-4">
+              <div class="space-y-6">
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">Alpa</span>
+                    <span class="text-sm font-medium">~40小时</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-red-500 h-5 rounded-full" style="width: 100%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">为GPT-3-39B在64个GPU上寻找最佳并行策略</p>
+                </div>
+                
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">Aceso (类似搜索空间)</span>
+                    <span class="text-sm font-medium">~30分钟</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-blue-500 h-5 rounded-full" style="width: 1.25%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">高效的分布式训练搜索系统</p>
+                </div>
+                
+                <div>
+                  <div class="flex justify-between mb-2">
+                    <span class="text-sm font-medium">Mist (全面优化)</span>
+                    <span class="text-sm font-medium">~45分钟</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-5">
+                    <div class="bg-green-500 h-5 rounded-full" style="width: 1.875%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">即使搜索空间大大增加，调优时间仍然合理</p>
+                </div>
+              </div>
+              
+              <div class="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p class="text-xs text-blue-800">
+                  <strong>重要观察：</strong> 1) Mist相比Alpa大幅减少了调优时间；2) 当Mist配置为使用与Aceso类似的搜索空间时，可以更快；3) 即使Mist启用更多优化并大大增加搜索空间，调优时间与显著更长的训练时间相比仍然合理。此外，由于在不同梯度累积步骤上的搜索是独立的，Mist的调优可以在不同的CPU核心或机器上并行化以使其更快。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="space-y-6">
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 p-5 rounded-lg border border-green-200">
+              <h3 class="font-bold text-green-700 mb-3 flex items-center text-xl">
+                <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+              </h3>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>提出了Mist系统</strong>：首个全面协同优化内存占用减少技术与并行策略的自动分布式训练框架</li>
+                <li><strong>解决了现有系统的三个关键局限</strong>：缺乏重叠感知、搜索空间爆炸、微批次间不平衡</li>
+                <li><strong>实现了显著的性能提升</strong>：相比最先进的自动系统Aceso平均提升1.27倍（最高2.04倍）</li>
+                <li><strong>提供了高效的调优方法</strong>：即使在巨大的搜索空间中也能快速找到最优配置</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-lg border border-blue-200">
+              <h3 class="font-bold text-blue-700 mb-3 flex items-center text-xl">
+                <i class="fas fa-lightbulb mr-2"></i>技术创新点
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 class="font-semibold text-blue-600 mb-2">方法论创新</h4>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 细粒度重叠感知调度模板</li>
+                    <li>• 符号化性能分析系统</li>
+                    <li>• 不平衡感知分层调优</li>
+                    <li>• 帕累托前沿采样连接</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-blue-600 mb-2">工程实现创新</h4>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 27K行Python代码实现</li>
+                    <li>• 基于PyTorch的从头实现</li>
+                    <li>• 支持所有优化技术</li>
+                    <li>• 灵活的扩展性设计</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 rounded-lg border border-yellow-200">
+              <h3 class="font-bold text-yellow-700 mb-3 flex items-center text-xl">
+                <i class="fas fa-exclamation-triangle mr-2"></i>论文局限性
+              </h3>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>动态工作负载支持有限</strong>：依赖于符号计算图，对于高度动态的工作负载（计算图难以固定）不太适合</li>
+                <li><strong>异构架构优化挑战</strong>：高效的调优算法假设各层相同，扩展到异构架构模型是一个重要方向</li>
+                <li><strong>重叠正确性保证</strong>：支持多个操作的细粒度重叠时，确保正确性仍然具有挑战性（潜在的数据竞争和值不一致）</li>
+                <li><strong>特定硬件假设</strong>：虽然支持多种GPU，但某些优化可能针对特定硬件架构进行了调整</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-200">
+              <h3 class="font-bold text-purple-700 mb-3 flex items-center text-xl">
+                <i class="fas fa-road mr-2"></i>未来研究方向
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 class="font-semibold text-purple-600 mb-2">技术扩展</h4>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 支持MoE（混合专家）模型的专家并行</li>
+                    <li>• 集成量化、压缩等额外优化技术</li>
+                    <li>• 支持更多自定义内核和通信模式</li>
+                    <li>• 扩展到多节点、跨区域训练</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-purple-600 mb-2">系统优化</h4>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 开发自动机制管理重叠和防止执行冲突</li>
+                    <li>• 优化高度动态工作负载的支持</li>
+                    <li>• 改进异构模型的调优算法</li>
+                    <li>• 增强对新兴硬件架构的适配</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center mt-8 p-6 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-300">
+              <h3 class="font-bold text-gray-800 mb-4 text-2xl">Mist的影响与意义</h3>
+              <p class="text-gray-700 leading-relaxed">
+                Mist通过全面协同优化内存优化技术与并行策略，为大规模语言模型的分布式训练提供了高效的自动化解决方案。它不仅显著提升了训练性能，还通过易用的自动化框架降低了分布式训练的复杂度，有望帮助机器学习研究者和实践者更高效地进行LLM训练，推动人工智能研究的民主化进程。
+              </p>
+              <div class="mt-6 flex flex-wrap justify-center gap-4">
+                <div class="bg-green-100 text-green-800 px-4 py-2 rounded-full font-semibold">
+                  <i class="fas fa-bolt mr-2"></i>性能提升显著
+                </div>
+                <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold">
+                  <i class="fas fa-robot mr-2"></i>自动化程度高
+                </div>
+                <div class="bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-semibold">
+                  <i class="fas fa-expand-arrows-alt mr-2"></i>扩展性强
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function(){
+        if(!expanded){
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if(details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

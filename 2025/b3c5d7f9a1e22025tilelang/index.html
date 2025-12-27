@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TileLang: A Composable Tiled Programming Model for AI Systems</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          TileLang: A Composable Tiled Programming Model for AI Systems
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Lei Wang, Yu Cheng, Yinling Shi, Zhengju Tang, Zhengiu Tang, Zhiwen Mo, Wenhao Xie, Lingxiao Ma, Yuqing Xia, Jilong Xue, Fan Yang, Zhi Yang</div>
+                <div class="text-sm text-gray-600 mt-1">北京大学、帝国理工学院、微软亚洲研究院</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">论文类型</strong>
+                <div>计算机科学、系统、编程语言、人工智能</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">开源地址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border break-all">https://github.com/tile-ai/tilelang</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Tile Programming</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">AI Kernel</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">GPU Optimization</span>
+                  <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">Compiler</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-900 border-l-4 border-amber-500 dark:border-amber-400 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-sm font-bold rounded-full border border-amber-200 dark:border-amber-700">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 dark:text-amber-300 font-medium px-2 py-1 bg-amber-50 dark:bg-amber-900/30 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700 dark:text-amber-400">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200 dark:border-gray-700">
+              <p class="text-xs text-gray-600 dark:text-gray-400 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12 md:mb-16">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg md:text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>Tile-Level编程语言</strong>：设计了一个以Tile为基本单位的编程语言，允许用户在硬件内存层次结构中显式声明缓冲区位置，并通过布局推断机制抽象化高效并行化缓冲操作的复杂性。</li>
+          <li><strong>带自动优化的编译器</strong>：提供了配套编译器，包含自动并行化、动态参数简化、自动流水线推导和循环尾部拆分等优化过程，确保TileLang程序高效且易于编写。</li>
+          <li><strong>最先进的性能</strong>：在实际AI内核上的评估表明，TileLang在NVIDIA和AMD GPU上达到了与专业供应商库及其他DSL（如Triton）相媲美甚至更优的性能。</li>
+        </ul>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose prose-lg max-w-none text-gray-700">
+          <p>现代AI工作负载在训练和推理阶段都严重依赖优化的计算内核。这些AI内核遵循明确的数据流模式，例如在DRAM和SRAM之间移动Tile（数据块），并在这些Tile上执行一系列计算。尽管这些模式清晰，但编写高性能内核仍然很复杂。要充分发挥现代加速器的潜力，需要仔细、面向硬件的优化。</p>
+          <p>TileLang是一个通用的Tile编程模型，旨在实现更高效的AI内核编程。<strong>核心创新在于将调度空间（线程绑定、内存布局、张量化和流水线）从数据流中解耦出来，并将它们封装为一组可定制的注解和原语。</strong> 这种方法允许用户专注于内核的数据流本身，而将大多数其他优化任务交给编译器。</p>
+          <p>实验评估表明，TileLang在关键内核上能够达到最先进的性能，证明其统一的块-线程范式和透明的调度能力能够满足现代AI系统开发所需的强大性能和灵活性。</p>
+        </div>
+      </section>
+
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose prose-lg max-w-none text-gray-700">
+          <p>近年来，对AI工作负载更高性能的追求加速了驱动训练和推理的专用内核的发展。矩阵乘法（GEMM）尤其支撑着从简单前馈层到大规模Transformer模型的广泛神经网络架构。为了减轻这些网络巨大的计算负担，出现了如FlashAttention这样的自定义内核来优化注意力机制，减少内存开销并提高处理吞吐量。</p>
+          <p>然而，在不断演进的加速器硬件上实现高效率，依赖于硬件感知设计和复杂调优的微妙结合——这些挑战激发了人们对更具表达力的领域特定编译器日益增长的兴趣。</p>
+        </div>
+      </section>
+
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose prose-lg max-w-none text-gray-700">
+          <p>深度学习内核通常表示为数据流模式，涉及在DRAM和SRAM之间移动Tile并在这些Tile上执行计算序列。尽管这些模式看似清晰，但编写高性能内核仍然极具挑战性，因为开发人员必须手动处理多项关键优化：</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-link mr-2"></i>线程绑定
+              </h4>
+              <p class="text-sm text-gray-700">将Tile操作和数据映射到适当的线程上。在现代GPU架构中，这涉及跨线程块、线程束和单个线程的任务分配，以最大化并行性并最小化负载不平衡。</p>
+            </div>
+            <div class="tech-card bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <h4 class="font-bold text-amber-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-project-diagram mr-2"></i>内存布局
+              </h4>
+              <p class="text-sm text-gray-700">优化数据在物理内存中的组织，以消除存储体冲突并确保高效的访问模式。通常需要将自然数据表示转换为与架构内存子系统对齐的Tile或分块格式。</p>
+            </div>
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>张量内禀化
+              </h4>
+              <p class="text-sm text-gray-700">利用为性能优化的特定目标指令，如Tensor Core或Matrix Core。需要精确管理数据类型、内存对齐和控制流以充分利用硬件计算能力。</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-stream mr-2"></i>流水线
+              </h4>
+              <p class="text-sm text-gray-700">重叠数据移动与计算，以掩盖内存访问延迟。通过并发调度数据传输和计算任务，确保处理单元保持活跃并最小化因内存延迟造成的空闲时间。</p>
+            </div>
+          </div>
+
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">现有方案的不足</h3>
+          <p>现有的领域特定编译器，如Triton，虽然极大地简化了高性能内核的创建，但它们仍然将大多数底层优化与内核实现交织在一起，即使数据流是明确暴露的。</p>
+          <ul class="list-disc list-inside space-y-2 text-gray-700 my-4">
+            <li><strong>Triton</strong>：提供直观的块级原语，但将线程行为、内存布局和地址空间注解隐藏在自动生成的策略后面。这种抽象虽然简化了编程，但阻碍了有经验的开发人员提取最大性能。</li>
+            <li><strong>限制</strong>：例如，在实现具有量化权重的矩阵乘法时，通常需要内联汇编来执行向量化的数据类型转换和与硬件特定内存缓冲区仔细对齐的自定义数据布局。虽然Triton提供了如`tl.dot`的向量化操作，但将其扩展到定制用例仍然很麻烦。</li>
+            <li><strong>流水线控制</strong>：尽管Triton暴露了用户友好的流水线旋钮，但它不允许用户定义完全自定义的流水线。因此，领域专家在开发需要显式控制内存层次结构和其他细粒度优化的内核时受到限制。</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <p class="text-gray-700 mb-8">为了应对上述挑战，作者提出了TileLang，一个在保留Triton简洁性的同时提供更大灵活性的编程模型。其核心设计理念是将<strong>数据流与调度解耦</strong>：用户仅专注于使用可组合的Tile算子定义数据流，而编译器负责探索和应用调度策略。</p>
+
+        <!-- 核心设计原则 -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-500 mb-8">
+          <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+            <i class="fas fa-lightbulb mr-2"></i>三个核心设计原则
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h5 class="font-semibold text-blue-800 mb-2">1. Pythonic设计</h5>
+              <p class="text-sm text-gray-700">无缝集成到Python生态系统中，提供熟悉的编码体验并降低学习曲线。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h5 class="font-semibold text-blue-800 mb-2">2. 以数据流为中心</h5>
+              <p class="text-sm text-gray-700">用户主要关注数据流，同时将底层调度复杂性抽象化。将调度方面（线程绑定、内存布局、张量化、流水线）与数据流解耦，将它们封装为一组可自定义的注解和原语。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-100">
+              <h5 class="font-semibold text-blue-800 mb-2">3. 可组合性</h5>
+              <p class="text-sm text-gray-700">确保内核、原语和调度策略可以无缝组合以构建复杂的设计。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 编译流程 -->
+        <h3 class="text-xl font-bold text-gray-800 mt-10 mb-4">TileLang编译流程</h3>
+        <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-3">
+            <h5 class="font-semibold text-gray-700">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              原图 [图2]: TileLang编译流程各阶段
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+          </div>
+          <!-- 原图占位符 - 使用img标签 -->
+          <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+            <img src="./images/fig2.png" alt="论文图2: TileLang编译流程，展示从高级程序到后端代码生成的五个阶段：解析、IR构建、优化、代码生成。" class="max-w-full h-auto rounded-lg">
+          </div>
+          <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> TileLang的编译流程分为五个阶段：用户编写高级程序，解析器将其转换为TileLang AST，IR构建器将其转换为TVM IR，优化阶段执行图优化和调度转换，代码生成阶段将优化后的IR翻译成后端代码。
+          </div>
+        </div>
+
+        <!-- 关键技术机制 -->
+        <div class="space-y-8">
+          <div>
+            <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-cube mr-2 text-green-500"></i>
+              基于Tile的编程模型
+            </h4>
+            <p class="text-gray-700 mb-4">Tile是编程模型中的一等对象。Tile代表一块有形状的数据，可以由一个线程束、线程块或等效的并行单元拥有和操作。</p>
+            <div class="bg-green-50 p-4 rounded-lg mb-4">
+              <h5 class="font-semibold text-green-700 mb-2">显式硬件内存分配</h5>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li><code>T.alloc_shared</code>: 在快速的片上存储空间（如GPU共享内存）中分配内存，用于缓存中间数据。</li>
+                <li><code>T.alloc_fragment</code>: 在片段内存（如GPU寄存器文件）中分配累加器，以最小化延迟。</li>
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-arrows-alt-h mr-2 text-purple-500"></i>
+              以数据流为中心的Tile算子
+            </h4>
+            <p class="text-gray-700 mb-4">TileLang抽象出一组Tile算子，使开发人员能够专注于数据流逻辑，而无需管理每个Tile操作的底层实现细节。每个算子实现了两个关键接口：<code>Lower</code>（如何将高级算子降级为低级IR）和<code>InferLayout</code>（确定与算子相关的内存和循环布局）。</p>
+            <!-- 表1部分内容的可视化 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+              <div class="border border-gray-200 rounded-lg p-4">
+                <h6 class="font-bold text-gray-700 mb-3 text-center border-b pb-2">数据流算子 (示例)</h6>
+                <div class="space-y-3">
+                  <div>
+                    <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">T.copy</code>
+                    <p class="text-xs text-gray-600 mt-1">用于寄存器、共享内存和全局内存之间并行数据移动的专用内存拷贝算子。</p>
+                  </div>
+                  <div>
+                    <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">T.gemm</code>
+                    <p class="text-xs text-gray-600 mt-1">根据不同GPU自动选择高性能矩阵乘法实现。</p>
+                  </div>
+                </div>
+              </div>
+              <div class="border border-gray-200 rounded-lg p-4">
+                <h6 class="font-bold text-gray-700 mb-3 text-center border-b pb-2">调度原语 (示例)</h6>
+                <div class="space-y-3">
+                  <div>
+                    <code class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">T.Pipelined</code>
+                    <p class="text-xs text-gray-600 mt-1">启用循环级流水线以重叠数据传输和计算。</p>
+                  </div>
+                  <div>
+                    <code class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">T.Parallel</code>
+                    <p class="text-xs text-gray-600 mt-1">通过将迭代映射到线程来实现循环的自动并行化。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-memory mr-2 text-red-500"></i>
+              内存布局与线程绑定
+            </h4>
+            <p class="text-gray-700 mb-4">TileLang引入了一个关键的抽象——<strong>Layout</strong>，来描述数据在内存中的组织和映射方式。Layout可以表示为一个线性化的地址表达式。基于此，进一步引入了<strong>Fragment Layout</strong>，专门描述寄存器文件在线程间的分区方案。</p>
+            <p class="text-gray-700 mb-4">线程绑定问题涉及如何将块级寄存器文件分配到各个线程，以及如何推断适当的Fragment布局。TileLang采用基于Layout和Fragment对象的推理方案，并定义了Tile算子布局的优先级层次结构来处理相互依赖的布局和绑定策略。</p>
+          </div>
+
+          <div>
+            <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-microchip mr-2 text-amber-500"></i>
+              利用高性能硬件指令
+            </h4>
+            <p class="text-gray-700 mb-4">TileLang提供了两种互补的方法来利用高性能硬件指令（如NVIDIA的DP4A, MMA）：</p>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700 pl-2">
+              <li><strong>通过Tile库集成</strong>：使用如NVIDIA CUTLASS或AMD Composable Kernel等库的高级API，自动选择最有效的指令。简化集成，但可能限制底层控制，且编译可能较慢。</li>
+              <li><strong>直接实现</strong>：使用TileLang自身通过<code>T.gemm</code>或直接内联PTX指令实现。避免布局注释限制，编译时间更短，但需要为每个目标硬件指令实现完整的指令集。</li>
+            </ol>
+          </div>
+
+          <div>
+            <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-stream mr-2 text-indigo-500"></i>
+              软件定义流水线
+            </h4>
+            <p class="text-gray-700 mb-4">TileLang采用自动化的软件流水线推理机制来分析计算块之间的依赖关系（如Copy和GEMM），并生成结构化的流水线调度，以在保持正确执行顺序的同时最大化并行性。</p>
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h5 class="font-semibold text-indigo-700 mb-2">架构特定支持</h5>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li><strong>Ampere架构</strong>：通过<code>cp.async</code>支持异步内存拷贝。</li>
+                <li><strong>Hopper架构</strong>：自动执行线程束专业化优化，利用TMA进行数据移动，<code>wgmma.mma_async</code>进行异步矩阵乘法。</li>
+                <li><strong>AMD CDNA架构</strong>：通过HIP包装的Copy原语支持异步拷贝指令和DMA。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="prose prose-lg max-w-none text-gray-700">
+          <p>作者在一系列不同的硬件平台和工作负载上对TileLang进行了全面的性能评估。目标是证明TileLang在优化构成现代机器学习工作负载主干的关键算子内核方面的有效性、通用性和可扩展性。</p>
+
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">实验设置</h3>
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3">硬件平台</h5>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>NVIDIA H100 (80 GB), CUDA 12.4</li>
+              <li>NVIDIA A100 (80 GB)</li>
+              <li>AMD Instinct MI300X (192 GB), ROCm 6.1.0</li>
+            </ul>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3">对比基线</h5>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li><strong>FlashAttention-3</strong>：针对多头部注意力的优化CUDA实现。</li>
+              <li><strong>Triton</strong>：高效的GPU内核开源框架。</li>
+              <li><strong>cuBLAS / rocBLAS</strong>：NVIDIA和AMD的高性能线性代数库。</li>
+              <li><strong>PyTorch</strong>：包含手写优化内核（如FlashAttention-2）。</li>
+              <li><strong>BitsandBytes & Marlin</strong>：针对特定量化格式的高度优化内核。</li>
+            </ul>
+          </div>
+
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">关键实验结果</h3>
+
+          <div class="space-y-8">
+            <!-- FlashAttention性能 -->
+            <div class="performance-chart-placeholder bg-white p-6 rounded-lg border shadow-sm">
+              <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-brain text-3xl text-blue-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-lg">FlashAttention性能 (H100)</h6>
+              </div>
+              <p class="text-gray-700 mb-4 text-center">相比于手动优化的FlashAttention-3，TileLang实现了<strong>1.36倍</strong>的加速。TileLang能够自动利用如<code>cp.async.bulk</code>和<code>wgmma.mma_async</code>等指令，并应用如线程束专业化等优化。</p>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">TileLang:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-green-500 h-4 rounded-full" style="width: 100%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">1.36x</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">FlashAttention-3:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-blue-500 h-4 rounded-full" style="width: 73.5%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">1.00x</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium w-32">PyTorch (FA-2):</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-gray-500 h-4 rounded-full" style="width: 58.8%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">~0.6x</span>
+                </div>
+              </div>
+              <div class="mt-4 text-xs text-gray-600">
+                <strong>关键洞察：</strong> 手动调优的FlashAttention-3由于固定的Tile大小，难以高效适应不同工作负载规模。TileLang的自动调度能力使其更具适应性。
+              </div>
+            </div>
+
+            <!-- GEMM性能 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 [图13]: GEMM在NVIDIA和AMD GPU上的性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig13.png" alt="论文图13: GEMM性能对比，展示TileLang在RTX 4090、A100、H100和MI300X上与供应商库（cuBLAS/rocBLAS）以及Triton的比较。" class="max-w-full h-auto rounded-lg">
+              </div>
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> TileLang在多种GPU上的GEMM性能。相比供应商库，在RTX 4090、A100、H100和MI300X上分别实现了1.10倍、0.97倍、1.00倍和1.04倍的加速。相比Triton，在相同GPU上实现了1.08倍、1.03倍、1.13倍和1.25倍的加速。TileLang通过简单的语法即可匹配供应商库的性能，并通过布局交错确保在所有测试设备上实现无存储体冲突的执行。
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg mt-4 border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-2 flex items-center"><i class="fas fa-chart-bar mr-2"></i>性能总结</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li><strong>对齐供应商库</strong>：在大多数情况下，TileLang能够达到甚至超过cuBLAS/rocBLAS等高度优化的供应商库的性能。</li>
+                  <li><strong>超越Triton</strong>：在所有测试的GPU上，TileLang的性能均优于Triton，特别是在AMD MI300X上优势明显。</li>
+                  <li><strong>灵活的精度支持</strong>：在A100上的反量化矩阵乘法实验中，TileLang（通过BitBLAS后端）相比<code>cuBLAS-Wfp16-Afp16</code>实现了最高<strong>7.65倍</strong>的加速。</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- MLA性能 -->
+            <div class="performance-chart-placeholder bg-white p-6 rounded-lg border shadow-sm">
+              <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-code text-3xl text-purple-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-lg">代码效率与性能</h6>
+              </div>
+              <p class="text-gray-700 mb-4 text-center">TileLang在实现高性能的同时，保持了出色的代码简洁性。例如，在H100上实现Multi-Head Latent Attention (MLA)时：</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="text-center">
+                  <div class="text-4xl font-bold text-green-600 mb-2">1075.9x</div>
+                  <div class="text-sm text-gray-600">相比PyTorch的加速比</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-4xl font-bold text-blue-600 mb-2">~70 LOC</div>
+                  <div class="text-sm text-gray-600">仅需约70行Python代码</div>
+                </div>
+              </div>
+              <p class="text-gray-700 mt-4 text-sm">TileLang实现了手工优化库FlashMLA 98%的性能，但代码行数显著减少，展示了其在生产力与性能之间的良好平衡。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论与讨论
+        </h2>
+        <div class="prose prose-lg max-w-none text-gray-700">
+          <p>本文介绍了TileLang，一种类似Python的领域特定语言，旨在应对为现代硬件加速器编写高性能内核的挑战。TileLang允许用户在Tile粒度上进行编程，其核心创新在于将调度空间与数据流解耦。</p>
+
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-500 mb-8">
+            <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-balance-scale mr-2"></i>核心优势与定位
+            </h4>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>与Triton相比</strong>：TileLang允许用户在前端显式声明硬件内存层次结构中的缓冲区，并利用布局推断机制来高效并行化缓冲区操作。同时，TileLang为专家提供了指定单个线程在缓冲区上确切行为的灵活性。</li>
+              <li><strong>与ThunderKittens相比</strong>：TileLang通过允许开发人员完全使用Python编程并默认抽象化优化细节（如流水线）来简化编程过程，同时仍支持高级控制。</li>
+              <li><strong>通用性与生产力</strong>：TileLang提供了对动态参数、动态形状和其他高级功能的强大支持，使其特别适用于编写内核库，在保持高性能的同时提升了开发效率。</li>
+            </ul>
+          </div>
+
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">未来工作方向</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-white p-4 rounded-lg border border-green-200 shadow-sm">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-boxes mr-2"></i>自托管的Tile库
+              </h5>
+              <p class="text-sm text-gray-700">计划构建一个基于TileLang的自托管Tile库，消除当前对CUTLASS和手动包装的CUDA/HIP代码的依赖，以提供内置算子。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-network-wired mr-2"></i>分布式支持
+              </h5>
+              <p class="text-sm text-gray-700">旨在通过引入Tile级通信原语和调度策略，将TileLang扩展到支持一系列分布式场景。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-calculator mr-2"></i>成本模型
+              </h5>
+              <p class="text-sm text-gray-700">计划研究TileLang的成本模型设计。基于Tile的编程范式，其内存访问模式和计算行为被明确定义，有利于硬件行为分析。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
+              <h5 class="font-semibold text-amber-700 mb-3 flex items-center">
+                <i class="fas fa-expand-arrows-alt mr-2"></i>多后端支持
+              </h5>
+              <p class="text-sm text-gray-700">将探索通用设计方法以扩展多后端支持，使TileLang能够无缝适配CPU、NPU等多种硬件架构。</p>
+            </div>
+          </div>
+
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">不足之处与挑战 (AI生成评述)</h3>
+          <div class="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+            <h4 class="font-bold text-red-700 mb-4 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>可能存在的局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>学习曲线</strong>：尽管基于Python，但TileLang引入的新概念（如Tile、Fragment Layout）和显式调度控制，对于不熟悉GPU底层编程或编译技术的用户，仍可能构成一定的学习门槛。</li>
+              <li><strong>编译器复杂性</strong>：为了自动化复杂的优化，TileLang编译器本身可能变得相当复杂。其优化过程（如布局推断）的正确性和效率高度依赖于实现质量。</li>
+              <li><strong>对Tile库的依赖</strong>：当前高性能算子的实现依赖于外部Tile库（如CUTLASS）。构建完全自托管库是一个长期目标，实现过程中可能遇到性能和兼容性挑战。</li>
+              <li><strong>适用范围</strong>：TileLang主要针对具有规则数据流和Tile化特征的AI计算内核进行优化。对于高度不规则或控制流复杂的算法，其优势可能不那么明显。</li>
+              <li><strong>验证与调试</strong>：在提供显式底层控制的同时，如何提供有效的调试工具和性能分析手段，帮助用户理解复杂的自动调度决策，是一个实际工程挑战。</li>
+            </ul>
+            <p class="text-sm text-gray-600 mt-4">注：上述局限性分析基于对论文内容的解读和推断，旨在提供一个全面的视角，并非论文作者明确指出。</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 -->
+<div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+  <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+    <span style="font-size: 16px;">🤖</span>
+    <span>AI生成</span>
+  </div>
+</div>
+<script>
+  (function(){
+    const badge = document.getElementById('ai-badge');
+    let expanded = false;
+    badge.addEventListener('click', function() {
+      if(!expanded) {
+        const details = document.createElement('div');
+        details.id = 'ai-details';
+        details.style.cssText = "position: absolute; bottom: 50px; right: 0; background: white; color: #333; padding: 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 200px; font-size: 12px; line-height: 1.5; border: 1px solid #e5e7eb;";
+        details.innerHTML = '<div style="font-weight: 600; margin-bottom: 8px; color: #6366f1">人工智能生成内容</div><div style="color: #666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+        badge.appendChild(details);
+        expanded = true;
+      } else {
+        const details = document.getElementById('ai-details');
+        if(details) details.remove();
+        expanded = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>

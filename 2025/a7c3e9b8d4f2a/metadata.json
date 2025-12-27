@@ -1,0 +1,10 @@
+{
+  "id": "a7c3e9b8d4f2a",
+  "title": "Selective On-Device Execution of Data-Dependent Read I/Os",
+  "authors": ["Chanyoung Park", "Minu Chung", "Hyungon Moon"],
+  "year": 2025,
+  "conference": "FAST",
+  "category": "存储系统",
+  "keywords": ["存储计算", "数据依赖读I/O", "设备内执行", "eBPF", "键值存储", "NVMe", "性能优化"],
+  "abstract": "Recent studies have demonstrated the benefits of employing on-device and in-kernel storage functions. On-device functions are primarily used to preprocess data within storage devices, effectively reducing the amount of I/O. In contrast, in-kernel functions are proposed to expedite sequences of data-dependent read I/O requests, particularly useful for applications traversing on-disk data structures. In this work, we investigate the unexplored potential of using on-device functions for data-dependent read I/O requests on read-only on-disk data structures. The results are promising: on-device I/O functions enable applications to issue I/O requests more rapidly and integrate seamlessly with in-kernel functions to efficiently manage high volumes of requests. We developed a prototype of this on-device function atop NVMeVirt, a state-of-the-art storage emulator. We demonstrate that on-device function enhances performance through experiments utilizing a simple B+-tree key-value store and WiredTiger, a widely used log-structured merge tree-based key-value store. Use of the on-device function improves the throughput of the B+-tree key-value store by up to 41%, and reduces WiredTiger's 99-percentile tail latency on YCSB C by up to 3.85%, compared to the host-only in-kernel storage function."
+}

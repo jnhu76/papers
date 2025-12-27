@@ -1,0 +1,10 @@
+{
+  "id": "a3cee8c5e2e8",
+  "title": "A Survey on Hallucination in Large Language Models: Principles, Taxonomy, Challenges, and Open Questions",
+  "authors": ["LEI HUANG", "WEIJIANG YU", "WEITAO MA", "WEIHONG ZHONG", "ZHANGYIN FENG", "HAOTIAN WANG", "QIANGLONG CHEN", "WEIHUA PENG", "XIAOCHENG FENG", "BING QIN", "TING LIU"],
+  "year": 2024,
+  "conference": "ACM TOIS",
+  "category": "自然语言处理",
+  "keywords": ["大语言模型", "Hallucination", "事实性", "忠实性", "检索增强生成", "幻觉检测", "幻觉缓解"],
+  "abstract": "The emergence of large language models (LLMs) has marked a significant breakthrough in natural language processing (NLP), fueling a paradigm shift in information acquisition. Nevertheless, LLMs are prone to hallucination, generating plausible yet nonfactual content. This phenomenon raises significant concerns over the reliability of LLMs in real-world information retrieval (IR) systems and has attracted intensive research to detect and mitigate such hallucinations. Given the open-ended general-purpose attributes inherent to LLMs, LLM hallucinations present distinct challenges that diverge from prior task-specific models. This divergence highlights the urgency for a nuanced understanding and comprehensive overview of recent advances in LLM hallucinations. In this survey, we begin with an innovative taxonomy of hallucination in the era of LLM and then delve into the factors contributing to hallucinations. Subsequently, we present a thorough overview of hallucination detection methods and benchmarks. Our discussion then transfers to representative methodologies for mitigating LLM hallucinations. Additionally, we delve into the current limitations faced by retrieval-augmented LLMs in combating hallucinations, offering insights for developing more robust IR systems. Finally, we highlight the promising research directions on LLM hallucinations, including hallucination in large vision-language models and understanding of knowledge boundaries in LLM hallucinations."
+}

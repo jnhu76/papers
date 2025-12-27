@@ -1,0 +1,10 @@
+{
+  "id": "8f3a7c2b1d9e",
+  "title": "Densing law of LLMs",
+  "authors": ["Chaojun Xiao", "Jie Cai", "Weilin Zhao", "Biyuan Lin", "Guoyang Zeng", "Jie Zhou", "Zhi Zheng", "Xu Han", "Zhiyuan Liu", "Maosong Sun"],
+  "year": 2025,
+  "conference": "Nature Mach. Intell.",
+  "category": "自然语言处理",
+  "keywords": ["大语言模型", "能力密度", "缩放定律", "模型效率", "推理成本", "Densing law", "参数效率"],
+  "abstract": "Large language models (LLMs) have emerged as a milestone in artificial intelligence. The scaling law indicates that the performance of LLMs can continually improve as the model size increases, which poses challenges for training and deployment. Despite numerous efforts to improve LLM efficiency, there is no general consensus on development trends and evaluation metrics for efficiency of LLMs with different scales. To address this tension between model performance and efficiency, we introduce the concept of capability density as a metric to evaluate the quality of the LLMs and describe the trend of LLMs in terms of both effectiveness and efficiency. Intuitively, capability density can be understood as the capability contained within each unit of model parameters. Capability density provides a unified framework for assessing both model performance and efficiency. Here we show an empirical observation, called the 'densing law', that the capability density of LLMs grows exponentially over time. More specifically, using widely used benchmarks for evaluation, the maximum capability density of open-source LLMs doubles approximately every 3.5 months. This reveals that both parameter requirements and inference costs of LLMs for achieving equivalent performance decrease exponentially, offering insights for efficient LLM development strategies."
+}

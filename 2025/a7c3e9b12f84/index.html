@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nested Learning: The Illusion of Deep Learning Architectures</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 添加KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .equation {
+      @apply bg-gray-100 p-4 rounded-lg overflow-x-auto my-4 text-center;
+    }
+    .algorithm-box {
+      @apply bg-gray-50 border-l-4 border-blue-500 p-4 rounded-r-lg my-4;
+    }
+    /* 数学公式样式 */
+    .katex { font-size: 1.1em; }
+    .katex-display { margin: 1em 0; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#nested-learning" class="nav-item whitespace-nowrap">嵌套学习</a>
+        <a href="#hope-architecture" class="nav-item whitespace-nowrap">Hope架构</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Nested Learning: The Illusion of Deep Learning Architectures
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Ali Behrouz, Meisam Razaviyayn, Peiling Zhong, Vahab Mirrokni</div>
+                <div class="text-sm text-gray-600 mt-1">Google Research, USA</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>NeurIPS 2024 (摘要版)</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">嵌套学习</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">关联记忆</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">持续学习</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">上下文学习</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>论文核心贡献
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-lg shadow-sm">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-brain mr-2"></i>深度优化器
+            </h5>
+            <p class="text-sm text-gray-700">将传统优化器（如Adam、SGD）重新解释为关联记忆模块，并提出更强大的深度记忆优化器</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow-sm">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-robot mr-2"></i>自修改模型
+            </h5>
+            <p class="text-sm text-gray-700">提出能够学习如何修改自身的序列模型，通过自学习更新算法实现持续学习</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow-sm">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-infinity mr-2"></i>连续记忆系统
+            </h5>
+            <p class="text-sm text-gray-700">提出新的记忆系统公式，泛化传统"长/短期记忆"观点，支持多时间尺度更新</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">论文提出了<strong>嵌套学习(Nested Learning, NL)</strong>这一新的学习范式，将模型表示为一组嵌套、多级和/或并行的优化问题，每个问题都有自己的"上下文流"。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+            <p class="text-sm"><strong>关键洞察：</strong>作者揭示了现有深度学习方法通过压缩自身的上下文流来学习数据，并解释了大模型中<strong>上下文学习(in-context learning)</strong>如何出现。</p>
+          </div>
+          
+          <p class="mb-4">NL为设计更具表达力的学习算法提供了一条路径，通过增加更多"层级"来实现<strong>高阶上下文学习能力</strong>。除了其神经科学上合理和数学上白盒的特性外，论文通过三个核心贡献展示了其重要性。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">深度学习的局限性</h3>
+          <p class="mb-4">尽管深度学习在多个领域取得了显著成功，但其深层设计并非解决所有挑战的通用方案：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>计算深度限制
+              </h4>
+              <p class="text-sm">增加层数可能不会改变深度模型的计算深度，其实现复杂算法的能力与传统浅层方法相比没有显著提升。</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>容量边际效应
+              </h4>
+              <p class="text-sm">某些参数类别的容量可能随着模型深度/宽度的增加而呈现边际改善。</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>优化挑战
+              </h4>
+              <p class="text-sm">训练过程可能收敛到次优解，主要由于优化器或其超参数的次优选择。</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>持续学习限制
+              </h4>
+              <p class="text-sm">模型快速适应新任务、持续学习和/或泛化到分布外数据的能力不会随着堆叠更多层而改变。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">LLMs的静态特性</h3>
+          <p class="mb-4">大型语言模型(LLMs)在初始部署阶段后基本上是<strong>静态的</strong>，这意味着它们成功执行在预训练或后训练期间学习的任务，但无法在其直接上下文之外持续获取新能力。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-brain mr-2"></i>顺行性遗忘症类比
+            </h4>
+            <p class="text-sm">作者将当前LLMs的记忆处理系统与<strong>顺行性遗忘症</strong>进行类比。这种神经学状况下，一个人在疾病发作后无法形成新的长期记忆，而现有记忆保持完整。这限制了人的知识和经验到一个短暂的当前窗口和遥远的过去（疾病发作前），导致持续体验当前时刻，仿佛它总是新的。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">人脑启发</h3>
+          <p class="mb-4">人脑在持续学习方面非常高效和有效，这通常归因于<strong>神经可塑性</strong>——大脑响应新经验、记忆、学习甚至损伤而改变自身的显著能力。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">在线巩固</h4>
+              <p class="text-sm">也称为突触巩固，发生在学习后立即或不久，甚至在清醒期间。这时新的、最初脆弱的记忆痕迹被稳定并开始从短期存储转移到长期存储。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">离线巩固</h4>
+              <p class="text-sm">也称为系统巩固，重复回放最近编码的模式——在海马体的尖波涟漪期间，与皮质睡眠纺锤波和慢振荡协调——加强和重组记忆并支持转移到皮质部位。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">当前模型的主要问题</h3>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-red-700 mb-2">当前模型只体验即时现在</h4>
+            <p class="mb-2">LLMs的知识仅限于：</p>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>适合其上下文窗口的即时上下文</li>
+              <li>存储在MLP层中的知识，这些知识存储了遥远的过去，在"预训练结束"之前</li>
+            </ul>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-memory mr-2 text-blue-500"></i>上下文学习限制
+              </h4>
+              <p class="text-sm text-gray-700">LLMs唯一可适应的组件是它们的上下文学习能力——LLMs的一个（已知是突现的）特性，能够快速适应上下文并因此执行零样本或少样本任务。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-snowflake mr-2 text-blue-500"></i>静态模型问题
+              </h4>
+              <p class="text-sm text-gray-700">除了上下文学习，最近克服LLMs静态特性的努力要么计算成本高，需要外部组件，缺乏泛化，和/或可能遭受灾难性遗忘。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">根本挑战</h3>
+          <div class="algorithm-box">
+            <p class="font-medium mb-2">传统深度学习公式：</p>
+            <div class="equation">
+              $$W^* = \arg\min_W \mathcal{L}(W; \mathcal{D}_{\text{train}})$$
+            </div>
+            <p class="text-sm text-gray-600">这种传统方法限制了模型持续学习和适应新知识的能力，因为一旦训练完成，参数就基本固定。</p>
+          </div>
+          
+          <p class="mb-4">这导致研究人员质疑是否需要重新审视如何设计机器学习模型，以及是否需要一种超越层堆叠的新学习范式来释放LLMs在持续设置中的能力。</p>
+        </div>
+      </section>
+      
+      <!-- 嵌套学习 -->
+      <section id="nested-learning" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-sitemap mr-3 text-blue-500"></i>
+          嵌套学习
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">关联记忆基础</h3>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-2">定义1：关联记忆</h4>
+            <p class="mb-2">给定一组键$\mathcal{K} \subseteq \mathbb{R}^{d_k}$和值$\mathcal{V} \subseteq \mathbb{R}^{d_v}$，关联记忆是一个算子$\mathcal{M} : \mathcal{K} \rightarrow \mathcal{V}$，它映射两个键集$\mathcal{K}$和值集$\mathcal{V}$。</p>
+            <div class="equation">
+              $$\mathcal{M}^* = \arg\min_{\mathcal{M}} \tilde{\mathcal{L}}(\mathcal{M}(\mathcal{K}); \mathcal{V})$$
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-800 mb-2">学习 vs. 记忆</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">记忆</h5>
+                <p class="text-sm">由输入引起的神经更新</p>
+              </div>
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">学习</h5>
+                <p class="text-sm">获取有效和有用记忆的过程</p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">嵌套优化问题</h3>
+          
+          <div class="algorithm-box mb-6">
+            <p class="font-medium mb-2">简单MLP训练示例（梯度下降）：</p>
+            <div class="equation">
+              $$W_{t+1} = W_t - \eta_{t+1} \nabla_{W_t} \mathcal{L}(W_t; x_{t+1})$$
+            </div>
+            <p class="text-sm text-gray-600">这可以重新表述为关联记忆优化问题：</p>
+            <div class="equation">
+              $$W_{t+1} = \arg\min_W \langle W x_{t+1}, \nabla_{y_{t+1}} \mathcal{L}(W_t; x_{t+1}) \rangle + \frac{1}{2\eta_{t+1}} \|W - W_t\|_2^2$$
+            </div>
+          </div>
+          
+          <div class="algorithm-box mb-6">
+            <p class="font-medium mb-2">带动量的梯度下降：</p>
+            <div class="equation">
+              $$W_{t+1} = W_t - \mathbf{m}_{t+1}$$
+              $$\mathbf{m}_{t+1} = \mathbf{m}_t - \eta_{t+1} \nabla_{W_t} \mathcal{L}(W_t; x_{t+1})$$
+            </div>
+            <p class="text-sm text-gray-600">这可以重新表述为两级优化过程，其中动量项本身是一个关联记忆。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">更新频率定义</h3>
+          
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-6">
+            <h4 class="font-bold text-purple-700 mb-2">定义2：更新频率</h4>
+            <p class="mb-2">对于任何组件$A$，我们定义其频率$f_A$为其每单位时间的更新次数。</p>
+            <p class="text-sm">基于更新频率，我们可以对机器学习算法的组件进行排序：$A \succ B$如果$f_A > f_B$，或者$f_A = f_B$但$B$在时间$t$的状态计算需要$A$在时间$t$的状态计算。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">优化器作为学习模块</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3">扩展：更具表达力的关联</h4>
+              <p class="text-sm text-gray-700">通过引入值参数$\mathbf{v}_i = \mathbf{P}_i$，动量旨在最小化：</p>
+              <div class="equation text-xs">
+                $$\min_{\mathbf{m}} \langle \mathbf{m} \nabla \mathcal{L}(W_i; x_i)^\top, \mathbf{P}_i \rangle$$
+              </div>
+              <p class="text-sm text-gray-700">这相当于使用预调节的动量GD。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3">扩展：更具表达力的记忆</h4>
+              <p class="text-sm text-gray-700">为了增加此模块的学习容量，一个替代方案是使用替代的强大持久学习模块：即用MLP替换动量的线性矩阵值记忆。</p>
+              <p class="text-sm text-gray-700">这被称为深度动量梯度下降(DMGD)。</p>
+            </div>
+          </div>
+          
+          <!-- 图2：嵌套学习范式 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图2 - 嵌套学习范式
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 嵌套学习范式
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-project-diagram text-5xl text-blue-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700 text-xl">嵌套学习范式图</h6>
+                  </div>
+                  
+                  <!-- 架构组件可视化 -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-4 rounded-lg border border-blue-300">
+                      <h6 class="font-bold text-blue-700 mb-3 text-center">左：混合架构</h6>
+                      <div class="space-y-3">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-center">
+                          <i class="fas fa-layer-group text-blue-500 mb-2"></i>
+                          <p class="text-sm font-medium">深度学习视角</p>
+                          <p class="text-xs text-gray-600 mt-1">NL的扁平化图像</p>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded border border-green-200 text-center">
+                          <i class="fas fa-eye text-green-500 mb-2"></i>
+                          <p class="text-sm font-medium">NL视角</p>
+                          <p class="text-xs text-gray-600 mt-1">透明表示所有内部梯度流</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-purple-300">
+                      <h6 class="font-bold text-purple-700 mb-3 text-center">右：神经学习模块</h6>
+                      <div class="space-y-3">
+                        <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                          <i class="fas fa-cogs text-purple-500 mb-2"></i>
+                          <p class="text-sm font-medium">计算模型</p>
+                          <p class="text-xs text-gray-600 mt-1">学习如何压缩自身的上下文流</p>
+                        </div>
+                        <div class="flex justify-center items-center text-gray-500 text-sm">
+                          <span>第一级 →</span>
+                          <i class="fas fa-arrow-right mx-2"></i>
+                          <span>预训练</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 嵌套学习范式，将机器学习模型及其训练过程表示为一组嵌套优化问题。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>混合架构对比:</strong> 左图展示了深度学习视角与NL视角的对比，NL透明地表示所有内部梯度流</li>
+                  <li><strong>神经学习模块:</strong> 右图展示了一个计算模型，它学习如何压缩自身的上下文流</li>
+                  <li><strong>多级结构:</strong> 第一级对应于模型的最外层训练，通常称为"预训练"步骤</li>
+                  <li><strong>上下文流压缩:</strong> 每个级别都负责压缩自己的上下文流到其参数中</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">嵌套优化:</strong>
+                    <p>NL将传统深度学习模型分解为多个嵌套的优化问题，每个问题都有自己的目标函数和更新频率</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">频率排序:</strong>
+                    <p>基于更新频率对组件进行排序，高频率组件更新更频繁，低频率组件更新较少</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">上下文流:</strong>
+                    <p>每个级别都有自己的上下文流，负责压缩特定时间尺度的信息</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- Hope架构 -->
+      <section id="hope-architecture" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-infinity mr-3 text-blue-500"></i>
+          Hope架构
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">连续记忆系统</h3>
+          
+          <p class="mb-4">现有的架构主干包括：(1) 一个<strong>工作记忆</strong>模块（例如注意力），负责在序列长度上主动融合信息；(2) 一个前馈层（例如MLP），在特征上融合信息，并作为预训练阶段的持久记忆或知识存储。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-2">连续记忆系统公式</h4>
+            <p class="mb-2">连续记忆系统被形式化为MLP块的链：</p>
+            <div class="equation">
+              $$y_t = \mathtt{MLP}^{(f_h)}(\mathtt{MLP}^{(f_{h-1})}(\cdots \mathtt{MLP}^{(f_1)}(x_t)))$$
+            </div>
+            <p class="text-sm">其中第$\ell$个MLP块的参数$\bm{\theta}^{(f_\ell)}$每$C^{(\ell)}$步更新一次：</p>
+            <div class="equation">
+              $$\bm{\theta}^{(f_\ell)}_{i+1} = \bm{\theta}^{(f_\ell)}_i - \begin{cases} \sum_{t=i-C^{(\ell)}}^{i} \eta^{(\ell)}_t f(\bm{\theta}^{(f_\ell)}_t; x_t) & \text{如果 } i \equiv 0 \pmod{C^{(\ell)}} \\ 0 & \text{否则} \end{cases}$$
+            </div>
+          </div>
+          
+          <p class="mb-4">传统的Transformer块是这种公式的一个特殊实例，其中$k=1$。公式提供了一个重要的解释：参数$\bm{\theta}^{(f_\ell)}_t$负责将其自身的上下文压缩到其参数中，因此它们是其上下文抽象知识的代表。</p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">Hope架构</h3>
+          
+          <p class="mb-4">作者进一步提出了基于Titans和他们在第B.1节中的梯度下降变体的<strong>自引用学习模块</strong>。将这种自引用序列模型与连续记忆系统结合，产生了Hope架构。</p>
+          
+          <!-- 图3：Hope架构主干 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图3 - Hope架构主干
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: Hope架构主干与Transformer的比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-sitemap text-5xl text-blue-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700 text-xl">Hope架构与Transformer对比</h6>
+                  </div>
+                  
+                  <!-- 架构组件可视化 -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-4 rounded-lg border border-blue-300">
+                      <h6 class="font-bold text-blue-700 mb-3 text-center">Transformer</h6>
+                      <div class="space-y-3">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-center">
+                          <i class="fas fa-brain text-blue-500 mb-2"></i>
+                          <p class="text-sm font-medium">注意力机制</p>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-center">
+                          <i class="fas fa-network-wired text-blue-500 mb-2"></i>
+                          <p class="text-sm font-medium">前馈网络</p>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-2">单级记忆系统</div>
+                      </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-purple-300">
+                      <h6 class="font-bold text-purple-700 mb-3 text-center">Hope架构</h6>
+                      <div class="space-y-3">
+                        <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                          <i class="fas fa-infinity text-purple-500 mb-2"></i>
+                          <p class="text-sm font-medium">连续记忆系统</p>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                          <i class="fas fa-robot text-purple-500 mb-2"></i>
+                          <p class="text-sm font-medium">自引用学习</p>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-2">多级嵌套优化</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 关键差异 -->
+                  <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-4">
+                    <h6 class="font-bold text-yellow-700 mb-2 text-sm">关键差异</h6>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                      <div><span class="font-medium">记忆系统:</span> 单级 vs 多级</div>
+                      <div><span class="font-medium">更新频率:</span> 统一 vs 多时间尺度</div>
+                      <div><span class="font-medium">学习能力:</span> 静态 vs 自修改</div>
+                      <div><span class="font-medium">上下文管理:</span> 有限 vs 连续</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Hope架构主干与Transformer的比较（为了清晰起见，归一化和潜在的数据相关组件已被移除）。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>架构对比:</strong> 图3展示了Hope架构与标准Transformer架构的对比</li>
+                  <li><strong>记忆系统:</strong> Hope采用连续记忆系统，而Transformer使用单级记忆系统</li>
+                  <li><strong>更新机制:</strong> Hope支持多时间尺度更新，不同组件有不同的更新频率</li>
+                  <li><strong>自引用学习:</strong> Hope包含自引用学习模块，能够学习如何修改自身</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">连续记忆系统:</strong>
+                    <p>Hope使用MLP块的链，每个块与特定的块大小$C^{(\ell)}$相关联，参数以不同的频率更新</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">自引用学习:</strong>
+                    <p>基于Titans架构和作者提出的梯度下降变体，使模型能够学习如何修改自身</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">多级优化:</strong>
+                    <p>将模型表示为嵌套优化问题的集成系统，每个组件有自己的梯度流</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">架构优势:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>支持持续学习能力</li>
+                      <li>多时间尺度记忆管理</li>
+                      <li>自修改和自适应能力</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">应用场景:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>语言建模任务</li>
+                      <li>持续学习环境</li>
+                      <li>长上下文推理任务</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          
+          <p class="mb-4">作者在语言建模和常识推理任务上评估了Hope架构，并与多个基线模型进行了比较，包括Transformer、RetNet、DeltaNet、TTT、Samba和Titans。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-blue-700 mb-2">模型规模和训练数据</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div class="bg-white p-3 rounded border border-blue-200 text-center">
+                <div class="font-bold text-blue-700">340M参数</div>
+                <div class="text-gray-600">未指定令牌数</div>
+              </div>
+              <div class="bg-white p-3 rounded border border-blue-200 text-center">
+                <div class="font-bold text-blue-700">760M参数</div>
+                <div class="text-gray-600">30B令牌</div>
+              </div>
+              <div class="bg-white p-3 rounded border border-blue-200 text-center">
+                <div class="font-bold text-blue-700">1.3B参数</div>
+                <div class="text-gray-600">100B令牌</div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">评估结果</h3>
+          
+          <!-- 表1：性能对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>技术细节：表1 - 语言建模和常识推理性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原表展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-table mr-2 text-blue-500"></i>
+                    表1: Hope和基线在语言建模和常识推理任务上的性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 原表占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-bar text-5xl text-blue-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700 text-xl">性能对比分析表</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-300 text-sm">
+                      <thead class="bg-gray-100">
+                        <tr>
+                          <th class="py-2 px-3 border-b text-left">模型</th>
+                          <th class="py-2 px-3 border-b text-center">Wiki. pp1 ↓</th>
+                          <th class="py-2 px-3 border-b text-center">LMB. pp1 ↓</th>
+                          <th class="py-2 px-3 border-b text-center">LMB. acc ↑</th>
+                          <th class="py-2 px-3 border-b text-center">Avg. ↑</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="bg-blue-50">
+                          <td class="py-2 px-3 border-b font-medium">Hope (760M)</td>
+                          <td class="py-2 px-3 border-b text-center">20.53</td>
+                          <td class="py-2 px-3 border-b text-center">20.47</td>
+                          <td class="py-2 px-3 border-b text-center">39.02</td>
+                          <td class="py-2 px-3 border-b text-center font-bold">52.26</td>
+                        </tr>
+                        <tr>
+                          <td class="py-2 px-3 border-b">Titans (LMM)</td>
+                          <td class="py-2 px-3 border-b text-center">20.04</td>
+                          <td class="py-2 px-3 border-b text-center">21.96</td>
+                          <td class="py-2 px-3 border-b text-center">37.40</td>
+                          <td class="py-2 px-3 border-b text-center">51.56</td>
+                        </tr>
+                        <tr>
+                          <td class="py-2 px-3 border-b">Samba*</td>
+                          <td class="py-2 px-3 border-b text-center">20.63</td>
+                          <td class="py-2 px-3 border-b text-center">22.71</td>
+                          <td class="py-2 px-3 border-b text-center">39.72</td>
+                          <td class="py-2 px-3 border-b text-center">51.08</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                          <td class="py-2 px-3 border-b font-medium">Hope (1.3B)</td>
+                          <td class="py-2 px-3 border-b text-center">15.11</td>
+                          <td class="py-2 px-3 border-b text-center">11.63</td>
+                          <td class="py-2 px-3 border-b text-center">50.01</td>
+                          <td class="py-2 px-3 border-b text-center font-bold">57.23</td>
+                        </tr>
+                        <tr>
+                          <td class="py-2 px-3 border-b">Titans (LMM)</td>
+                          <td class="py-2 px-3 border-b text-center">15.00</td>
+                          <td class="py-2 px-3 border-b text-center">11.41</td>
+                          <td class="py-2 px-3 border-b text-center">49.14</td>
+                          <td class="py-2 px-3 border-b text-center">56.82</td>
+                        </tr>
+                        <tr>
+                          <td class="py-2 px-3 border-b">Samba*</td>
+                          <td class="py-2 px-3 border-b text-center">16.13</td>
+                          <td class="py-2 px-3 border-b text-center">13.29</td>
+                          <td class="py-2 px-3 border-b text-center">44.94</td>
+                          <td class="py-2 px-3 border-b text-center">54.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div class="mt-4 text-xs text-gray-600">
+                    <p>↑ 表示数值越高越好，↓ 表示数值越低越好。混合模型用*标记。</p>
+                  </div>
+                </div>
+                
+                <!-- 原表表注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原表表注:</strong> Hope和基线在语言建模和常识推理任务上的性能。评估指标包括WikiText和LAMBADA的困惑度(pp1)，以及多个常识推理任务的准确率。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>性能优势:</strong> Hope在所有规模和基准任务上表现出非常好的性能，优于Transformer和最近的现代循环神经网络</li>
+                  <li><strong>规模扩展:</strong> 随着模型规模从760M增加到1.3B参数，Hope的性能持续提升</li>
+                  <li><strong>对比分析:</strong> 与Titans和Gated DeltaNet相比，基于上下文动态改变键、值和查询投影以及深度记忆模块可以产生具有更低困惑度和更高基准准确率的模型</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>模型规模: 340M, 760M, 1.3B参数</li>
+                      <li>训练数据: 最高100B令牌</li>
+                      <li>评估任务: 语言建模和常识推理</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>Hope在760M规模上平均得分52.26，优于Titans(51.56)</li>
+                      <li>Hope在1.3B规模上平均得分57.23，优于Titans(56.82)</li>
+                      <li>性能随着模型规模增加而持续提升</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">其他实验结果</h3>
+          
+          <p class="mb-4">除了主要结果外，论文还在附录中报告了关于优化器、上下文学习的出现、Hope的持续学习能力、消融研究、长上下文任务等的广泛结果。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2 text-blue-500"></i>优化器实验
+              </h4>
+              <p class="text-sm text-gray-700">论文展示了基于NL视角设计的新型优化器，包括深度动量梯度下降(DMGD)和其他变体。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-infinity mr-2 text-blue-500"></i>持续学习能力
+              </h4>
+              <p class="text-sm text-gray-700">Hope在持续学习设置中表现出色，能够在不忘记先前知识的情况下适应新任务。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">主要贡献总结</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">嵌套学习范式</h4>
+              <p class="text-sm">提出了NL作为新的学习范式，将模型表示为一组嵌套优化问题，每个有自己的上下文流。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">优化器新视角</h4>
+              <p class="text-sm">将传统优化器重新解释为关联记忆模块，并提出更强大的深度记忆优化器。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">Hope架构</h4>
+              <p class="text-sm">结合自引用序列模型和连续记忆系统，在语言建模和持续学习中表现出色。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">未来方向</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>更深入的嵌套级别:</strong> 探索具有更多级别的嵌套学习架构</li>
+              <li><strong>更高效的优化算法:</strong> 基于NL视角设计更高效的优化器</li>
+              <li><strong>更广泛的应用:</strong> 将NL范式应用于其他机器学习领域</li>
+              <li><strong>理论分析:</strong> 对嵌套学习进行更深入的理论分析</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">论文局限性</h3>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <p class="mb-2"><strong>当前版本限制:</strong> 此版本的论文已广泛总结以适应NeurIPS相机就绪的页面限制，一些材料、实验、讨论和方法已移至附录，这可能使某些部分难以理解或导致不一致。</p>
+            <p class="text-sm">为避免这种情况，请阅读作者的arXiv版本（将于11月13日提供）。</p>
+          </div>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-2">潜在问题和不足</h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li><strong>复杂性:</strong> 嵌套学习范式增加了模型的复杂性，可能难以理解和实现</li>
+              <li><strong>计算成本:</strong> 多级优化过程可能增加计算开销</li>
+              <li><strong>收敛性:</strong> 嵌套优化问题的收敛性需要进一步理论分析</li>
+              <li><strong>实证验证:</strong> 需要更多实验验证NL在各种任务和数据集上的有效性</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+  
+  <!-- 添加KaTeX JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+  
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

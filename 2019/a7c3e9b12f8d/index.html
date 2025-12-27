@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Thomas Mueller Graf, Daniel Lemire</div>
+                <div class="text-sm text-gray-600 mt-1">University of Quebec (TELUQ), Canada</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv preprint arXiv:1912.08258v3</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Bloom filters</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Cuckoo filters</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Approximate Set Membership</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Xor filters</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>提出Xor Filter</strong>：基于Dietzfelbinger和Pagh的Bloomier filter变体，首次实现并评估了这种过滤器</li>
+          <li><strong>性能优势</strong>：在查询速度和内存使用方面优于Bloom和Cuckoo过滤器</li>
+          <li><strong>空间优化</strong>：提出Xor+ Filter，通过压缩技术进一步减少内存使用</li>
+          <li><strong>实用验证</strong>：通过实验证明Xor Filter在实际应用中的有效性</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 mb-4">
+            Bloom过滤器提供快速的近似集合成员查询，同时使用很少的内存。工程师通常使用这些过滤器来避免磁盘或网络访问等慢速操作。作为替代方案，Cuckoo过滤器可能比Bloom过滤器需要更少的空间并且更快。
+          </p>
+          <p class="text-gray-700 mb-4">
+            Chazelle等人提出了Bloom过滤器的泛化，称为Bloomier过滤器。Dietzfelbinger和Pagh描述了一种Bloomier过滤器的变体，可以回答不可变集合的近似成员查询。据作者所知，这种方法从未经过实证测试。
+          </p>
+          <p class="text-gray-700">
+            作者回顾了他们方法的高效实现，称为Xor过滤器。发现Xor过滤器比Bloom和Cuckoo过滤器更快，同时使用更少的内存。进一步表明，Xor过滤器的更紧凑版本（Xor+）可以在提供与Bloom过滤器竞争速度的同时，使用比高度紧凑的替代方案（例如，Golomb压缩序列）更少的空间。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-filter mr-2 text-blue-500"></i>
+              近似集合成员查询
+            </h3>
+            <p class="text-gray-700 mb-4">
+              近似集合成员查询是一种概率数据结构，用于测试一个元素是否属于一个集合。它允许一定的误报率（false positive），但可以显著减少内存使用。
+            </p>
+            <p class="text-gray-700">
+              应用场景包括：
+            </p>
+            <ul class="list-disc list-inside mt-2 text-gray-700 space-y-1">
+              <li>使用有效载荷签名扫描病毒</li>
+              <li>过滤不良关键字或地址</li>
+              <li>字符串的快速语言识别</li>
+              <li>写入优化的键值存储（如LSM树）</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-history mr-2 text-blue-500"></i>
+              现有技术
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 text-lg mb-2">
+                  <i class="fa-solid fa-seedling mr-2"></i>Bloom过滤器
+                </h4>
+                <p class="text-sm text-gray-700">
+                  经典的概率数据结构，使用多个哈希函数和位数组。误报概率为ε时，最优情况下使用约-log₂ε个哈希函数，内存使用比理论下限高44%。
+                </p>
+              </div>
+              
+              <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 text-lg mb-2">
+                  <i class="fa-solid fa-kiwi-bird mr-2"></i>Cuckoo过滤器
+                </h4>
+                <p class="text-sm text-gray-700">
+                  基于Cuckoo哈希，在满容量和低误报概率下比Bloom过滤器使用更少空间，成员查询通常更快。标准版本每个键有3位开销。
+                </p>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h4 class="font-bold text-gray-700 mb-3">其他变体</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li><strong>Blocked Bloom filters</strong>：每个CPU缓存线一个小Bloom过滤器，每个操作只需要一次内存访问</li>
+                <li><strong>Golomb-compressed sequences</strong>：通过编码指纹值之间的差异存储排序的指纹</li>
+                <li><strong>Quotient filters</strong>：在紧凑哈希表中存储指纹</li>
+                <li><strong>Morton filters</strong>：类似于Cuckoo过滤器，但使用欠载桶</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-bolt mr-2 text-red-500"></i>
+              Bloom过滤器的局限性
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-2">随机访问问题</h4>
+                <p class="text-sm text-gray-700">
+                  对于1%的误报概率，Bloom过滤器需要7个哈希函数，导致多个随机内存访问，这在现代处理器上可能很昂贵。
+                </p>
+              </div>
+              
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-2">空间效率问题</h4>
+                <p class="text-sm text-gray-700">
+                  最优Bloom过滤器比理论下限多使用44%的内存，存在显著的空间开销。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-kiwi-bird mr-2 text-orange-500"></i>
+              Cuckoo过滤器的挑战
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 class="font-bold text-orange-700 mb-2">构造失败问题</h4>
+                <p class="text-sm text-gray-700">
+                  在原始实现中，构造偶尔会失败，需要将最大负载从0.96降低到0.94，这会轻微恶化内存使用。
+                </p>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 class="font-bold text-orange-700 mb-2">空间浪费问题</h4>
+                <p class="text-sm text-gray-700">
+                  原始实现要求过滤器大小为2的幂，可能导致高达50%的空间浪费，而不改善误报概率。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-lightbulb mr-2 text-blue-500"></i>
+              研究机会
+            </h3>
+            <p class="text-gray-700">
+              Bonomi等人以及Broder和Mitzenmacher指出，对于静态集合，使用完美哈希函数和指纹可以实现基本最优的内存使用。但由于完美哈希函数计算成本可能太高，他们部分否定了这种可能性。然而，Dietzfelbinger和Pagh描述了这种思想的一个看似实用的实现，作者称之为Xor过滤器。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- Xor Filter 基础概念 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-code-branch mr-2 text-blue-500"></i>
+              Xor Filter 基础概念
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">核心思想</h4>
+                <p class="text-gray-700 mb-4">
+                  给定一个键x，使用随机选择的哈希函数产生其k位指纹。误报概率由ε=1/2^k决定。
+                </p>
+                <p class="text-gray-700">
+                  目标是构造一个映射F，将所有可能的元素映射到k位整数，使得它将集合S中的所有键y映射到它们的k位指纹。
+                </p>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2">关键特性</h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>对于集合中的元素：F(y) = fingerprint(y)</li>
+                  <li>对于不在集合中的元素：以概率1-ε映射到不同于其指纹的值</li>
+                  <li>使用三个哈希函数和指纹数组</li>
+                  <li>通过异或操作验证成员资格</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 成员查询算法 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-search mr-2 text-green-500"></i>
+              成员查询算法
+            </h3>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+              <h4 class="font-bold text-gray-700 mb-2">算法流程</h4>
+              <div class="font-mono text-sm bg-white p-4 rounded border">
+                <div class="text-blue-600">// 成员测试：如果键x可能在S中返回true，否则返回false</div>
+                <div class="text-purple-600">function</div> <span class="text-green-600">membershipTest</span>(x) {<br>
+                &nbsp;&nbsp;<span class="text-blue-600">// 计算三个哈希函数</span><br>
+                &nbsp;&nbsp;h0 = h0(x)<br>
+                &nbsp;&nbsp;h1 = h1(x)<br>
+                &nbsp;&nbsp;h2 = h2(x)<br>
+                &nbsp;&nbsp;<br>
+                &nbsp;&nbsp;<span class="text-blue-600">// 构造期望的指纹</span><br>
+                &nbsp;&nbsp;expected = B[h0] xor B[h1] xor B[h2]<br>
+                &nbsp;&nbsp;<br>
+                &nbsp;&nbsp;<span class="text-blue-600">// 与给定键的指纹比较</span><br>
+                &nbsp;&nbsp;<span class="text-purple-600">return</span> expected == fingerprint(x)<br>
+                }
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">性能特点</h5>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>恰好3次内存访问</li>
+                  <li>内存访问可由内存子系统并行执行</li>
+                  <li>指令数量少</li>
+                  <li>无分支</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">与Bloom过滤器对比</h5>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>Bloom过滤器：多个内存访问（取决于误报概率）</li>
+                  <li>Xor过滤器：固定3次内存访问</li>
+                  <li>Xor过滤器：约48条指令/键</li>
+                  <li>Cuckoo过滤器：66-68条指令/键</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 构造算法 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-hammer mr-2 text-orange-500"></i>
+              构造算法
+            </h3>
+            
+            <div class="space-y-4">
+              <p class="text-gray-700">
+                构造遵循Botelho等人的算法构建无环3部随机超图。算法包括两个主要步骤：
+              </p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                  <h5 class="font-bold text-orange-700 mb-2">映射步骤 (Mapping Step)</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>初始化大小为⌊1.23·|S|⌋+32的集合数组H</li>
+                    <li>对于每个键x，将其添加到三个集合H[h0(x)], H[h1(x)], H[h2(x)]</li>
+                    <li>找到只包含一个键的集合</li>
+                    <li>重复移除这些键，直到处理完所有键或失败</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-bold text-purple-700 mb-2">分配步骤 (Assigning Step)</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>分配足够大的数组B存储指纹</li>
+                    <li>以相反顺序处理键和索引</li>
+                    <li>设置B[i]使得B[h0(x)] xor B[h1(x)] xor B[h2(x)] = fingerprint(x)</li>
+                    <li>每个条目最多修改一次</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">构造成功率</h5>
+                <p class="text-sm text-gray-700">
+                  对于大型集合，成功概率接近100%。对于大小为10^7的集合，Botelho等人发现概率几乎为1。对于较小的集合，使用c=1.23·|S|+32时，估计概率始终大于0.8。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Xor+ Filter 空间优化 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-compress-arrows-alt mr-2 text-purple-500"></i>
+              Xor+ Filter 空间优化
+            </h3>
+            
+            <div class="space-y-4">
+              <p class="text-gray-700">
+                表B中约19%的条目是空的：每100个键需要123个条目，其中23个是空的。为了传输，可以通过以下方式节省大部分空空间：
+              </p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-bold text-purple-700 mb-2">压缩策略</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>发送B之前，发送一个位数组，空条目为'0'，占用条目为'1'</li>
+                    <li>只发送占用条目的数据</li>
+                    <li>使用k=8位时，常规Xor过滤器需要9.84位/条目</li>
+                    <li>压缩后可减少到9.23位/条目</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-bold text-green-700 mb-2">运行时优化</h5>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>使用Rank数据结构（如Rank9）实现恒定时间访问</li>
+                    <li>Rank9有约25%的存储开销</li>
+                    <li>Poppy有约3%的开销，但速度较慢</li>
+                    <li>修改构造算法，将空条目移动到表的最后三分之一</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">空间使用公式</h5>
+                <div class="text-sm text-gray-700">
+                  <p><strong>Xor过滤器：</strong> 1.23k 位/条目</p>
+                  <p><strong>Xor+过滤器：</strong> 1.0824k + 0.5125 位/条目</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 实验设置 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-flask mr-2 text-blue-500"></i>
+              实验设置
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">测试方法</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>遵循Fan等人的测试程序</li>
+                  <li>使用64位键作为集合元素</li>
+                  <li>基于10M或100M键构建过滤器</li>
+                  <li>创建包含原始集合部分键和不在原始集合中的键的查询集</li>
+                  <li>使用不同的存在比例（0%, 25%, 50%, 75%, 100%）</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">测试环境</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>Intel i7-6700处理器（Skylake微架构），3.4 GHz</li>
+                  <li>8 MB L3缓存</li>
+                  <li>GNU GCC 8.1.0编译器，-O3 -march=native标志</li>
+                  <li>单线程基准测试</li>
+                  <li>每个过滤器运行3次测试，报告中位数</li>
+                  <li>误差范围小于3%</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 构造性能 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2 text-green-500"></i>
+              构造性能
+            </h3>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b text-left">算法</th>
+                    <th class="py-2 px-4 border-b text-center">10M键 (ns/key)</th>
+                    <th class="py-2 px-4 border-b text-center">100M键 (ns/key)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Blocked Bloom</td>
+                    <td class="py-2 px-4 border-b text-center">10</td>
+                    <td class="py-2 px-4 border-b text-center">20</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Bloom 8</td>
+                    <td class="py-2 px-4 border-b text-center">40</td>
+                    <td class="py-2 px-4 border-b text-center">70</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Bloom 12</td>
+                    <td class="py-2 px-4 border-b text-center">60</td>
+                    <td class="py-2 px-4 border-b text-center">90</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Bloom 16</td>
+                    <td class="py-2 px-4 border-b text-center">90</td>
+                    <td class="py-2 px-4 border-b text-center">130</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Cuckoo semiSort 13</td>
+                    <td class="py-2 px-4 border-b text-center">130</td>
+                    <td class="py-2 px-4 border-b text-center">200</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Cuckoo 12</td>
+                    <td class="py-2 px-4 border-b text-center">80</td>
+                    <td class="py-2 px-4 border-b text-center">130</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Cuckoo 16</td>
+                    <td class="py-2 px-4 border-b text-center">90</td>
+                    <td class="py-2 px-4 border-b text-center">120</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">GCS</td>
+                    <td class="py-2 px-4 border-b text-center">160</td>
+                    <td class="py-2 px-4 border-b text-center">190</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Xor 8</td>
+                    <td class="py-2 px-4 border-b text-center">110</td>
+                    <td class="py-2 px-4 border-b text-center">130</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Xor 16</td>
+                    <td class="py-2 px-4 border-b text-center">120</td>
+                    <td class="py-2 px-4 border-b text-center">130</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Xor+ 8</td>
+                    <td class="py-2 px-4 border-b text-center">160</td>
+                    <td class="py-2 px-4 border-b text-center">180</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Xor+ 16</td>
+                    <td class="py-2 px-4 border-b text-center">160</td>
+                    <td class="py-2 px-4 border-b text-center">180</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">(排序键)</td>
+                    <td class="py-2 px-4 border-b text-center">80</td>
+                    <td class="py-2 px-4 border-b text-center">90</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600">
+              <p><strong>关键观察：</strong></p>
+              <ul class="list-disc list-inside mt-1 space-y-1">
+                <li>Blocked Bloom过滤器构造最快</li>
+                <li>Xor过滤器构造速度约为Cuckoo过滤器和Bloom过滤器的一半</li>
+                <li>对于1亿键的情况，半排序Cuckoo过滤器变体最慢</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 查询性能 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-search mr-2 text-purple-500"></i>
+              查询性能 (25%存在)
+            </h3>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b text-left">名称</th>
+                    <th class="py-2 px-4 border-b text-center">时间 (ns)</th>
+                    <th class="py-2 px-4 border-b text-center">位/键</th>
+                    <th class="py-2 px-4 border-b text-center">误报率 (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Blocked Bloom</td>
+                    <td class="py-2 px-4 border-b text-center">16</td>
+                    <td class="py-2 px-4 border-b text-center">10.7</td>
+                    <td class="py-2 px-4 border-b text-center">0.939</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Bloom 8</td>
+                    <td class="py-2 px-4 border-b text-center">31</td>
+                    <td class="py-2 px-4 border-b text-center">8.0</td>
+                    <td class="py-2 px-4 border-b text-center">2.161</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Bloom 12</td>
+                    <td class="py-2 px-4 border-b text-center">40</td>
+                    <td class="py-2 px-4 border-b text-center">12.0</td>
+                    <td class="py-2 px-4 border-b text-center">0.313</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Bloom 16</td>
+                    <td class="py-2 px-4 border-b text-center">48</td>
+                    <td class="py-2 px-4 border-b text-center">16.0</td>
+                    <td class="py-2 px-4 border-b text-center">0.046</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Cuckoo semiSort 13</td>
+                    <td class="py-2 px-4 border-b text-center">57</td>
+                    <td class="py-2 px-4 border-b text-center">12.8</td>
+                    <td class="py-2 px-4 border-b text-center">0.092</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Cuckoo 12</td>
+                    <td class="py-2 px-4 border-b text-center">31</td>
+                    <td class="py-2 px-4 border-b text-center">12.8</td>
+                    <td class="py-2 px-4 border-b text-center">0.183</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Cuckoo 16</td>
+                    <td class="py-2 px-4 border-b text-center">32</td>
+                    <td class="py-2 px-4 border-b text-center">17.0</td>
+                    <td class="py-2 px-4 border-b text-center">0.012</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">GCS</td>
+                    <td class="py-2 px-4 border-b text-center">137</td>
+                    <td class="py-2 px-4 border-b text-center">10.0</td>
+                    <td class="py-2 px-4 border-b text-center">0.389</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Xor 8</td>
+                    <td class="py-2 px-4 border-b text-center">23</td>
+                    <td class="py-2 px-4 border-b text-center">9.8</td>
+                    <td class="py-2 px-4 border-b text-center">0.389</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Xor 16</td>
+                    <td class="py-2 px-4 border-b text-center">27</td>
+                    <td class="py-2 px-4 border-b text-center">19.7</td>
+                    <td class="py-2 px-4 border-b text-center">0.002</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Xor+ 8</td>
+                    <td class="py-2 px-4 border-b text-center">36</td>
+                    <td class="py-2 px-4 border-b text-center">9.2</td>
+                    <td class="py-2 px-4 border-b text-center">0.390</td>
+                  </tr>
+                  <tr class="bg-gray-50">
+                    <td class="py-2 px-4 border-b">Xor+ 16</td>
+                    <td class="py-2 px-4 border-b text-center">43</td>
+                    <td class="py-2 px-4 border-b text-center">17.8</td>
+                    <td class="py-2 px-4 border-b text-center">0.002</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">性能优势</h5>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>Xor 8比Bloom 8快35%，同时使用更少内存</li>
+                  <li>Xor 8比Cuckoo 12快26%，使用更少内存</li>
+                  <li>Xor 16提供极低误报率(0.002%)，同时保持良好性能</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">空间效率</h5>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>Xor过滤器始终比Cuckoo过滤器使用更少空间</li>
+                  <li>Xor+进一步减少内存使用，性能损失适中</li>
+                  <li>在常见误报概率范围内，Xor过滤器比Bloom过滤器更节省空间</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 性能分析 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-chart-bar mr-2 text-orange-500"></i>
+              性能分析
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h5 class="font-bold text-orange-700 mb-2 text-center">内存访问</h5>
+                <div class="text-center">
+                  <div class="text-3xl font-bold text-orange-600 mb-2">3</div>
+                  <p class="text-sm text-gray-700">Xor过滤器每次查询固定3次内存访问</p>
+                </div>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2 text-center">指令数量</h5>
+                <div class="text-center">
+                  <div class="text-3xl font-bold text-green-600 mb-2">~48</div>
+                  <p class="text-sm text-gray-700">Xor过滤器每条查询约48条指令</p>
+                </div>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2 text-center">分支预测</h5>
+                <div class="text-center">
+                  <div class="text-3xl font-bold text-purple-600 mb-2">0</div>
+                  <p class="text-sm text-gray-700">Xor过滤器无分支，避免分支预测错误</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h5 class="font-bold text-gray-700 mb-3">与竞争技术的比较</h5>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span class="font-medium">Blocked Bloom过滤器</span>
+                  <div class="flex items-center">
+                    <span class="text-green-600 font-bold mr-2">最快</span>
+                    <span class="text-sm text-gray-600">但内存使用和低误报概率不是最佳选择</span>
+                  </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span class="font-medium">Cuckoo过滤器</span>
+                  <div class="flex items-center">
+                    <span class="text-blue-600 font-bold mr-2">2次内存访问</span>
+                    <span class="text-sm text-gray-600">但66-68条指令/键，比Xor多</span>
+                  </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span class="font-medium">Bloom过滤器</span>
+                  <div class="flex items-center">
+                    <span class="text-orange-600 font-bold mr-2">多个内存访问</span>
+                    <span class="text-sm text-gray-600">41-105条指令/键，取决于误报概率</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-2 text-green-500"></i>
+              主要发现
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">性能优势</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>Xor过滤器通常比Bloom过滤器更快</li>
+                  <li>节省约15%的内存使用</li>
+                  <li>在查询速度和内存使用方面优于Cuckoo过滤器</li>
+                  <li>Xor+过滤器进一步减少内存使用，性能损失适中</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">实用性</h4>
+                <ul class="list-disc list-inside text-gray-700 space-y-2">
+                  <li>Xor过滤器作为实用数据结构具有价值</li>
+                  <li>快速、紧凑且易于实现</li>
+                  <li>适用于静态集合场景</li>
+                  <li>在多线程系统中，不可变性避免了同步开销</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2 text-orange-500"></i>
+              局限性
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h5 class="font-bold text-orange-700 mb-2">构造性能</h5>
+                <p class="text-sm text-gray-700">
+                  Xor过滤器的构造比Bloom过滤器慢约2倍，但这是一次性成本，可通过多次查询分摊。
+                </p>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h5 class="font-bold text-orange-700 mb-2">不可变性</h5>
+                <p class="text-sm text-gray-700">
+                  Xor过滤器是不可变的，但这对于许多重要应用不是限制，因为竞争替代方案在任何情况下都有有限的可变性。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-road mr-2 text-blue-500"></i>
+              未来工作
+            </h3>
+            
+            <ul class="list-disc list-inside text-gray-700 space-y-3">
+              <li>考虑批量查询以提高性能</li>
+              <li>可能部分并行化过滤器的构造</li>
+              <li>探索更多压缩技术和优化策略</li>
+              <li>在更多实际应用场景中验证性能</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

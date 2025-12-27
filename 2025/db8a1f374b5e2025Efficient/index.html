@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Efficient Attention Methods: Hardware-efficient, Sparse, Compact, and Linear Attention</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+      .tech-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .attention-category {
+      transition: all 0.3s ease;
+    }
+    .attention-category:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .complexity-badge {
+      font-family: 'Courier New', monospace;
+    }
+    .gate-visualization {
+      height: 80px;
+      background: linear-gradient(90deg, #e0f2fe 0%, #fef3c7 50%, #fce7f3 100%);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .figure-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">
+          <i class="fas fa-file-alt mr-2"></i>摘要
+        </a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">
+          <i class="fas fa-layer-group mr-2"></i>背景与动机
+        </a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">
+          <i class="fas fa-exclamation-triangle mr-2"></i>问题与挑战
+        </a>
+        <a href="#taxonomy-overview" class="nav-item whitespace-nowrap">
+          <i class="fas fa-sitemap mr-2"></i>分类框架
+        </a>
+        <a href="#hardware-efficient" class="nav-item whitespace-nowrap">
+          <i class="fas fa-microchip mr-2"></i>硬件高效注意力
+        </a>
+        <a href="#compact-attention" class="nav-item whitespace-nowrap">
+          <i class="fas fa-compress-alt mr-2"></i>紧凑注意力
+        </a>
+        <a href="#sparse-attention" class="nav-item whitespace-nowrap">
+          <i class="fas fa-code-branch mr-2"></i>稀疏注意力
+        </a>
+        <a href="#linear-attention" class="nav-item whitespace-nowrap">
+          <i class="fas fa-bolt mr-2"></i>线性注意力
+        </a>
+        <a href="#limitations" class="nav-item whitespace-nowrap">
+          <i class="fas fa-clipboard-check mr-2"></i>局限与机会
+        </a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">
+          <i class="fas fa-flag-checkered mr-2"></i>结论
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Efficient Attention Methods: Hardware-efficient, Sparse, Compact, and Linear Attention
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">作者信息</strong>
+                <div class="text-base leading-relaxed">Jintao Zhang, Rundong Su, Chunyu Liu, Jia Wei, Ziteng Wang, Haoxu Wang, Pengle Zhang, Huiqiang Jiang, Haofeng Huang, Chendong Xiang, Haocheng Xi, Shuo Yang, Xingyang Li, Yilong Zhao, Yuezhou Hu, Tianyu Fu, Tianchen Zhao, Yicheng Zhang, Boqun Cao, Youhe Jiang, Kai Jiang, Huayu Chen, Min Zhao, Xiaoming Xu, Yi Wu, Fan Bao, Ion Stoica, Joseph E. Gonzalez, Jianfei Chen, and Jun Zhu</div>
+                <div class="text-sm text-gray-600 mt-2">Corresponding author: Jun Zhu</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">所属机构</strong>
+                <div>IEEE, 清华大学等</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">论文类型</strong>
+                <div>综述论文 (Survey Paper)</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Attention Mechanisms</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Transformers</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Efficient Computing</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Large Language Models</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">核心贡献</strong>
+                <div class="text-sm">首次提出硬件高效注意力与紧凑注意力的分类，建立统一分析框架，涵盖几乎所有现有高效注意力方法</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-green-700 mb-3 flex items-center">
+            <i class="fas fa-trophy mr-2"></i>核心贡献总结
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li>提出统一分类法：硬件高效注意力、稀疏注意力、紧凑注意力和线性注意力</li>
+            <li>建立每种方法类别的统一分析框架</li>
+            <li>硬件高效注意力与紧凑注意力是本文新提出的分类</li>
+            <li>涵盖了几乎所有现有的高效注意力方法</li>
+          </ul>
+        </div>
+        
+        <!-- 图2：高效注意力方法概览 -->
+        <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-3">
+            <h5 class="font-semibold text-gray-700">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              图2: 高效注意力方法概览
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+          </div>
+          
+          <!-- 原图展示区域 -->
+          <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+            <img src="./images/fig2.png" alt="论文图2: 高效注意力方法概览图，展示四种高效注意力方法的分类和关系" class="figure-img">
+          </div>
+          
+          <!-- 图注 -->
+          <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 高效注意力方法的概览，展示硬件高效注意力、紧凑注意力、稀疏注意力和线性注意力四种方法的分类和相互关系。
+          </div>
+          
+          <!-- 技术解释 -->
+          <div class="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>技术解释
+            </h5>
+            <p class="text-sm text-gray-700">
+              图2展示了本文提出的高效注意力方法分类框架。该图将现有方法分为四类，每类针对注意力计算的不同瓶颈进行优化：
+            </p>
+            <ul class="list-disc list-inside mt-2 text-sm text-gray-700">
+              <li><strong>硬件高效注意力：</strong> 优化底层实现，利用GPU特性加速</li>
+              <li><strong>紧凑注意力：</strong> 压缩KV缓存，减少内存占用</li>
+              <li><strong>稀疏注意力：</strong> 跳过不重要的计算，减少计算量</li>
+              <li><strong>线性注意力：</strong> 重新表述注意力公式，降低复杂度</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            在现代Transformer架构中，注意力操作是唯一具有<code class="bg-gray-100 px-2 py-1 rounded">O(N²)</code>时间复杂度的组件，而所有其他操作都是线性复杂度<code class="bg-gray-100 px-2 py-1 rounded">O(N)</code>，其中N是序列长度。
+          </p>
+          
+          <p class="mb-4">
+            本文提出了一个统一的分类法和全面的高效注意力方法综述。作者将现有方法分为四类：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+            <div class="attention-category bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>硬件高效注意力
+              </h4>
+              <p class="text-sm text-gray-700">通过利用硬件特性优化注意力计算效率</p>
+              <div class="mt-2">
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded complexity-badge">O(N²) → O(N²)*</span>
+              </div>
+            </div>
+            
+            <div class="attention-category bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-compress-alt mr-2"></i>紧凑注意力
+              </h4>
+              <p class="text-sm text-gray-700">压缩KV缓存（通过权重共享或低秩分解）</p>
+              <div class="mt-2">
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded complexity-badge">内存减少</span>
+              </div>
+            </div>
+            
+            <div class="attention-category bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-code-branch mr-2"></i>稀疏注意力
+              </h4>
+              <p class="text-sm text-gray-700">选择性执行注意力计算的子集，省略其他部分</p>
+              <div class="mt-2">
+                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded complexity-badge">O(N²) → O(kN)</span>
+              </div>
+            </div>
+            
+            <div class="attention-category bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>线性注意力
+              </h4>
+              <p class="text-sm text-gray-700">重新表述注意力计算以实现O(N)时间复杂度</p>
+              <div class="mt-2">
+                <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded complexity-badge">O(N²) → O(N)</span>
+              </div>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            本文为每个类别开发了统一的分析框架，并对高效注意力研究的开放挑战和未来研究方向提供了视角。
+          </p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-6">
+            <h5 class="font-semibold text-gray-800 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>为博士生设计的理解要点
+            </h5>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+              <li><strong>问题是什么？</strong>Transformer的注意力太慢（N²复杂度），序列长时计算爆炸</li>
+              <li><strong>解决方案是什么？</strong>四种方法让注意力变快：①用硬件特性加速、②压缩存储、③跳过不重要的计算、④改变数学公式</li>
+              <li><strong>这篇论文做了什么？</strong>把几百种方法分类整理，给出分析框架，帮助研究者理解这个领域</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">标准注意力计算</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-calculator mr-2 text-blue-500"></i>
+                标准注意力公式
+              </h5>
+              <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">复杂度 O(N²d)</span>
+            </div>
+            
+            <div class="bg-white p-4 rounded border">
+              <p class="font-mono text-center mb-2">S = QKᵀ / √d</p>
+              <p class="font-mono text-center mb-2">P = softmax(S)</p>
+              <p class="font-mono text-center">O = PV</p>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600">
+              <p><strong>其中：</strong></p>
+              <ul class="list-disc list-inside ml-2">
+                <li>Q, K, V ∈ ℝ<sup>N×d</sup>：查询、键、值矩阵</li>
+                <li>S, P ∈ ℝ<sup>N×N</sup>：注意力分数和概率矩阵</li>
+                <li>N：序列长度，d：头维度</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">GPU硬件背景</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-brain mr-2"></i>计算单元
+              </h5>
+              <ul class="space-y-2 text-sm">
+                <li><strong>SM（流式多处理器）</strong>：GPU的基本计算单元</li>
+                <li><strong>CUDA核心</strong>：通用计算核心</li>
+                <li><strong>Tensor核心</strong>：专用矩阵乘法加速器</li>
+                <li><strong>计算吞吐量 C<sub>t</sub></strong>：以FLOPS（浮点运算/秒）衡量</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2"></i>内存层次
+              </h5>
+              <ul class="space-y-2 text-sm">
+                <li><strong>共享内存</strong>：SM上的高速缓存，容量小但带宽高</li>
+                <li><strong>全局内存</strong>：所有SM共享的大容量内存（HBM）</li>
+                <li><strong>内存带宽 B<sub>w</sub></strong>：以字节/秒衡量</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">注意力在不同任务中的计算特性</h3>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">任务类型</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">计算复杂度</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">瓶颈类型</th>
+                  <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">关键特征</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="py-3 px-4">非自回归模型<br><span class="text-xs text-gray-500">(BERT, ViT, U-ViT)</span></td>
+                  <td class="py-3 px-4 font-mono">O(N²d)</td>
+                  <td class="py-3 px-4"><span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">计算瓶颈</span></td>
+                  <td class="py-3 px-4 text-sm">并行计算所有token，无因果掩码</td>
+                </tr>
+                <tr class="border-b hover:bg-gray-50">
+                  <td class="py-3 px-4">LLM训练</td>
+                  <td class="py-3 px-4 font-mono">O(N²d)</td>
+                  <td class="py-3 px-4"><span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">计算瓶颈</span></td>
+                  <td class="py-3 px-4 text-sm">应用因果掩码，每个token只能关注自身及之前的token</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4">LLM推理<br><span class="text-xs text-gray-500">解码阶段</span></td>
+                  <td class="py-3 px-4 font-mono">O(Nd)</td>
+                  <td class="py-3 px-4"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">内存瓶颈</span></td>
+                  <td class="py-3 px-4 text-sm">KV缓存I/O开销大，计算相对轻量</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
+            <h5 class="font-semibold text-yellow-800 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>为博士生设计的简单类比
+            </h5>
+            <p class="text-gray-700 mb-2">想象你在图书馆找书：</p>
+            <ul class="list-disc list-inside ml-2 space-y-1 text-gray-700">
+              <li><strong>标准注意力</strong>：你需要检查图书馆里<strong>每一本书</strong>是否相关（N²次检查）</li>
+              <li><strong>Q, K, V</strong>：Q是你想找什么，K是书名关键词，V是书的内容</li>
+              <li><strong>GPU计算瓶颈</strong>：你的大脑能快速计算（Tensor核心），但拿书的速度慢（内存带宽）</li>
+              <li><strong>LLM推理瓶颈</strong>：生成每个新单词时，你需要重新翻阅所有之前的笔记（KV缓存）</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-6 rounded-r-lg mb-8">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-fire mr-2"></i>核心问题：注意力计算复杂度
+            </h4>
+            <p class="mb-3">标准注意力计算的<strong>时间复杂度为O(N²)</strong>，其中N是序列长度。随着序列长度增加，计算量呈平方级增长。</p>
+            <div class="flex items-center justify-center my-4">
+              <div class="text-center">
+                <div class="text-3xl font-bold text-red-600">N=1000</div>
+                <div class="text-gray-600">→ 需要约100万次计算</div>
+              </div>
+              <div class="mx-8 text-2xl">→</div>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-red-600">N=10000</div>
+                <div class="text-gray-600">→ 需要约1亿次计算</div>
+              </div>
+              <div class="mx-8 text-2xl">→</div>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-red-600">N=100000</div>
+                <div class="text-gray-600">→ 需要约100亿次计算</div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">具体技术挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-memory text-red-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">内存I/O瓶颈</h4>
+              </div>
+              <p class="text-gray-700 text-sm mb-3">注意力计算需要存储和访问巨大的中间矩阵（S和P矩阵，大小为N×N）。</p>
+              <div class="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>示例：</strong>序列长度N=100K，头维度d=64，S和P矩阵大小约为19GB（FP16精度）。内存访问时间约40ms，而计算时间仅8.2ms，内存访问时间比计算时间长近5倍。
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-chart-line text-blue-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">KV缓存内存占用</h4>
+              </div>
+              <p class="text-gray-700 text-sm mb-3">LLM推理时，KV缓存随序列长度线性增长，占用大量GPU内存。</p>
+              <div class="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>问题：</strong>长上下文场景下（如128K tokens），KV缓存可能占用数十GB内存，限制批处理大小和吞吐量。
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-tachometer-alt text-green-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">计算效率低下</h4>
+              </div>
+              <p class="text-gray-700 text-sm mb-3">标准注意力计算许多接近零的值，这些计算对最终结果贡献极小。</p>
+              <div class="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>洞察：</strong>softmax操作将小的注意力分数压缩到接近零，这意味着许多计算可以安全地跳过而不影响准确性。
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-balance-scale text-purple-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">效率与质量的权衡</h4>
+              </div>
+              <p class="text-gray-700 text-sm mb-3">大多数高效注意力方法需要在计算效率和模型质量之间进行权衡。</p>
+              <div class="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>权衡：</strong>更高的稀疏性或更强的压缩通常带来更大的性能下降风险。但精心设计的方法（如无损量化）可以避免这种权衡。
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">FlashAttention的突破</h3>
+          
+          <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-blue-700">
+                <i class="fas fa-bolt mr-2"></i>
+                FlashAttention的核心思想
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">解决内存I/O瓶颈</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h6 class="font-medium text-gray-800 mb-2">传统注意力的问题：</h6>
+                <ul class="list-disc list-inside ml-2 space-y-1 text-sm text-gray-700">
+                  <li>需要显式存储N×N的S和P矩阵</li>
+                  <li>大量全局内存I/O操作</li>
+                  <li>内存带宽成为瓶颈</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h6 class="font-medium text-gray-800 mb-2">FlashAttention的解决方案：</h6>
+                <ul class="list-disc list-inside ml-2 space-y-1 text-sm text-gray-700">
+                  <li>分块计算（tiling）：将Q、K、V分成小块</li>
+                  <li>在线softmax：避免存储完整的S和P矩阵</li>
+                  <li>核融合：将整个注意力计算融合到单个GPU核中</li>
+                  <li>I/O复杂度从O(N²)降低到O(Nd)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- FlashAttention示意图 -->
+            <div class="mt-6 p-4 bg-white rounded-lg border">
+              <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-sitemap text-xl text-blue-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700">FlashAttention分块计算示意图</h6>
+              </div>
+              
+              <div class="flex flex-col items-center">
+                <div class="flex items-center justify-center w-full mb-4">
+                  <div class="bg-blue-100 p-3 rounded-lg text-center mx-2">
+                    <div class="font-medium text-blue-800">Q块</div>
+                    <div class="text-xs text-gray-600">b_q × d</div>
+                  </div>
+                  <div class="mx-4">
+                    <i class="fas fa-times text-gray-400"></i>
+                  </div>
+                  <div class="bg-green-100 p-3 rounded-lg text-center mx-2">
+                    <div class="font-medium text-green-800">K块</div>
+                    <div class="text-xs text-gray-600">b_kv × d</div>
+                  </div>
+                </div>
+                
+                <div class="text-center text-gray-600 mb-4">
+                  <i class="fas fa-arrow-down"></i>
+                </div>
+                
+                <div class="bg-purple-100 p-4 rounded-lg w-full text-center">
+                  <div class="font-medium text-purple-800">在线softmax计算</div>
+                  <div class="text-xs text-gray-600">迭代更新统计量(m, l)和输出块O</div>
+                </div>
+                
+                <div class="text-center text-gray-600 mt-4">
+                  <i class="fas fa-arrow-down"></i>
+                </div>
+                
+                <div class="bg-yellow-100 p-3 rounded-lg mt-4 text-center">
+                  <div class="font-medium text-yellow-800">输出O块</div>
+                  <div class="text-xs text-gray-600">b_q × d</div>
+                </div>
+              </div>
+              
+              <div class="mt-4 text-xs text-gray-600 text-center">
+                <p>每个SM处理不同的Q块，迭代加载K和V块，最后输出对应的O块</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
+            <h5 class="font-semibold text-yellow-800 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>为博士生设计的简单理解
+            </h5>
+            <p class="text-gray-700 mb-2">想象你要计算1000个学生和1000本书的相关性：</p>
+            <ul class="list-disc list-inside ml-2 space-y-1 text-gray-700">
+              <li><strong>传统方法</strong>：需要一张1000×1000的大表格，每次都要读写整个表格（很慢）</li>
+              <li><strong>FlashAttention方法</strong>：每次只处理10个学生和10本书，算完这小部分再处理下一批，不需要大表格</li>
+              <li><strong>核心技巧</strong>：用一个小本子记录中间结果，最后汇总，避免来回搬运大数据</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <section id="taxonomy-overview" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-sitemap mr-3 text-blue-500"></i>
+          分类框架
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">
+            本文提出了一个统一的分类法，将高效注意力方法分为四个主要类别。这个分类法涵盖了几乎所有现有的高效注意力方法，其中<strong>硬件高效注意力</strong>和<strong>紧凑注意力</strong>是本文新提出的分类。
+          </p>
+          
+          <!-- 分类法概览图 -->
+          <div class="bg-white p-6 rounded-xl border border-gray-300 shadow-md mb-8">
+            <div class="flex items-center justify-center mb-6">
+              <i class="fas fa-project-diagram text-3xl text-blue-500 mr-3"></i>
+              <h4 class="text-2xl font-bold text-gray-800">高效注意力方法分类框架</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <!-- 左侧：分类树 -->
+              <div>
+                <div class="mb-6">
+                  <div class="bg-blue-600 text-white p-4 rounded-lg text-center font-bold text-lg">
+                    高效注意力方法
+                  </div>
+                  
+                  <div class="flex justify-center my-4">
+                    <i class="fas fa-arrow-down text-2xl text-blue-500"></i>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-100 p-3 rounded-lg border-2 border-blue-300 text-center">
+                      <div class="font-bold text-blue-800 mb-1">硬件高效</div>
+                      <div class="text-xs text-gray-600">优化实现效率</div>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-lg border-2 border-blue-300 text-center">
+                      <div class="font-bold text-blue-800 mb-1">算法高效</div>
+                      <div class="text-xs text-gray-600">改变计算方式</div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex justify-center mt-4">
+                    <div class="flex space-x-8">
+                      <i class="fas fa-arrow-down text-xl text-blue-500"></i>
+                      <i class="fas fa-arrow-down text-xl text-blue-500"></i>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-3 gap-3 mt-4">
+                    <div class="bg-green-100 p-3 rounded-lg border border-green-300 text-center">
+                      <div class="font-bold text-green-800 mb-1">硬件高效</div>
+                      <div class="text-xs text-gray-600">FlashAttention系列</div>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-lg border border-purple-300 text-center">
+                      <div class="font-bold text-purple-800 mb-1">紧凑注意力</div>
+                      <div class="text-xs text-gray-600">MQA/GQA/MLA</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 col-span-1">
+                      <div class="bg-red-100 p-2 rounded-lg border border-red-300 text-center">
+                        <div class="font-bold text-red-800 text-sm">稀疏</div>
+                      </div>
+                      <div class="bg-yellow-100 p-2 rounded-lg border border-yellow-300 text-center">
+                        <div class="font-bold text-yellow-800 text-sm">线性</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 右侧：分类说明 -->
+              <div class="space-y-6">
+                <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                  <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+                    <i class="fas fa-microchip mr-2"></i>硬件高效注意力
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>核心思想：</strong>不改变注意力计算逻辑，通过优化实现来利用现代GPU特性（如矩阵分块、核融合、低精度量化）。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>代表方法：</strong> FlashAttention, SageAttention, FlashAttention3
+                  </div>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                  <h5 class="font-bold text-purple-700 mb-2 flex items-center">
+                    <i class="fas fa-compress-alt mr-2"></i>紧凑注意力
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>核心思想：</strong>压缩KV缓存（通过权重共享或低秩分解），减少内存占用而不改变计算成本。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>代表方法：</strong> MQA（多头查询注意力）, GQA（分组查询注意力）, MLA（多头潜在注意力）
+                  </div>
+                </div>
+                
+                <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                  <h5 class="font-bold text-red-700 mb-2 flex items-center">
+                    <i class="fas fa-code-branch mr-2"></i>稀疏注意力
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>核心思想：</strong>利用注意力矩阵的稀疏性，只计算重要的注意力分数，跳过接近零的计算。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>代表方法：</strong> StreamingLLM, H2O, SparQAttention
+                  </div>
+                </div>
+                
+                <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                  <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+                    <i class="fas fa-bolt mr-2"></i>线性注意力
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>核心思想：</strong>重新表述注意力计算，将复杂度从O(N²)降低到O(N)，通常通过移除softmax或使用核函数实现。
+                  </p>
+                  <div class="mt-2 text-xs text-gray-600">
+                    <strong>代表方法：</strong> Linear Transformer, RetNet, Mamba
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">效率与质量的权衡</h3>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-5 rounded-lg border border-gray-200 mb-6">
+            <div class="flex items-center mb-4">
+              <i class="fas fa-balance-scale-right text-2xl text-blue-600 mr-3"></i>
+              <h4 class="font-bold text-gray-800">效率-质量权衡曲线</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-white p-4 rounded-lg border border-gray-300 text-center">
+                <div class="text-green-600 font-bold mb-2">高质量侧</div>
+                <div class="text-sm text-gray-700 mb-2">硬件高效注意力方法</div>
+                <div class="text-xs text-gray-600">保持原始注意力公式，仅优化实现</div>
+                <div class="mt-2">
+                  <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">质量保持好</span>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-300 text-center">
+                <div class="text-yellow-600 font-bold mb-2">平衡点</div>
+                <div class="text-sm text-gray-700 mb-2">精心设计的稀疏/量化方法</div>
+                <div class="text-xs text-gray-600">在效率和质量间找到平衡</div>
+                <div class="mt-2">
+                  <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">适度权衡</span>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-300 text-center">
+                <div class="text-red-600 font-bold mb-2">高效率侧</div>
+                <div class="text-sm text-gray-700 mb-2">高稀疏/强压缩方法</div>
+                <div class="text-xs text-gray-600">显著减少计算但可能损失质量</div>
+                <div class="mt-2">
+                  <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">质量风险高</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-sm text-gray-700">
+              <p><strong>重要洞察：</strong>这种权衡不是绝对的。通过精心设计，低比特量化可以实现无损，稀疏注意力有时可以提高泛化能力，线性注意力在某些任务上可以匹配甚至超过标准softmax注意力。</p>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-6">
+            <h5 class="font-semibold text-gray-800 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>分类法的重要性
+            </h5>
+            <p class="text-gray-700 mb-2">这个分类法帮助研究者：</p>
+            <ol class="list-decimal list-inside ml-2 space-y-1 text-gray-700">
+              <li><strong>理解不同方法的核心思想</strong>：每种方法解决什么问题？如何解决？</li>
+              <li><strong>比较不同方法</strong>：在统一框架下比较各种方法的优劣</li>
+              <li><strong>选择合适的方法</strong>：根据具体应用场景（训练/推理、长上下文/短上下文）选择最合适的方法</li>
+              <li><strong>发现研究空白</strong>：识别尚未充分探索的研究方向</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+      
+      <section id="hardware-efficient" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-microchip mr-3 text-blue-500"></i>
+          硬件高效注意力
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">
+            硬件高效注意力方法的核心思想是<strong>不改变注意力计算逻辑</strong>，而是通过优化实现来充分利用现代GPU硬件的特性。这些方法主要关注两个阶段的优化：预填充阶段（prefilling）和解码阶段（decoding）。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-play-circle mr-2"></i>预填充阶段优化
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">处理初始提示，为LLM生成第一个输出token。通常是<strong>计算瓶颈</strong>。</p>
+              <div class="text-xs text-gray-600">
+                <strong>优化目标：</strong>加速QKᵀ和PV的矩阵乘法计算
+              </div>
+              <div class="mt-3">
+                <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">计算密集型</span>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-code mr-2"></i>解码阶段优化
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">自回归生成后续token。通常是<strong>内存I/O瓶颈</strong>。</p>
+              <div class="text-xs text-gray-600">
+                <strong>优化目标：</strong>减少KV缓存的读写开销
+              </div>
+              <div class="mt-3">
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">内存密集型</span>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">关键技术：量化</h3>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-compress-arrows-alt mr-2 text-blue-500"></i>
+                量化精度级别
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">从FP16到INT4</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">精度</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">比特数</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">内存节省</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">速度提升</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">代表方法</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 font-medium">FP16/BF16</td>
+                    <td class="py-3 px-4">16位</td>
+                    <td class="py-3 px-4">基准</td>
+                    <td class="py-3 px-4">基准</td>
+                    <td class="py-3 px-4 text-sm">FlashAttention</td>
+                  </tr>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 font-medium">INT8</td>
+                    <td class="py-3 px-4">8位</td>
+                    <td class="py-3 px-4">2×</td>
+                    <td class="py-3 px-4">~2.1×</td>
+                    <td class="py-3 px-4 text-sm">SageAttention</td>
+                  </tr>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 font-medium">FP8</td>
+                    <td class="py-3 px-4">8位</td>
+                    <td class="py-3 px-4">2×</td>
+                    <td class="py-3 px-4">~2×</td>
+                    <td class="py-3 px-4 text-sm">FlashAttention3</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 font-medium">INT4</td>
+                    <td class="py-3 px-4">4位</td>
+                    <td class="py-3 px-4">4×</td>
+                    <td class="py-3 px-4">~3-3.9×</td>
+                    <td class="py-3 px-4 text-sm">SageAttention2/2++</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">主要方法总结</h3>
+          
+          <!-- FlashAttention系列 -->
+          <div class="mb-8">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-bolt text-blue-600"></i>
+              </div>
+              <h4 class="text-xl font-bold text-gray-800">FlashAttention系列</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">FlashAttention</h5>
+                <p class="text-sm text-gray-700 mb-2">开创性工作，首次将注意力计算融合到单个GPU核中。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>创新：</strong>分块计算 + 在线softmax
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">FlashAttention2</h5>
+                <p class="text-sm text-gray-700 mb-2">反转循环顺序，减少全局内存访问。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>改进：</strong>I/O复杂度从O(N²d/b_kv)降低到O(Nd)
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">FlashAttention3</h5>
+                <p class="text-sm text-gray-700 mb-2">利用Hopper架构特性，异步TensorCore计算。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>创新：</strong>warp专业化 + FP8量化 + 异步计算
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- SageAttention系列 -->
+          <div class="mb-8">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-seedling text-green-600"></i>
+              </div>
+              <h4 class="text-xl font-bold text-gray-800">SageAttention系列</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-1 text-sm">SageAttention</h5>
+                <p class="text-xs text-gray-700 mb-1">INT8量化Q和K</p>
+                <div class="text-xs text-gray-600">2.1×加速</div>
+              </div>
+              
+              <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-1 text-sm">SageAttention2</h5>
+                <p class="text-xs text-gray-700 mb-1">INT4量化QKᵀ，FP8量化PV</p>
+                <div class="text-xs text-gray-600">3×加速</div>
+              </div>
+              
+              <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-1 text-sm">SageAttention2++</h5>
+                <p class="text-xs text-gray-700 mb-1">消费级GPU优化</p>
+                <div class="text-xs text-gray-600">3.9×加速</div>
+              </div>
+              
+              <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-1 text-sm">SageAttention3</h5>
+                <p class="text-xs text-gray-700 mb-1">FP4/FP8微缩放量化</p>
+                <div class="text-xs text-gray-600">5×加速</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 解码阶段优化方法 -->
+          <div>
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-code text-purple-600"></i>
+              </div>
+              <h4 class="text-xl font-bold text-gray-800">解码阶段优化方法</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2">FlashDecoding</h5>
+                <p class="text-sm text-gray-700 mb-2">分割KV缓存，提高SM利用率。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>加速：</strong>8×（长序列上）
+                </div>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2">PagedAttention</h5>
+                <p class="text-sm text-gray-700 mb-2">分页管理KV缓存，减少内存碎片。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>应用：</strong>vLLM系统
+                </div>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2">KIVI</h5>
+                <p class="text-sm text-gray-700 mb-2">2比特KV缓存量化。</p>
+                <div class="text-xs text-gray-600">
+                  <strong>内存减少：</strong>2.6×峰值内存
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图1：FlashAttention示意图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 mt-8">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                图1: FlashAttention示意图
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: FlashAttention示意图，展示Q、K、V的分块计算和在线softmax流程" class="figure-img">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> FlashAttention的示意图。不同的Q块在不同的SM上处理，每个SM迭代加载K和V块，最后输出一个O块。
+            </div>
+            
+            <!-- 技术解释 -->
+            <div class="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-info-circle mr-2"></i>技术解释
+              </h5>
+              <p class="text-sm text-gray-700">
+                图1展示了FlashAttention的核心计算流程。该图说明了如何通过分块计算和在线softmax避免存储巨大的中间矩阵：
+              </p>
+              <ul class="list-disc list-inside mt-2 text-sm text-gray-700">
+                <li><strong>分块处理：</strong> 将Q、K、V矩阵沿token维度分成小块</li>
+                <li><strong>在线softmax：</strong> 通过迭代更新统计量(m, l)计算softmax，避免存储完整的N×N矩阵</li>
+                <li><strong>核融合：</strong> 将整个注意力计算融合到单个GPU核中，减少全局内存访问</li>
+                <li><strong>I/O优化：</strong> 将Q块保持在共享内存中，迭代处理K、V块，减少全局内存传输</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 技术细节可视化 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：FlashAttention的分块计算机制
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 算法流程 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>算法流程：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div class="bg-white p-3 rounded border font-mono text-sm">
+                    <div>1. 初始化: m_i ← -∞, l_i ← 0, O_i ← 0</div>
+                    <div>2. for j = 1 to N/b_kv:</div>
+                    <div class="ml-4">S_ij = Q_i K_jᵀ / √d</div>
+                    <div class="ml-4">m_ij = max(m_i,j-1, rowmax(S_ij))</div>
+                    <div class="ml-4">P̃_ij = exp(S_ij - m_ij)</div>
+                    <div class="ml-4">l_ij = exp(m_i,j-1 - m_ij) * l_i,j-1 + rowsum(P̃_ij)</div>
+                    <div class="ml-4">O_ij = diag(exp(m_i,j-1 - m_ij)) * O_i,j-1 + P̃_ij V_j</div>
+                    <div>3. O_i = diag(l_i)⁻¹ * O_i</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: NVIDIA A100 GPU</li>
+                      <li>内存带宽: 2.0 TB/s</li>
+                      <li>计算吞吐量: 312 TFLOPS (FP16)</li>
+                      <li>序列长度: 100K tokens</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>传统注意力: 内存访问时间40ms，计算时间8.2ms</li>
+                      <li>FlashAttention: 减少内存访问5倍</li>
+                      <li>I/O复杂度: 从O(N²)降低到O(Nd)</li>
+                      <li>实际加速: 2-5倍（取决于序列长度）</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
+            <h5 class="font-semibold text-yellow-800 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>为博士生设计的简单理解
+            </h5>
+            <p class="text-gray-700 mb-2">硬件高效注意力就像优化工厂生产线：</p>
+            <ul class="list-disc list-inside ml-2 space-y-1 text-gray-700">
+              <li><strong>传统工厂</strong>：原料从仓库到生产线来回搬运（内存I/O），效率低</li>
+              <li><strong>FlashAttention工厂</strong>：把生产线搬到仓库旁边（核融合），减少搬运</li>
+              <li><strong>量化</strong>：用小包装代替大包装（8位代替16位），一次能搬运更多</li>
+              <li><strong>分块计算</strong>：分批处理原料，不需要一次性处理所有原料</li>
+              <li><strong>关键</strong>：不改变产品（注意力计算结果），只优化生产过程</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 其他章节保持不变，只修改线性注意力章节的图3部分 -->
+      
+      <section id="linear-attention" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-bolt mr-3 text-blue-500"></i>
+          线性注意力
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">
+            线性注意力方法的核心思想是<strong>重新表述注意力计算</strong>，将时间复杂度从O(N²)降低到O(N)。这是通过移除softmax操作或使用核函数，利用矩阵乘法的结合律实现的。
+          </p>
+          
+          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-6 rounded-r-lg mb-8">
+            <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-calculator mr-2"></i>核心公式：线性化变换
+            </h4>
+            <div class="font-mono text-center bg-white p-3 rounded border mb-3">
+              <div>标准注意力: O = softmax(QKᵀ/√d) V</div>
+              <div class="my-2 text-xl">↓ 线性化</div>
+              <div>线性注意力: O = φ(Q) (φ(K)ᵀ V)</div>
+            </div>
+            <p class="text-sm text-gray-700">
+              通过先计算<strong>φ(K)ᵀ V</strong>（O(Nd²)复杂度），避免显式构造巨大的N×N矩阵QKᵀ，从而实现线性复杂度。
+            </p>
+          </div>
+          
+          <!-- 图3：线性注意力的不同计算形式 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                图3: 线性注意力的不同计算形式
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: 线性注意力的不同计算形式示意图，展示并行形式、循环形式和分块形式" class="figure-img">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 线性注意力的三种计算形式：并行形式、循环形式和分块形式。每种形式适用于不同的任务场景。
+            </div>
+            
+            <!-- 技术解释 -->
+            <div class="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-info-circle mr-2"></i>技术解释
+              </h5>
+              <p class="text-sm text-gray-700">
+                图3展示了线性注意力的三种主要计算形式，每种形式针对不同的应用场景进行优化：
+              </p>
+              <ul class="list-disc list-inside mt-2 text-sm text-gray-700">
+                <li><strong>并行形式：</strong> 用于非自回归任务，整个序列同时处理，完全并行</li>
+                <li><strong>循环形式：</strong> 用于自回归推理，维护固定大小的隐藏状态，每次更新O(1)</li>
+                <li><strong>分块形式：</strong> 用于自回归训练，分块处理序列，块内并行、块间循环</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">三种计算形式</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-parallel-lines text-blue-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">并行形式</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">用于非自回归任务，整个序列同时处理。</p>
+              <div class="font-mono text-center bg-white p-2 rounded border text-sm mb-3">
+                O = φ(Q)(φ(K)ᵀV)
+              </div>
+              <div class="text-xs text-gray-600">
+                <strong>复杂度：</strong> O(Nd²)<br>
+                <strong>适用：</strong> 训练和非自回归推理
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-redo-alt text-green-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">循环形式</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">用于自回归推理，维护固定大小的隐藏状态。</p>
+              <div class="font-mono text-center bg-white p-2 rounded border text-sm mb-3">
+                H_t = H_{t-1} + φ(k_t)ᵀv_t<br>
+                o_t = φ(q_t)H_t
+              </div>
+              <div class="text-xs text-gray-600">
+                <strong>复杂度：</strong> O(1)每步<br>
+                <strong>适用：</strong> 自回归推理
+              </div>
+            </div>
+            
+            <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <div class="flex items-center mb-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-th-large text-purple-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">分块形式</h4>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">用于自回归训练，分块处理序列。</p>
+              <div class="font-mono text-center bg-white p-2 rounded border text-sm mb-3">
+                O(NCd + Nd²)
+              </div>
+              <div class="text-xs text-gray-600">
+                <strong>复杂度：</strong> 块内并行 + 块间循环<br>
+                <strong>适用：</strong> 自回归训练
+              </div>
+            </div>
+          </div>
+          
+          <!-- 其他线性注意力内容保持不变 -->
+          
+          <!-- 图4：线性注意力与遗忘门和选择门 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8 mt-8">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                图4: 线性注意力与遗忘门和选择门
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="论文图4: 线性注意力与遗忘门和选择门示意图，展示门控机制如何控制信息流" class="figure-img">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 线性注意力中的遗忘门和选择门机制。遗忘门控制历史信息的保留，选择门控制新信息的加入。
+            </div>
+          </div>
+          
+          <!-- 图5：测试时训练概览 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                图5: 测试时训练概览
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig5.png" alt="论文图5: 测试时训练概览图，展示TTT如何将隐藏状态视为可学习参数" class="figure-img">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 测试时训练(TTT)概览。TTT将隐藏状态H_t视为可学习参数（"快速权重"），在训练和推理过程中通过梯度下降不断更新。
+            </div>
+          </div>
+          
+          <!-- 线性注意力的其他内容保持不变 -->
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
+            <h5 class="font-semibold text-yellow-800 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>为博士生设计的简单理解
+            </h5>
+            <p class="text-gray-700 mb-2">线性注意力就像改变数学公式来简化计算：</p>
+            <ul class="list-disc list-inside ml-2 space-y-1 text-gray-700">
+              <li><strong>传统计算</strong>：(a×b)×c，需要先算a×b的大矩阵</li>
+              <li><strong>线性注意力技巧</strong>：a×(b×c)，先算b×c的小结果</li>
+              <li><strong>遗忘门和选择门</strong>：像清理书桌，丢掉不用的，保留重要的</li>
+              <li><strong>并行形式</strong>：一次性处理所有问题（适合考试批改）</li>
+              <li><strong>循环形式</strong>：一个一个处理问题（适合对话生成）</li>
+              <li><strong>分块形式</strong>：分组批改试卷，组内并行，组间顺序</li>
+              <li><strong>测试时训练</strong>：边考试边学习，不断更新知识库</li>
+              <li><strong>关键</strong>：改变数学公式，从根本上降低计算复杂度</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 其他章节保持不变 -->
+      
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动展开当前活跃的技术细节
+      const detailsElements = document.querySelectorAll('details.technical-details');
+      const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.3
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // 可以在这里添加自动展开逻辑，但为了用户体验，我们保持手动控制
+          }
+        });
+      }, observerOptions);
+      
+      detailsElements.forEach(details => {
+        observer.observe(details);
+      });
+      
+      // 初始化导航高亮
+      highlightNav();
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

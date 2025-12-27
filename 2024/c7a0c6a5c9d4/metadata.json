@@ -1,0 +1,10 @@
+{
+  "id": "c7a0c6a5c9d4",
+  "title": "PALF: Replicated Write-Ahead Logging for Distributed Databases",
+  "authors": ["Fusheng Han", "Hao Liu", "Bin Chen", "Debin Jia", "Jianfeng Zhou", "Xuwang Teng", "Chuanhui Yang", "Huafeng Xi", "Wei Tian", "Shuning Tao", "Sen Wang", "Quanqing Xu", "Zhenkun Yang"],
+  "year": 2024,
+  "conference": "PVLDB",
+  "category": "分布式数据库",
+  "keywords": ["PALF", "复制日志", "分布式数据库", "Paxos协议", "OceanBase", "WAL", "共识算法"],
+  "abstract": "Distributed databases have been widely researched and developed in recent years due to their scalability, availability, and consistency guarantees. The write-ahead logging (WAL) system is one of the most vital components in a database. It is still a non-trivial problem to design a replicated logging system as the foundation of a distributed database with the power of ACID transactions. This paper proposes PALF, a Paxos-backed Append-only Log File System, to address these challenges. The basic idea behind PALF is to co-design the logging system with the entire database for supporting database-specific functions and to abstract the functions as PALF primitives to power other distributed systems. Many database functions, including transaction processing, database restore, and physical standby databases, have been built based on PALF primitives. Evaluation shows that PALF greatly outperforms well-known implementations of consensus protocols and is fully competent for distributed database workloads. PALF has been deployed as a component of the OceanBase 4.0 database and has been made open-source along with it."
+}

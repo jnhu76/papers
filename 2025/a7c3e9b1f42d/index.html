@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oasis: An Out-of-core Approximate Graph System via All-Distances Sketches</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      @apply bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+    }
+    .performance-bar {
+      @apply h-4 rounded-full;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Oasis: An Out-of-core Approximate Graph System via All-Distances Sketches
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Tsun-Yu Yang, Yi Li, Yizou Chen, Bingzhe Li, Ming-Chang Yang</div>
+                <div class="text-sm text-gray-600 mt-1">The Chinese University of Hong Kong, The University of Texas at Dallas</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST'25)</div>
+                <div class="text-sm text-gray-600">February 25–27, 2025 • Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://www.usenix.org/conference/fast25/presentation/yang</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">图处理</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">近似计算</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">核外系统</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">全距离草图</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li><strong>首个基于ADS的核外近似图系统</strong>：将全距离草图技术引入实际应用，通过有效利用存储解决内存瓶颈</li>
+          <li><strong>内存可调节的ADS构建方案</strong>：允许用户根据机器可用内存调整内存使用，实现高效的ADS构建过程</li>
+          <li><strong>用户友好的ADS估计框架</strong>：提供简单接口执行估计器，同时减轻慢速存储I/O的影响</li>
+          <li><strong>系统级优化</strong>：包括无锁边布局、活动数据分离、选择性ADS访问、局部感知查询分配和基于网格的估计</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p>全距离草图（All-Distances Sketch, ADS）是一种强大且理论完备的草图方案，用于捕获图中的邻域信息以进行近似处理。它能够以精度保证高精度估计许多有用的应用，并可以显著加速执行时间数个数量级。</p>
+          
+          <p>然而，ADS需要大量空间，通常是图数据的数倍。更严重的是，现有研究主要集中在内存中管理ADS，对于希望利用ADS进行大规模图处理的用户来说，这带来了日益严峻的挑战，特别是在当今现实世界图数据呈指数级增长的背景下。</p>
+          
+          <p>为此，本文介绍了Oasis，一个核外近似图系统，通过有效利用存储将ADS技术带入实际应用。具体来说，Oasis提供了一个整体框架，促进ADS构建和估计。对于ADS构建，它允许用户根据机器的可用内存调整内存使用，并实现高效的构建过程。对于ADS估计，Oasis提供了一个用户友好的接口，可以轻松执行估计器，同时减轻慢速存储I/O的影响。</p>
+          
+          <p>评估结果表明，Oasis提供了一个实用的图处理解决方案，具有出色的执行时间和低内存使用，代价是精度略有下降。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">全距离草图（ADS）</h3>
+            <p class="text-gray-700 mb-4">ADS是一种概率数据结构，为每个顶点定义，包括捕获和采样每个顶点与整个图相关的邻域信息。更准确地说，顶点u的ADS是与u相连的其他"地标"顶点距离的摘要。</p>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+              <h4 class="font-semibold text-yellow-700 mb-2">ADS方程</h4>
+              <div class="code-block">
+                ADS(u) = {(v, d<sub>uv</sub>) | v ∈ V, r(v) < π(u,v)}
+              </div>
+              <p class="text-sm text-gray-600 mt-2">其中π(u,v) = k<sup>th</sup><sub>r</sub>{N(u,v)}，N(u,v)是比v更接近u的顶点集合</p>
+            </div>
+            
+            <p class="text-gray-700">ADS的预期大小为O(k log|V|)，所有ADS的总大小为O(|V|k log|V|)。</p>
+          </div>
+          
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">ADS的应用</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-project-diagram mr-2"></i>邻域函数
+                </h4>
+                <p class="text-sm text-gray-700">返回从顶点v在距离d内可到达的顶点数量</p>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-route mr-2"></i>最短路径距离
+                </h4>
+                <p class="text-sm text-gray-700">估计顶点u到v的最短路径距离</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-star mr-2"></i>紧密度中心性
+                </h4>
+                <p class="text-sm text-gray-700">测量顶点u的重要性</p>
+              </div>
+              <div class="bg-pink-50 p-4 rounded-lg border border-pink-200">
+                <h4 class="font-bold text-pink-700 mb-2 flex items-center">
+                  <i class="fas fa-similarity mr-2"></i>紧密度相似性
+                </h4>
+                <p class="text-sm text-gray-700">测量两个顶点在整个图中的位置相似性</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图1: ADS工作流程 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图1 - ADS工作流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: ADS工作流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: ADS工作流程" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用ADS的工作流程，涉及两个主要步骤：ADS构建和ADS估计
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>ADS构建:</strong> 基于原始图生成ADS，此过程只需对每个图执行一次</li>
+                  <li><strong>ADS估计:</strong> 使用生成的ADS来估计近似答案，可以多次执行</li>
+                  <li><strong>工作流程:</strong> 用户输入原始图和k值，系统构建ADS并存储在存储中，然后用户可以使用ADS估计器进行查询</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+            <h3 class="text-xl font-semibold text-red-700 mb-4">内存消耗问题</h3>
+            <p class="text-gray-700 mb-4">当前最高效的ADS构建方案需要大量内存，可达图本身大小的30-60倍。例如，对于一个512GB的大规模图，构建其ADS的内存开销可能需要30TB，这对大多数现代机器/用户来说是无法承受的。</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <h4 class="font-semibold text-gray-700 mb-2">Basic方案</h4>
+                <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                  <li>时间复杂度：O(VE)边遍历</li>
+                  <li>内存开销：主要由草图大小决定</li>
+                  <li>Twitter图(k=32)：无法在一年内完成</li>
+                </ul>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <h4 class="font-semibold text-gray-700 mb-2">SOTA方案</h4>
+                <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                  <li>时间复杂度：O(E log V)边遍历</li>
+                  <li>内存开销：草图大小的2.13倍</li>
+                  <li>Twitter图(k=32)：3.4天完成</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-lg">
+            <h3 class="text-xl font-semibold text-orange-700 mb-4">存储I/O挑战</h3>
+            <p class="text-gray-700 mb-4">使用存储管理ADS是一把双刃剑。存储I/O速度通常较慢，管理带有存储的ADS面临许多技术挑战。</p>
+            
+            <div class="space-y-4">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-2">与传统图处理的差异</h4>
+                <ul class="list-disc list-inside text-gray-600 space-y-1">
+                  <li>传统图处理通常一次处理一个算法，活动顶点数受O(V)限制</li>
+                  <li>ADS构建在所有顶点上执行有界图遍历，活动顶点数可能达到O(V²)</li>
+                  <li>ADS估计可以同时处理不同顶点上的多个查询</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 表1: ADS构建方案比较 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              表1: soc-LiveJournal图上不同k值的现有ADS构建方案比较
+            </h4>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方案</th>
+                    <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">k=4</th>
+                    <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">k=16</th>
+                    <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">k=32</th>
+                    <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">k=64</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Basic时间</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">2.58小时</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">2.68小时</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">2.59小时</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">2.61小时</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Basic内存</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">2.7 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">8.0 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">14.1 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">25.4 GB</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">SOTA时间</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">105秒</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">326秒</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">424秒</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">894秒</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">SOTA内存</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">5.1 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">17.5 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">33.1 GB</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">63.4 GB</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>说明:</strong> soc-LiveJournal图的原始图大小为527 MB。SOTA方案在时间效率上显著优于Basic方案，但内存开销更大。
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 系统架构 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Oasis系统架构</h3>
+            
+            <!-- 图2: 系统架构 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - Oasis系统架构
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 2: Oasis系统架构
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig2.png" alt="论文图2: Oasis系统架构" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> Oasis的系统架构和工作流程
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>ADS构建模块:</strong> 接收用户输入的k值和分区数，基于原始图生成ADS并存储在存储中</li>
+                    <li><strong>ADS估计模块:</strong> 接收用户提供的ADS估计器，自动化和优化加载所需ADS并执行估计器的过程</li>
+                    <li><strong>工作流程:</strong> 用户首先提供原始图和参数给构建模块，然后使用估计模块进行查询</li>
+                  </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">实现方法:</strong>
+                      <p>Oasis采用模块化设计，将ADS构建和估计分离为两个独立模块。构建模块负责将原始图转换为ADS表示，估计模块负责利用ADS进行高效查询。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">技术选择:</strong>
+                      <p>采用分区技术管理大规模ADS数据，通过无锁边布局解决多线程冲突，使用活动数据分离和选择性ADS访问优化I/O性能。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">优化策略:</strong>
+                      <p>通过局部感知查询分配和基于网格的估计提高数据局部性，减少不必要的I/O操作，提升整体系统性能。</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-hammer mr-2"></i>ADS构建模块
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>基于分区的ADS构建</li>
+                  <li>无锁边布局</li>
+                  <li>活动数据分离</li>
+                  <li>选择性ADS访问</li>
+                </ul>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-calculator mr-2"></i>ADS估计模块
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>编程框架和接口</li>
+                  <li>局部感知查询分配</li>
+                  <li>基于网格的估计</li>
+                  <li>单ADS和双ADS估计器</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ADS构建关键技术 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">ADS构建关键技术</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-unlock mr-2 text-blue-500"></i>无锁边布局
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">将边网格分割为多个大小相等的块，每个块包含一组不相交的目标顶点，防止两个线程更新相同的ADS。</p>
+                
+                <!-- 图3: 无锁边布局示例 -->
+                <div class="bg-gray-100 p-4 rounded-lg mb-3">
+                  <div class="flex items-center justify-center mb-3">
+                    <i class="fas fa-sitemap text-xl text-blue-500 mr-2"></i>
+                    <h5 class="font-medium text-gray-700">无锁边布局示例</h5>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-blue-100 p-2 rounded text-center text-xs">
+                      <div class="font-semibold">块1</div>
+                      <div class="text-gray-600">顶点0-499</div>
+                    </div>
+                    <div class="bg-green-100 p-2 rounded text-center text-xs">
+                      <div class="font-semibold">块2</div>
+                      <div class="text-gray-600">顶点500-999</div>
+                    </div>
+                    <div class="bg-yellow-100 p-2 rounded text-center text-xs">
+                      <div class="font-semibold">块3</div>
+                      <div class="text-gray-600">顶点1000-1499</div>
+                    </div>
+                    <div class="bg-red-100 p-2 rounded text-center text-xs">
+                      <div class="font-semibold">块4</div>
+                      <div class="text-gray-600">顶点1500-1999</div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-3 flex justify-center items-center text-gray-500 text-xs">
+                    <span>线程1 →</span>
+                    <i class="fas fa-arrow-right mx-1"></i>
+                    <span>块1,3</span>
+                    <i class="fas fa-arrow-right mx-1"></i>
+                    <span>无冲突</span>
+                  </div>
+                  <div class="flex justify-center items-center text-gray-500 text-xs">
+                    <span>线程2 →</span>
+                    <i class="fas fa-arrow-right mx-1"></i>
+                    <span>块2,4</span>
+                    <i class="fas fa-arrow-right mx-1"></i>
+                    <span>无冲突</span>
+                  </div>
+                </div>
+                
+                <p class="text-xs text-gray-500">通过将目标顶点分配到不同的块，确保每个线程处理不相交的ADS集合，无需使用锁。</p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-code-branch mr-2 text-green-500"></i>活动数据分离
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">将活动ADS复制并存储在单独的文件中，避免从庞大的原始ADS结构中加载和搜索活动ADS。</p>
+                
+                <div class="space-y-2">
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    <span class="text-sm text-gray-700">传统方法I/O量: O(VklogV·P·I)</span>
+                  </div>
+                  <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span class="text-sm text-gray-700">活动数据分离I/O量: O(2·VklogV)</span>
+                  </div>
+                </div>
+                
+                <div class="mt-3 bg-gray-100 p-3 rounded-lg">
+                  <div class="text-xs text-gray-600">
+                    <strong>优势:</strong> 显著减少I/O量，特别是在迭代次数多的情况下
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ADS估计关键技术 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">ADS估计关键技术</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-map-marker-alt mr-2 text-purple-500"></i>局部感知查询分配
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">根据目标顶点ID对查询进行排序，然后将查询顺序且均匀地分配给每个线程，提高加载ADS的利用率。</p>
+                
+                <div class="bg-purple-50 p-3 rounded-lg mb-3">
+                  <div class="text-xs text-purple-700 font-medium mb-2">查询分配策略:</div>
+                  <div class="space-y-1 text-xs text-gray-600">
+                    <div class="flex justify-between">
+                      <span>线程1: 查询1-3 (顶点ID: 100, 101, 102)</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>线程2: 查询4-6 (顶点ID: 103, 104, 105)</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>线程3: 查询7-9 (顶点ID: 106, 107, 108)</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <p class="text-xs text-gray-500">通过将需要相同ADS(u)的查询分配给同一线程，提高I/O利用率。</p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
+                  <i class="fas fa-th mr-2 text-pink-500"></i>基于网格的估计
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">将双ADS查询分割为不同的查询网格，基于ADS分区，一次处理一个网格，提高ADS访问的局部性。</p>
+                
+                <!-- 图5: 基于网格的估计示例 -->
+                <div class="bg-gray-100 p-3 rounded-lg mb-3">
+                  <div class="flex items-center justify-center mb-2">
+                    <i class="fas fa-th text-lg text-pink-500 mr-2"></i>
+                    <h5 class="font-medium text-gray-700 text-sm">基于网格的估计示例</h5>
+                  </div>
+                  
+                  <div class="grid grid-cols-3 gap-1 text-xs">
+                    <div class="bg-blue-100 p-1 rounded text-center">(P0,P0)</div>
+                    <div class="bg-blue-100 p-1 rounded text-center">(P0,P1)</div>
+                    <div class="bg-blue-100 p-1 rounded text-center">(P0,P2)</div>
+                    <div class="bg-green-100 p-1 rounded text-center">(P1,P0)</div>
+                    <div class="bg-green-100 p-1 rounded text-center">(P1,P1)</div>
+                    <div class="bg-green-100 p-1 rounded text-center">(P1,P2)</div>
+                    <div class="bg-yellow-100 p-1 rounded text-center">(P2,P0)</div>
+                    <div class="bg-yellow-100 p-1 rounded text-center">(P2,P1)</div>
+                    <div class="bg-yellow-100 p-1 rounded text-center">(P2,P2)</div>
+                  </div>
+                  
+                  <div class="mt-2 text-center text-xs text-gray-500">
+                    当前处理: <span class="font-semibold">(P0,P1)</span> | 保持P0在内存中
+                  </div>
+                </div>
+                
+                <p class="text-xs text-gray-500">通过顺序处理网格，减少ADS加载次数，提高I/O效率。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 实验设置 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
+                <i class="fas fa-table mr-2 text-blue-500"></i>
+                表3: 评估的图数据集
+              </h4>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                      <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">顶点数(V)</th>
+                      <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">边数(E)</th>
+                      <th class="px-4 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Pokec</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">1.6 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">31 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">有向</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">soc-LiveJournal</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">4.8 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">69 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">有向</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">hollywood2009</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">1.1 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">113 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">无向</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Twitter</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">42 M</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">1.4 B</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">有向</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                  <strong class="text-blue-700">硬件环境:</strong>
+                  <ul class="list-disc list-inside mt-1">
+                    <li>服务器: HPE ProLiant DL560 Gen10</li>
+                    <li>CPU: Intel Xeon Platinum 8160</li>
+                    <li>内存: 32×32GB Dual Rank DDR4-2666</li>
+                    <li>存储: 2×1 TB Samsung NVMe SSD (6.0 GB/s)</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-blue-700">软件配置:</strong>
+                  <ul class="list-disc list-inside mt-1">
+                    <li>操作系统: Debian GNU/Linux 9</li>
+                    <li>线程数: 16</li>
+                    <li>默认分区数: 16</li>
+                    <li>k值范围: 4, 8, 16, 32, 64</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ADS构建评估 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">ADS构建评估</h3>
+            
+            <!-- 图6: ADS构建比较 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-bar mr-2"></i>技术细节：图6 - ADS构建方案比较
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 6: ADS构建方案比较
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig6.png" alt="论文图6: ADS构建方案比较" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 不同k值下各种ADS构建方案在构建时间、构建内存和草图空间方面的比较
+                  </div>
+                </div>
+                
+                <!-- 性能分析部分 -->
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-chart-line mr-2"></i>性能分析：
+                  </h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                    <div>
+                      <strong class="text-purple-700">关键结果:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>Oasis比Basic方案快数百到数千倍</li>
+                        <li>Oasis比SOTA方案平均慢1.79倍，但内存节省13.8倍</li>
+                        <li>Oasis允许用户通过调整分区数控制内存开销</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong class="text-purple-700">性能对比:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>Basic方案: O(VE)边遍历，与k值无关</li>
+                        <li>SOTA方案: O(E log V)边遍历，随k值增加</li>
+                        <li>Oasis方案: 基于分区的扫描合并方法</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <!-- 图7: Oasis ADS构建设计选择 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-cogs mr-2"></i>技术细节：图7 - Oasis ADS构建设计选择
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 7: Oasis ADS构建设计选择
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig7.png" alt="论文图7: Oasis ADS构建设计选择" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> Oasis ADS构建中主要设计的性能影响
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>活动数据分离:</strong> 对性能影响最大，平均提高3.3-4.2倍</li>
+                    <li><strong>无锁边布局:</strong> 平均提高1.76-2.97倍，避免多线程锁冲突</li>
+                    <li><strong>选择性ADS访问:</strong> 平均提高11.1%，在构建接近收敛时减少不必要ADS访问</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- ADS估计评估 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">ADS估计评估</h3>
+            
+            <!-- 图8: 精确处理与ADS估计比较 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-balance-scale mr-2"></i>技术细节：图8 - 精确处理与ADS估计比较
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 8: 精确处理与ADS估计比较
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig8.png" alt="论文图8: 精确处理与ADS估计比较" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 紧密中心性和紧密相似性的执行时间和内存开销比较
+                  </div>
+                </div>
+                
+                <!-- 性能分析部分 -->
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-chart-line mr-2"></i>性能分析：
+                  </h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                    <div>
+                      <strong class="text-purple-700">关键结果:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>Ligra+需要大量时间完成查询，Twitter图估计需要50天</li>
+                        <li>内存ADS估计性能最佳，但需要大量内存</li>
+                        <li>Oasis核外ADS估计平均比内存ADS估计慢2.9倍，但内存节省42倍</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong class="text-purple-700">性能优势:</strong>
+                      <ul class="list-disc list-inside mt-1 text-gray-700">
+                        <li>ADS估计比精确处理快数个数量级</li>
+                        <li>精度损失轻微，可通过调整k值控制</li>
+                        <li>Oasis在性能和内存使用之间提供最佳平衡</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <!-- 图9: 精度分析 -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                图9: soc-LiveJournal图上不同k值的紧密中心性和相似性精度
+              </h4>
+              
+              <div class="performance-chart-placeholder">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-medium text-gray-700 mb-3 text-center">紧密中心性精度</h5>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=4:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 82%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">82%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=8:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 88%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">88%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=16:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 92%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">92%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=32:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">95%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=64:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 97%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">97%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 class="font-medium text-gray-700 mb-3 text-center">紧密相似性精度</h5>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=4:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 78%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">78%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=8:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 85%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">85%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=16:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 90%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">90%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=32:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 94%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">94%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">k=64:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 96%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">96%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-center text-sm text-gray-600">
+                  <strong>说明:</strong> 精度通过估计值与精确值之间的归一化均方根误差(NRMSE)衡量。随着k值增加，紧密中心性和相似性的精度都提高。
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 内存可扩展性 -->
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">内存可扩展性</h3>
+            
+            <!-- 图12: 不同分区数的性能影响 -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
+                <i class="fas fa-memory mr-2 text-blue-500"></i>
+                图12: soc-LiveJournal图上不同分区数的ADS构建性能(k=32)
+              </h4>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h5 class="font-medium text-gray-700 mb-3 text-center">执行时间</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=4:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 55%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">676秒</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=8:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 65%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">789秒</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=16:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 80%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">972秒</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=32:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">1154秒</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=64:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">1236秒</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 class="font-medium text-gray-700 mb-3 text-center">内存开销</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=4:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">8638 MB</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=8:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">6478 MB</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=16:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 50%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">4319 MB</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=32:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 30%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">2591 MB</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">P=64:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 ml-2">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 15%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-16 ml-2">1296 MB</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4 text-center text-sm text-gray-600">
+                <strong>说明:</strong> 执行时间和内存开销呈现反向关系。分区数越少，执行时间越短但内存开销越大。草图大小为4319 MB(水平红色虚线)。
+              </div>
+              
+              <div class="mt-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <h5 class="font-semibold text-yellow-700 mb-2 flex items-center text-sm">
+                  <i class="fas fa-lightbulb mr-2"></i>优化建议
+                </h5>
+                <p class="text-xs text-gray-700">为实现高性能，建议用户在机器内存容量允许的情况下最小化分区数P。分区数越少，加载活动ADS的I/O量越小，线程间的工作平衡也越好。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">主要贡献总结</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                    <i class="fas fa-cube mr-2"></i>系统创新
+                  </h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>首个基于ADS的核外近似图系统</li>
+                    <li>将全距离草图技术引入实际应用</li>
+                    <li>通过有效利用存储解决内存瓶颈</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                    <i class="fas fa-tachometer-alt mr-2"></i>性能优势
+                  </h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>比精确处理快数个数量级</li>
+                    <li>内存使用比SOTA方案节省13.8倍</li>
+                    <li>精度损失轻微且可控</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="space-y-4">
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                    <i class="fas fa-sliders-h mr-2"></i>灵活性
+                  </h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>用户可控制内存开销</li>
+                    <li>通过调整分区数适应不同机器容量</li>
+                    <li>支持多种ADS估计器</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                    <i class="fas fa-cogs mr-2"></i>技术优化
+                  </h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <li>无锁边布局避免线程冲突</li>
+                    <li>活动数据分离减少I/O</li>
+                    <li>局部感知查询分配提高数据局部性</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h3 class="text-xl font-semibold text-blue-700 mb-4">实际意义</h3>
+            <p class="text-gray-700 mb-4">Oasis通过将ADS技术与存储设备相结合，解决了ADS在实际应用中的内存瓶颈问题。评估结果表明，Oasis在高效执行时间、低内存使用和高灵活性方面表现出色，为大规模图处理提供了一个实用的解决方案。</p>
+            
+            <div class="flex items-center text-sm text-gray-600">
+              <i class="fas fa-link mr-2 text-blue-500"></i>
+              <span>项目开源地址: </span>
+              <a href="https://github.com/tsunyuyang/Oasis" class="ml-1 text-blue-600 hover:underline">https://github.com/tsunyuyang/Oasis</a>
+            </div>
+          </div>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+            <h3 class="text-xl font-semibold text-red-700 mb-4">不足之处</h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>性能折衷:</strong> 与内存中的SOTA方案相比，Oasis在构建时间上慢1.79倍，在估计时间上慢1.7倍</li>
+              <li><strong>精度损失:</strong> 虽然精度损失轻微，但对于需要精确结果的应用可能不适用</li>
+              <li><strong>存储依赖:</strong> 系统性能受存储I/O速度限制，在I/O性能较差的环境中表现可能不佳</li>
+              <li><strong>复杂性:</strong> 系统设计相对复杂，需要用户理解ADS原理和系统优化技术</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节展开/收起
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

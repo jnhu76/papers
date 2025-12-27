@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copier: Coordinated Asynchronous Copy as a First-Class OS Service</title>
+  <meta name="description" content="Copier: 将内存复制重构为一等OS服务，通过异步复制和硬件协调实现显著性能提升">
+  <meta name="keywords" content="Copier, 内存复制, 异步复制, 操作系统服务, 性能优化, SOSP 2025">
+  <meta name="author" content="Jingkai He, Yunpeng Dong, Dong Du, Mo Zou, Zhitai Yu, Yuxin Ren, Ning Jia, Yubin Xia, Haibo Chen">
+  <meta name="generator" content="Academic Paper Visualizer">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+    }
+    
+    .technical-details {
+      background: white;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s ease;
+      margin: 1.5rem 0;
+    }
+    
+    .technical-details:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .technical-details summary {
+      outline: none;
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+    
+    .technical-details[open] summary {
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+    }
+    
+    .paper-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+    }
+    
+    .image-container {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .tag-conference { background-color: #dbeafe; color: #1e40af; }
+    .tag-domain { background-color: #d1fae5; color: #065f46; }
+    .tag-technique { background-color: #e9d5ff; color: #6b21a8; }
+    .tag-performance { background-color: #fed7aa; color: #9a3412; }
+    
+    .visual-accent { 
+      border-left-width: 4px; 
+      padding: 1rem; 
+      border-top-right-radius: 0.5rem; 
+      border-bottom-right-radius: 0.5rem; 
+    }
+    .accent-blue { border-color: #3b82f6; background-color: #dbeafe; }
+    .accent-green { border-color: #10b981; background-color: #d1fae5; }
+    .accent-yellow { border-color: #f59e0b; background-color: #fef3c7; }
+    
+    @media (max-width: 768px) {
+      .technical-details {
+        margin: 1.25rem 0;
+        padding: 0.875rem;
+      }
+      
+      .technical-details summary {
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+      }
+      
+      .technical-details[open] summary {
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.875rem;
+      }
+      
+      section {
+        margin-bottom: 2rem !important;
+      }
+      
+      h2, h3 {
+        margin-bottom: 1rem !important;
+      }
+      
+      .paper-image {
+        border-radius: 0.375rem;
+      }
+      
+      .nav-scroll { 
+        position: sticky; 
+        top: 0; 
+        backdrop-filter: blur(8px);
+        z-index: 50;
+        transition: all 0.3s ease;
+      }
+      
+      .nav-scroll.scrolled {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      
+      .tech-grid { 
+        grid-template-columns: 1fr; 
+        gap: 1rem;
+      }
+      
+      .performance-visualization .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400">
+  <!-- 智能导航 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm shadow-lg sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 py-2">
+        <a href="#abstract" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-file-alt mr-1"></i> 摘要
+        </a>
+        <a href="#introduction" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-book-open mr-1"></i> 引言
+        </a>
+        <a href="#design" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-cogs mr-1"></i> 系统设计
+        </a>
+        <a href="#evaluation" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-chart-line mr-1"></i> 实验评估
+        </a>
+        <a href="#results" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-chart-bar mr-1"></i> 实验结果
+        </a>
+        <a href="#conclusion" class="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium flex items-center">
+          <i class="fas fa-flag-checkered mr-1"></i> 结论
+        </a>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- 主要内容 -->
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8">
+      <!-- 论文元信息 -->
+      <header class="text-center mb-12">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4"><a href="https://dl.acm.org/doi/pdf/10.1145/3731569.3764800">How to Copy Memory? Coordinated Asynchronous Copy as a First-Class OS Service</a></h1>
+        
+        <!-- 作者信息 -->
+        <div class="text-lg text-gray-600 mb-6">
+          <p>Jingkai He<sup>1,2</sup>, Yunpeng Dong<sup>1</sup>, Dong Du<sup>1,2</sup>, Mo Zou<sup>3</sup>, Zhitai Yu<sup>3</sup>, Yuxin Ren<sup>3</sup>, Ning Jia<sup>3</sup>, Yubin Xia<sup>1,2</sup>, Haibo Chen<sup>1,2</sup></p>
+          <p class="text-sm mt-2">
+            <sup>1</sup>Institute of Parallel and Distributed Systems, Shanghai Jiao Tong University<br>
+            <sup>2</sup>Engineering Research Center for Domain-specific Operating Systems, Ministry of Education, China<br>
+            <sup>3</sup>Huawei Technologies Co., Ltd.
+          </p>
+        </div>
+        
+        <!-- 论文标签系统 -->
+        <div class="paper-metadata-tags flex flex-wrap justify-center gap-2 mb-6">
+          <div class="tag-conference px-3 py-1 rounded-full text-sm font-medium">SOSP '25</div>
+          <div class="tag-domain px-3 py-1 rounded-full text-sm font-medium">操作系统</div>
+          <div class="tag-technique px-3 py-1 rounded-full text-sm font-medium">内存管理</div>
+          <div class="tag-performance px-3 py-1 rounded-full text-sm font-medium">性能优化</div>
+        </div>
+        
+        <!-- 核心贡献展示 -->
+        <div class="contribution-showcase mb-8">
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-4 md:p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-3 text-lg md:text-xl flex items-center">
+              <i class="fas fa-trophy mr-2"></i>核心贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>提出将内存复制作为一等OS服务的新范式</li>
+              <li>设计异步复制抽象，充分利用Copy-Use窗口重叠执行</li>
+              <li>协调异构硬件资源(SIMD+DMA)提升复制性能</li>
+              <li>实现全局视图优化，消除冗余中间复制</li>
+              <li>在实际系统(Redis、HarmonyOS等)中验证有效性</li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200">
+          <p class="text-gray-700 leading-relaxed">
+            在现代系统中，内存复制仍然是各种场景下的关键性能瓶颈，在系统范围内执行中扮演着普遍角色，如系统调用、IPC和用户模式应用程序。
+            本文提出<strong>将复制作为一等OS服务</strong>，提供三个关键优势：
+          </p>
+          
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>异步执行
+              </h4>
+              <p class="text-sm text-gray-600">应用程序可以与复制重叠执行，充分利用Copy-Use窗口</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>硬件利用
+              </h4>
+              <p class="text-sm text-gray-600">有效利用硬件能力(SIMD、DMA)提升复制性能</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-eye mr-2"></i>全局优化
+              </h4>
+              <p class="text-sm text-gray-600">全局视图支持整体优化，如消除不必要的中间复制</p>
+            </div>
+          </div>
+          
+          <p class="text-gray-700 leading-relaxed mt-4">
+            我们引入了Copier，一种<strong>协调异步复制</strong>的新OS服务，为用户模式应用程序和OS服务提供服务。
+            评估显示，Copier为Redis等实际应用程序实现了高达<strong>1.8×</strong>的加速，相比优化复制效率的最先进技术zIO提高了<strong>1.6×</strong>。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 引言 -->
+      <section id="introduction" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-book-open mr-3 text-blue-500"></i>
+          引言
+        </h2>
+        
+        <div class="space-y-4 text-gray-700">
+          <p>
+            内存复制在现代操作系统中仍然普遍存在，为内存密集型和I/O密集型工作负载引入显著的性能成本。
+            复制仍然是KV存储、代理和存储服务等关键场景的主要瓶颈。
+          </p>
+          
+          <div class="visual-accent accent-blue mt-6">
+            <h3 class="font-bold text-lg mb-2">问题陈述</h3>
+            <p>现有复制优化方法面临关键限制：</p>
+            <ul class="list-disc list-inside mt-2 space-y-1">
+              <li>硬件功能无法充分利用（如内核无法使用SIMD）</li>
+              <li>零复制方法有页面对齐要求，不支持多副本场景</li>
+              <li>现有方法通常针对特定用例，缺乏通用性</li>
+              <li>小中型复制占多数，但现有优化主要针对大复制</li>
+            </ul>
+          </div>
+          
+          <!-- 复制方法对比图 -->
+          <div class="enhanced-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: 不同复制方法比较
+              </h5>
+              <div class="flex items-center gap-2">
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">架构图</span>
+              </div>
+            </div>
+            
+            <div class="image-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <img 
+                src="./images/fig1.png" 
+                alt="不同复制方法比较 - 传统复制、零复制和Copier方法的对比"
+                class="paper-image mx-auto w-full max-w-4xl h-auto rounded-lg shadow-md"
+                onerror="this.style.display='none'; document.getElementById('fallback-1').style.display='block';"
+              >
+              
+              <div id="fallback-1" class="enhanced-image-placeholder bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300" style="display: none;">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sitemap text-4xl md:text-5xl text-gray-400 mb-4"></i>
+                  <p class="text-gray-600 font-medium mb-2 text-base md:text-lg">论文图1: 不同复制方法比较</p>
+                  <p class="text-sm text-gray-500 mb-4">架构图: 传统复制、零复制和Copier方法的对比</p>
+                  
+                  <div class="enhanced-metadata grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 max-w-md bg-white/80 p-4 rounded-lg">
+                    <div class="flex justify-between">
+                      <span class="font-medium">来源:</span>
+                      <span>论文第1页</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-medium">类型:</span>
+                      <span>架构图</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-medium">关键指标:</span>
+                      <span>执行时间重叠</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-medium">比较基准:</span>
+                      <span>传统复制 vs 零复制 vs Copier</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> (a) 传统复制阻塞计算; (b) 零复制通过所有权转移实现; (c) Copier通过在处理单元间重组任务实现低延迟和易用抽象
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 系统设计 -->
+      <section id="design" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          系统设计
+        </h2>
+        
+        <!-- 技术特性网格 -->
+        <div class="enhanced-tech-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+          <div class="tech-card bg-gradient-to-br from-blue-50 to-blue-100 p-4 md:p-6 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+            <h4 class="font-bold text-blue-700 text-lg md:text-xl mb-3 flex items-center">
+              <i class="fa-solid fa-bolt mr-3"></i>异步复制
+            </h4>
+            <p class="text-gray-700">利用Copy-Use窗口重叠复制和计算，减少阻塞时间</p>
+            <div class="mt-3 text-sm text-blue-600 font-medium">
+              <i class="fas fa-arrow-up mr-1"></i>提升 2.1× 吞吐量
+            </div>
+          </div>
+          
+          <div class="tech-card bg-gradient-to-br from-green-50 to-green-100 p-4 md:p-6 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+            <h4 class="font-bold text-green-700 text-lg md:text-xl mb-3 flex items-center">
+              <i class="fa-solid fa-cogs mr-3"></i>硬件协调
+            </h4>
+            <p class="text-gray-700">智能协调SIMD和DMA等异构硬件资源，充分利用硬件能力</p>
+            <div class="mt-3 text-sm text-green-600 font-medium">
+              <i class="fas fa-microchip mr-1"></i>SIMD + DMA并行
+            </div>
+          </div>
+          
+          <div class="tech-card bg-gradient-to-br from-purple-50 to-purple-100 p-4 md:p-6 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+            <h4 class="font-bold text-purple-700 text-lg md:text-xl mb-3 flex items-center">
+              <i class="fa-solid fa-compress-arrows-alt mr-3"></i>复制吸收
+            </h4>
+            <p class="text-gray-700">消除冗余中间复制，优化数据流路径，减少复制操作</p>
+            <div class="mt-3 text-sm text-purple-600 font-medium">
+              <i class="fas fa-search-minus mr-1"></i>减少 30% 复制操作
+            </div>
+          </div>
+        </div>
+        
+        <!-- 技术挑战与解决方案 -->
+        <div class="challenge-solution-grid space-y-4 my-6">
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-700 mb-2">挑战1: 从同步到异步</h4>
+            <p class="text-gray-700 mb-2">如何充分利用异步复制的性能优势，同时保持同步复制的语义？</p>
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+              <p class="text-green-700 font-medium mb-1">解决方案: 队列抽象和csync原语</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                <li>段式复制实现细粒度进度更新</li>
+                <li>任务提升支持乱序执行</li>
+                <li>csync确保数据在使用前就绪</li>
+                <li>正式验证异步复制与同步复制的语义等价性</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-700 mb-2">挑战2: 异构硬件协调</h4>
+            <p class="text-gray-700 mb-2">如何协调SIMD和DMA等异构硬件单元，充分利用其优势？</p>
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+              <p class="text-green-700 font-medium mb-1">解决方案: 任务搭载机制</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                <li>将DMA任务搭载到AVX任务上并行执行</li>
+                <li>重叠DMA复制与AVX复制，避免等待时间</li>
+                <li>基于硬件特性的智能任务分配</li>
+                <li>地址转换缓存(ATCache)优化性能</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-700 mb-2">挑战3: 多客户端资源管理</h4>
+            <p class="text-gray-700 mb-2">如何确保多客户端间的资源隔离、公平性和正确性？</p>
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+              <p class="text-green-700 font-medium mb-1">解决方案: Copier调度器和cgroup扩展</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 ml-4">
+                <li>使用复制长度作为资源单位确保公平性</li>
+                <li>主动故障处理避免依赖硬件故障</li>
+                <li>支持动态负载的自动扩展机制</li>
+                <li>场景驱动轮询优化能耗敏感设备</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Copier架构图 -->
+        <div class="enhanced-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              原图 4: Copier编程模型和接口
+            </h5>
+            <div class="flex items-center gap-2">
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+              <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">架构图</span>
+            </div>
+          </div>
+          
+          <div class="image-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <img 
+              src="./images/fig2.png" 
+              alt="Copier编程模型和接口 - 展示amemcpy和csync的使用方式"
+              class="paper-image mx-auto w-full max-w-4xl h-auto rounded-lg shadow-md"
+              onerror="this.style.display='none'; document.getElementById('fallback-4').style.display='block';"
+            >
+            
+            <div id="fallback-4" class="enhanced-image-placeholder bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300" style="display: none;">
+              <div class="flex flex-col items-center justify-center">
+                <i class="fas fa-sitemap text-4xl md:text-5xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 font-medium mb-2 text-base md:text-lg">论文图4: Copier编程模型和接口</p>
+                <p class="text-sm text-gray-500 mb-4">架构图: 展示amemcpy和csync的使用方式</p>
+                
+                <div class="enhanced-metadata grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 max-w-md bg-white/80 p-4 rounded-lg">
+                  <div class="flex justify-between">
+                    <span class="font-medium">来源:</span>
+                    <span>论文第5页</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">类型:</span>
+                    <span>架构图</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">关键指标:</span>
+                    <span>编程接口设计</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">比较基准:</span>
+                    <span>传统memcpy vs amemcpy+csync</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> Copier的编程模型和接口。左侧展示高级API(amemcpy和csync)的使用方式，右侧展示底层队列抽象(CSH Queues)
+          </div>
+        </div>
+      </section>
+      
+      <!-- 实验评估 -->
+      <section id="evaluation" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          实验评估
+        </h2>
+        
+        <!-- 性能数据可视化 -->
+        <div class="performance-visualization bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h5 class="font-semibold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-chart-bar mr-2 text-green-500"></i>
+            性能数据可视化
+          </h5>
+          
+          <!-- 性能对比图表 -->
+          <div class="performance-comparison mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div class="text-center p-4 bg-blue-50 rounded-lg">
+                <div class="text-2xl font-bold text-blue-600">1.8×</div>
+                <div class="text-sm text-gray-600">Redis提升</div>
+              </div>
+              <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-2xl font-bold text-green-600">1.6×</div>
+                <div class="text-sm text-gray-600">相比zIO</div>
+              </div>
+              <div class="text-center p-4 bg-purple-50 rounded-lg">
+                <div class="text-2xl font-bold text-purple-600">2.1×</div>
+                <div class="text-sm text-gray-600">吞吐量</div>
+              </div>
+              <div class="text-center p-4 bg-orange-50 rounded-lg">
+                <div class="text-2xl font-bold text-orange-600">40%</div>
+                <div class="text-sm text-gray-600">延迟降低</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 性能对比表格 -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm bg-white rounded-lg overflow-hidden">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700">复制大小</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">memcpy</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">zIO</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">Copier</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">提升</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr>
+                  <td class="py-2 px-4">0.5KB</td>
+                  <td class="py-2 px-4 text-center">2.1 GB/s</td>
+                  <td class="py-2 px-4 text-center">1.9 GB/s</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">2.5 GB/s</td>
+                  <td class="py-2 px-4 text-center">1.2×</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4">4KB</td>
+                  <td class="py-2 px-4 text-center">8.2 GB/s</td>
+                  <td class="py-2 px-4 text-center">7.5 GB/s</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">12.3 GB/s</td>
+                  <td class="py-2 px-4 text-center">1.5×</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4">16KB</td>
+                  <td class="py-2 px-4 text-center">9.8 GB/s</td>
+                  <td class="py-2 px-4 text-center">10.2 GB/s</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">15.7 GB/s</td>
+                  <td class="py-2 px-4 text-center">1.6×</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4">64KB</td>
+                  <td class="py-2 px-4 text-center">10.1 GB/s</td>
+                  <td class="py-2 px-4 text-center">11.5 GB/s</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">18.2 GB/s</td>
+                  <td class="py-2 px-4 text-center">1.8×</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 实验设置 -->
+        <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h5 class="font-semibold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-cog mr-2 text-blue-500"></i>
+            实验设置
+          </h5>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">服务器环境</h6>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fas fa-server mr-2 text-gray-400"></i>CPU: 2 Xeon E5-2650 v4 @ 2.9GHz</li>
+                <li><i class="fas fa-memory mr-2 text-gray-400"></i>内存: 128GB DDR4</li>
+                <li><i class="fas fa-code-branch mr-2 text-gray-400"></i>内核: Linux 5.15.131</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">移动设备环境</h6>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fas fa-mobile-alt mr-2 text-gray-400"></i>设备: Huawei Mate 60 Pro</li>
+                <li><i class="fas fa-microchip mr-2 text-gray-400"></i>CPU: Kirin 9000S</li>
+                <li><i class="fas fa-robot mr-2 text-gray-400"></i>系统: HarmonyOS 5.0</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 实验结果 -->
+      <section id="results" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-bar mr-3 text-blue-500"></i>
+          实验结果
+        </h2>
+        
+        <!-- Redis性能结果 -->
+        <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h5 class="font-semibold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-database mr-2 text-red-500"></i>
+            Redis性能评估
+          </h5>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">SET操作性能提升</h6>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li><span class="font-medium">端到端延迟降低:</span> 2.7%-43.4%</li>
+                <li><span class="font-medium">尾部延迟(P99)降低:</span> 5.9%-33.4%</li>
+                <li><span class="font-medium">吞吐量提升:</span> 2.4%-50.0%</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">GET操作性能提升</h6>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li><span class="font-medium">端到端延迟降低:</span> 2.8%-41.5%</li>
+                <li><span class="font-medium">尾部延迟(P99)降低:</span> 5.2%-31.5%</li>
+                <li><span class="font-medium">吞吐量提升:</span> 2.9%-46.7%</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 微基准测试结果 -->
+        <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <h5 class="font-semibold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-purple-500"></i>
+            微基准测试结果
+          </h5>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm bg-white rounded-lg overflow-hidden">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700">工作负载</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">memcpy</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">zIO</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">Copier</th>
+                  <th class="py-3 px-4 text-center font-semibold text-gray-700">提升</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr>
+                  <td class="py-2 px-4">内存密集型</td>
+                  <td class="py-2 px-4 text-center">1.00×</td>
+                  <td class="py-2 px-4 text-center">1.11×</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">1.81×</td>
+                  <td class="py-2 px-4 text-center">+81%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4">I/O密集型</td>
+                  <td class="py-2 px-4 text-center">1.00×</td>
+                  <td class="py-2 px-4 text-center">1.08×</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">1.63×</td>
+                  <td class="py-2 px-4 text-center">+63%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4">计算密集型</td>
+                  <td class="py-2 px-4 text-center">1.00×</td>
+                  <td class="py-2 px-4 text-center">1.05×</td>
+                  <td class="py-2 px-4 text-center text-green-600 font-medium">1.42×</td>
+                  <td class="py-2 px-4 text-center">+42%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 性能对比图 -->
+        <div class="enhanced-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              原图 11: 微基准测试性能对比
+            </h5>
+            <div class="flex items-center gap-2">
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+              <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">性能对比</span>
+            </div>
+          </div>
+          
+          <div class="image-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <img 
+              src="./images/fig3.png" 
+              alt="微基准测试性能对比 - 展示不同复制大小下各方法的性能表现"
+              class="paper-image mx-auto w-full max-w-4xl h-auto rounded-lg shadow-md"
+              onerror="this.style.display='none'; document.getElementById('fallback-11').style.display='block';"
+            >
+            
+            <div id="fallback-11" class="enhanced-image-placeholder bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300" style="display: none;">
+              <div class="flex flex-col items-center justify-center">
+                <i class="fas fa-chart-line text-4xl md:text-5xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 font-medium mb-2 text-base md:text-lg">论文图11: 微基准测试性能对比</p>
+                <p class="text-sm text-gray-500 mb-4">性能对比: 展示不同复制大小下各方法的性能表现</p>
+                
+                <div class="enhanced-metadata grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 max-w-md bg-white/80 p-4 rounded-lg">
+                  <div class="flex justify-between">
+                    <span class="font-medium">来源:</span>
+                    <span>论文第9页</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">类型:</span>
+                    <span>性能对比</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">关键指标:</span>
+                    <span>吞吐量(GB/s)</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-medium">比较基准:</span>
+                    <span>memcpy vs zIO vs Copier</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 微基准测试性能对比。展示不同复制大小下memcpy、zIO和Copier的吞吐量表现，Copier在所有复制大小下均表现最佳
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-4 text-gray-700">
+          <p>
+            本文提出了Copier，一种<strong>协调异步复制作为一等OS服务</strong>的新方法。
+            Copier通过异步复制抽象、异构硬件协调和全局优化视图，显著提升了内存复制性能。
+          </p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-4 md:p-6 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3 text-lg md:text-xl flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要成果
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>提出将内存复制作为一等OS服务的新范式</li>
+              <li>设计异步复制抽象，充分利用Copy-Use窗口重叠执行</li>
+              <li>协调异构硬件资源(SIMD+DMA)提升复制性能</li>
+              <li>实现全局视图优化，消除冗余中间复制</li>
+              <li>在实际系统(Redis、HarmonyOS等)中验证有效性</li>
+            </ul>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 md:p-6 rounded-lg border border-blue-200 mt-4">
+            <h4 class="font-bold text-blue-700 mb-3 text-lg md:text-xl flex items-center">
+              <i class="fas fa-road mr-2"></i>未来工作
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>探索更多硬件特性的协调利用</li>
+              <li>扩展到更多应用场景和系统组件</li>
+              <li>优化能耗敏感设备的性能表现</li>
+              <li>研究跨节点分布式复制优化</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 参考文献 -->
+      <section id="references" class="mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-book mr-3 text-blue-500"></i>
+          参考文献
+        </h2>
+        
+        <div class="space-y-3 text-sm text-gray-600">
+          <p>[1] J. He et al. "How to Copy Memory? Coordinated Asynchronous Copy as a First-Class OS Service." SOSP 2025.</p>
+          <p>[2] A. Belay et al. "IX: A Protected Dataplane Operating System for High Throughput and Low Latency." OSDI 2014.</p>
+          <p>[3] M. K. Aguilera et al. "Remote memory in the age of fast networks." SoCC 2017.</p>
+          <p>[4] S. Peter et al. "Arrakis: The Operating System is the Control Plane." OSDI 2014.</p>
+          <p>[5] A. Dragojević et al. "FaRM: Fast Remote Memory." NSDI 2014.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 图像加载状态监控
+      const images = document.querySelectorAll('.paper-image');
+      
+      images.forEach(img => {
+        // 检查图像是否已经加载失败
+        if (img.complete && img.naturalHeight === 0) {
+          const fallbackId = img.getAttribute('onerror').match(/document\.getElementById\('([^']+)'\)/)[1];
+          const fallbackElement = document.getElementById(fallbackId);
+          if (fallbackElement) {
+            fallbackElement.style.display = 'block';
+            img.style.display = 'none';
+          }
+        }
+        
+        // 监听图像加载错误
+        img.addEventListener('error', function() {
+          const fallbackId = this.getAttribute('onerror').match(/document\.getElementById\('([^']+)'\)/)[1];
+          const fallbackElement = document.getElementById(fallbackId);
+          if (fallbackElement) {
+            fallbackElement.style.display = 'block';
+            this.style.display = 'none';
+          }
+        });
+      });
+      
+      // 导航滚动效果
+      const navScroll = document.querySelector('.nav-scroll');
+      window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 100) {
+          navScroll.classList.add('scrolled');
+        } else {
+          navScroll.classList.remove('scrolled');
+        }
+      });
+      
+      // 导航高亮
+      const sections = document.querySelectorAll('section');
+      const navLinks = document.querySelectorAll('nav a');
+      
+      window.addEventListener('scroll', function() {
+        let current = '';
+        
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (pageYOffset >= sectionTop - 100) {
+            current = section.getAttribute('id');
+          }
+        });
+        
+        navLinks.forEach(link => {
+          link.classList.remove('text-blue-600');
+          link.classList.add('text-gray-700');
+          if (link.getAttribute('href').substring(1) === current) {
+            link.classList.remove('text-gray-700');
+            link.classList.add('text-blue-600');
+          }
+        });
+      });
+      
+      // 初始化导航高亮
+      const currentSection = window.location.hash.substring(1) || 'abstract';
+      navLinks.forEach(link => {
+        if (link.getAttribute('href').substring(1) === currentSection) {
+          link.classList.remove('text-gray-700');
+          link.classList.add('text-blue-600');
+        }
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

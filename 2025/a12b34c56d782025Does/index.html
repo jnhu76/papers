@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor's Impact on Software Projects</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .coeff-box {
+      @apply bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-300 p-3 rounded-lg font-mono text-center;
+    }
+    .findings-box {
+      @apply bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg;
+    }
+    .limitations-box {
+      @apply bg-gradient-to-r from-yellow-50 to-red-50 border-l-4 border-yellow-500 p-4 rounded-r-lg;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#methods" class="nav-item whitespace-nowrap">研究方法</a>
+        <a href="#results" class="nav-item whitespace-nowrap">研究结果</a>
+        <a href="#discussion-conclusion" class="nav-item whitespace-nowrap">讨论与结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor's Impact on Software Projects
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">作者信息</strong>
+                <div class="text-lg">Hao He, Courtney Miller, Shyam Agarwal, Christian Kästner, Bogdan Vasilescu</div>
+                <div class="text-sm text-gray-600 mt-2">Carnegie Mellon University, Pittsburgh, Pennsylvania, USA</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">发表信息</strong>
+                <div>arXiv Preprint, November 7, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">论文标识</strong>
+                <div class="font-mono text-sm bg-white px-4 py-3 rounded border">arXiv:2511.04427v2</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">AI辅助编程</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">软件开发速度</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">代码质量</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">双重差分法</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">技术债务</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献 -->
+      <div class="findings-box mb-12">
+        <h4 class="font-bold text-green-700 text-xl mb-3 flex items-center">
+          <i class="fas fa-trophy mr-2"></i>核心研究贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700 text-base">
+          <li><strong>首次大规模实证研究</strong>：首次使用因果推断方法（双重差分法）研究了LLM智能体助手（Cursor）在真实开源项目中的长期影响。</li>
+          <li><strong>揭示速度与质量的复杂交互</strong>：发现Cursor的采用会带来显著但短暂的开发速度提升，同时伴随持续的技术债务积累。</li>
+          <li><strong>识别自我强化的循环</strong>：技术债务的积累会反过来降低未来的开发速度，形成自我强化的负向循环。</li>
+          <li><strong>提供项目级证据</strong>：将研究焦点从个体开发者生产力扩展到项目级别的开发速度和软件质量，填补了文献空白。</li>
+        </ul>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            大型语言模型（LLMs）已展现出革新软件工程领域的潜力。其中，LLM智能体助手（如Cursor）声称能带来数倍的生产力提升，但这些说法缺乏实证证据。本文通过一个先进的<strong>双重差分（DiD）</strong>设计，估计了采用流行的LLM智能体助手Cursor对<strong>开发速度和软件质量</strong>的因果效应。
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>研究发现：速度
+              </h4>
+              <p class="text-sm text-gray-700">Cursor的采用导致了显著、大幅但短暂的开发速度提升：在采用后的第一个月，项目添加的代码行数增加了3-5倍，但增益在两个月后消失。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>研究发现：质量
+              </h4>
+              <p class="text-sm text-gray-700">同时，作者观察到持续的技术债务积累：采用后，静态分析警告增加了30%，代码复杂度增加了41%。面板广义矩估计（GMM）模型显示，积累的技术债务会降低未来的开发速度。</p>
+            </div>
+          </div>
+          <p class="text-gray-700 leading-relaxed mt-6">
+            这项研究揭示了AI辅助编码的复杂图景：短暂的效率提升可能以长期的可维护性为代价，强调了在使用AI工具时，需要配套的、与速度相匹配的质量保证流程。
+          </p>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-robot mr-2 text-purple-500"></i>LLM智能体助手的兴起
+            </h3>
+            <p class="text-gray-700 mb-4">
+              不同于早期的代码补全工具（如GitHub Copilot），<strong>LLM智能体助手</strong>（如Cursor、Claude Code）代表了一个质的飞跃。它们紧密集成到IDE中，具备持久的代码库感知能力，可以自主导航文件、提出跨文件重构、执行命令并迭代调试代码。
+            </p>
+            <div class="tech-card bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200 mb-4">
+              <h4 class="font-bold text-purple-700 mb-2">架构差异：从辅助到自主</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <strong class="text-gray-700">早期工具（Copilot）：</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-600">
+                    <li>基于即时上下文建议单行</li>
+                    <li>处于工作流外围</li>
+                    <li>开发者保持主导和监督</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-gray-700">智能体助手（Cursor）：</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-600">
+                    <li>自主、目标导向的行为</li>
+                    <li>跨多文件理解和操作</li>
+                    <li>自动化整个工作流</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <p class="text-gray-700">
+              这种架构的根本性差异意味着，早期关于代码补全工具的研究发现（如安全漏洞、代码异味）可能无法直接推广到现代的智能体工具上。了解这些新工具对长期项目健康和开发效率的影响，是一个亟待解决的<strong>实证问题</strong>。
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-question-circle mr-2 text-blue-500"></i>研究问题（RQ）
+            </h3>
+            <div class="coeff-box text-lg font-semibold mb-4">
+              RQ: How does the adoption of LLM agent assistants impact project-level development velocity and software quality?
+            </div>
+            <p class="text-gray-700">
+              本研究旨在填补文献空白，通过因果推断方法，探究在真实开源项目中采用Cursor这类LLM智能体助手，对<strong>项目级开发速度</strong>和<strong>软件质量</strong>产生的纵向、因果性影响。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          研究挑战与方法学问题
+        </h2>
+        <div class="space-y-6">
+          <div class="limitations-box">
+            <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-brain mr-2"></i>核心研究挑战
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>因果识别困难</strong>：采用AI工具的项目（处理组）与不采用的项目（控制组）本身就存在系统性差异（如项目活跃度、团队规模）。简单地比较两组结果会存在<strong>选择偏差</strong>。</li>
+              <li><strong>混杂因素多</strong>：项目的发展速度和质量同时受许多因素影响（如技术栈、团队经验、行业趋势），需要剥离出工具本身的净效应。</li>
+              <li><strong>长期动态效应</strong>：AI工具的影响可能不是静态的。初期的生产力提升可能会引发后期的技术债务，影响需要时间才能显现。</li>
+              <li><strong>观测数据局限</strong>：在真实世界（而非实验室）中，无法精确控制谁用、何时用、如何用AI工具，只能通过观测数据进行推断。</li>
+            </ul>
+          </div>
+
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-cogs mr-2 text-green-500"></i>论文的解决方案：因果推断设计
+            </h3>
+            <p class="text-gray-700 mb-4">
+              为了应对上述挑战，论文作者采用了<strong>准实验设计</strong>——<strong>交错采用的双重差分法（Staggered Difference-in-Differences, DiD）</strong>。这是经济学和社科领域用于从观测数据中识别因果效应的成熟方法。
+            </p>
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3">双重差分（DiD）核心思想</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div class="p-3 bg-white rounded shadow">
+                  <div class="text-3xl font-bold text-blue-600 mb-2">1</div>
+                  <p class="text-sm">比较“处理组”（采用Cursor）在采用<strong>前后</strong>的变化</p>
+                </div>
+                <div class="p-3 bg-white rounded shadow">
+                  <div class="text-3xl font-bold text-blue-600 mb-2">2</div>
+                  <p class="text-sm">比较“控制组”（未采用）在<strong>相同时期</strong>的变化</p>
+                </div>
+                <div class="p-3 bg-white rounded shadow">
+                  <div class="text-3xl font-bold text-blue-600 mb-2">3</div>
+                  <p class="text-sm">计算两个变化的<strong>差异</strong>，即为工具的因果效应</p>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mt-4 text-center">该方法的威力在于，它控制了同时影响所有项目的共同趋势（如节假日效应、平台更新），从而分离出工具本身的影响。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="methods" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          研究方法
+        </h2>
+        
+        <!-- 方法概览 -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-project-diagram mr-2 text-purple-500"></i>研究流程概览
+          </h3>
+          <div class="architecture-placeholder bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300">
+            <div class="flex items-center justify-center mb-6">
+              <i class="fas fa-sitemap text-4xl text-blue-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700 text-xl">方法论架构</h6>
+            </div>
+            <!-- 流程步骤 -->
+            <div class="space-y-4">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                <div class="ml-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex-1">
+                  <strong class="text-blue-700">数据收集与识别：</strong> 扫描GitHub，通过查找.cursorrules配置文件，识别807个在2024.01-2025.03期间采用Cursor的开源项目。
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                <div class="ml-4 p-3 bg-green-50 rounded-lg border border-green-200 flex-1">
+                  <strong class="text-green-700">构建控制组：</strong> 使用<strong>倾向得分匹配（PSM）</strong>，从大量未采用Cursor的项目中，为每个处理组项目匹配3个相似的控制组项目（共1380个），确保两组在采用前的特征和趋势相似。
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                <div class="ml-4 p-3 bg-purple-50 rounded-lg border border-purple-200 flex-1">
+                  <strong class="text-purple-700">因果效应估计：</strong> 应用<strong>Borusyak et al. (2024) 估计器</strong>进行交错DiD分析，估计Cursor对速度和质量指标的平均处理效应（ATE）和动态效应。
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="flex-shrink-0 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold">4</div>
+                <div class="ml-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex-1">
+                  <strong class="text-yellow-700">动态交互分析：</strong> 使用<strong>面板广义矩估计（GMM）</strong>模型，检验速度提升与技术债务积累之间的因果关系和时间滞后效应。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 变量定义 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-tachometer-alt mr-2 text-green-500"></i>因变量：开发速度指标
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fas fa-code-commit text-green-600 mt-1 mr-3"></i>
+                <div>
+                  <strong class="text-gray-800">月提交数（Commits）</strong>
+                  <p class="text-sm text-gray-600">衡量项目活动频率。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-plus-circle text-green-600 mt-1 mr-3"></i>
+                <div>
+                  <strong class="text-gray-800">月新增代码行数（Lines Added）</strong>
+                  <p class="text-sm text-gray-600">衡量代码产出量，作为生产力的代理指标。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-clipboard-check mr-2 text-red-500"></i>因变量：软件质量指标
+            </h3>
+            <ul class="space-y-3">
+              <li class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-red-600 mt-1 mr-3"></i>
+                <div>
+                  <strong class="text-gray-800">静态分析警告数</strong>
+                  <p class="text-sm text-gray-600">使用SonarQube检测可靠性、可维护性、安全性问题。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-project-diagram text-red-600 mt-1 mr-3"></i>
+                <div>
+                  <strong class="text-gray-800">代码复杂度</strong>
+                  <p class="text-sm text-gray-600">认知复杂度，衡量代码理解难度。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-copy text-red-600 mt-1 mr-3"></i>
+                <div>
+                  <strong class="text-gray-800">重复代码行密度</strong>
+                  <p class="text-sm text-gray-600">重复代码的百分比。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 技术细节：DiD与GMM -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：双重差分（DiD）与广义矩估计（GMM）
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-calculator mr-2"></i>双重差分（DiD）核心模型
+              </h5>
+              <div class="bg-white p-4 rounded border font-mono text-sm md:text-base overflow-x-auto">
+                Y_it = α + β D_it + μ_i + λ_t + X'_it Γ + ε_it
+              </div>
+              <ul class="list-disc list-inside mt-3 text-sm md:text-base text-gray-700">
+                <li><strong>Y_it:</strong> 项目i在月份t的结果（如代码行数）。</li>
+                <li><strong>D_it:</strong> 处理指示变量（1=项目i在月份t已采用Cursor）。</li>
+                <li><strong>β:</strong> 我们关心的<strong>平均处理效应（ATE）</strong>。</li>
+                <li><strong>μ_i, λ_t:</strong> 项目固定效应和时间固定效应，用于控制不随时间变化的项目特征和共同时间趋势。</li>
+                <li><strong>X'_it:</strong> 时变协变量（如代码库大小、贡献者数量）。</li>
+              </ul>
+              <p class="text-sm text-gray-600 mt-3">通过比较处理组在采用前后的变化与控制组在相同时期的变化，β 估计了Cursor的“纯净”效应。</p>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-exchange-alt mr-2"></i>广义矩估计（GMM）模型：检验因果关系方向
+              </h5>
+              <p class="text-gray-700 mb-3">DiD只能估计A对B的效应。为了检验“速度提升 → 技术债务积累 → 未来速度下降”这一动态链条，需要使用能处理内生性的GMM模型。</p>
+              <div class="bg-white p-4 rounded border font-mono text-sm md:text-base overflow-x-auto">
+                Y_it = α + ρ Y_i,t-1 + β D_it + γ X_it + μ_i + λ_t + Z'_it Θ + ε_it
+              </div>
+              <p class="text-sm text-gray-600 mt-3">其中，X_it可能是内生的（如当前的代码行数可能受当前未观测因素影响）。GMM使用X的滞后值作为工具变量，来一致地估计γ，从而揭示X对Y的因果影响，反之亦然。</p>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <section id="results" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          研究结果
+        </h2>
+        
+        <!-- 主要结果表格 -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-table mr-2 text-blue-500"></i>平均处理效应（ATE）汇总
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">结果变量</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">估计系数 (β)</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标准误</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">显著性</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">实际变化百分比*</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">月提交数（Commits）</td>
+                  <td class="px-4 py-3 text-sm font-mono text-gray-800">0.0336</td>
+                  <td class="px-4 py-3 text-sm text-gray-800">(0.0425)</td>
+                  <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">不显著</span></td>
+                  <td class="px-4 py-3 text-sm text-gray-800">~+3.4%</td>
+                </tr>
+                <tr class="bg-green-50">
+                  <td class="px-4 py-3 text-sm font-medium text-green-900">月新增代码行（Lines Added）</td>
+                  <td class="px-4 py-3 text-sm font-mono text-green-800">0.2512</td>
+                  <td class="px-4 py-3 text-sm text-green-800">(0.1070)</td>
+                  <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">显著 (p<0.05)</span></td>
+                  <td class="px-4 py-3 text-sm font-bold text-green-800">+28.6%</td>
+                </tr>
+                <tr class="bg-red-50">
+                  <td class="px-4 py-3 text-sm font-medium text-red-900">静态分析警告（Warnings）</td>
+                  <td class="px-4 py-3 text-sm font-mono text-red-800">0.2598</td>
+                  <td class="px-4 py-3 text-sm text-red-800">(0.0509)</td>
+                  <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">显著 (p<0.001)</span></td>
+                  <td class="px-4 py-3 text-sm font-bold text-red-800">+29.7%</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">重复代码密度</td>
+                  <td class="px-4 py-3 text-sm font-mono text-gray-800">0.0782</td>
+                  <td class="px-4 py-3 text-sm text-gray-800">(0.0426)</td>
+                  <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">不显著</span></td>
+                  <td class="px-4 py-3 text-sm text-gray-800">~+8.1%</td>
+                </tr>
+                <tr class="bg-red-50">
+                  <td class="px-4 py-3 text-sm font-medium text-red-900">代码复杂度（Complexity）</td>
+                  <td class="px-4 py-3 text-sm font-mono text-red-800">0.3415</td>
+                  <td class="px-4 py-3 text-sm text-red-800">(0.0526)</td>
+                  <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">显著 (p<0.001)</span></td>
+                  <td class="px-4 py-3 text-sm font-bold text-red-800">+40.7%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-500 mt-4">* 变化百分比 = 100 × (e^β - 1)%，基于对数变换模型。</p>
+        </div>
+
+        <!-- 关键发现 1 & 2 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div class="findings-box p-6">
+            <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-bolt mr-2"></i>研究发现 1：短暂的开发速度增益
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>动态效应分析</strong>显示，速度增益仅集中在前两个月。</li>
+              <li><strong>第一个月</strong>：代码行数增加 <span class="font-bold text-green-700">281.3%</span>，提交数增加 <span class="font-bold text-green-700">55.4%</span>。</li>
+              <li><strong>第二个月</strong>：代码行数增加 <span class="font-bold text-green-700">48.4%</span>，提交数增加 <span class="font-bold text-green-700">14.5%</span>。</li>
+              <li><strong>两个月后</strong>：速度恢复到采用前的基线水平。</li>
+            </ul>
+            <p class="text-gray-600 text-sm mt-4">这意味着，<strong>AI带来的“生产力爆发”是短期的</strong>，而非持续的线性提升。</p>
+          </div>
+          <div class="limitations-box p-6">
+            <h4 class="font-bold text-red-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>研究发现 2：持续的技术债务积累
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>与速度不同，<strong>代码质量问题在采用后持续存在</strong>，并未随时间消退。</li>
+              <li>静态分析警告持续增加约 <span class="font-bold text-red-700">30%</span>。</li>
+              <li>代码复杂度持续增加约 <span class="font-bold text-red-700">41%</span>。</li>
+              <li>重复代码密度变化不显著，表明问题主要在于复杂性和缺陷，而非简单复制。</li>
+            </ul>
+            <p class="text-gray-600 text-sm mt-4">这表明，<strong>AI辅助开发可能将“速度债”转化为了“质量债”</strong>，并积累在代码库中。</p>
+          </div>
+        </div>
+
+        <!-- 关键发现 3：GMM交互结果 -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-retweet mr-2 text-purple-500"></i>研究发现 3：速度与质量的因果链条
+          </h3>
+          <p class="text-gray-700 mb-6">
+            面板GMM模型揭示了速度与质量指标之间的动态因果关系，回答了“为什么速度增益是短暂的？”这一问题。
+          </p>
+          
+          <div class="performance-chart-placeholder bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 mb-6">
+            <div class="flex items-center justify-center mb-6">
+              <i class="fas fa-chart-network text-4xl text-purple-500 mr-3"></i>
+              <h6 class="font-semibold text-gray-700 text-xl">因果路径与效应强度</h6>
+            </div>
+            <div class="space-y-6">
+              <div class="bg-white p-4 rounded-lg shadow border">
+                <div class="flex items-center mb-2">
+                  <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                  <strong class="text-gray-800">路径 A：速度 → 质量？</strong>
+                </div>
+                <p class="text-sm text-gray-700 mb-2">控制代码库规模增长后，<strong>开发速度的提升本身并不会直接导致更多的警告或复杂度增加</strong>。这意味着，质量下降并非单纯因为“写得更快”。</p>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow border">
+                <div class="flex items-center mb-2">
+                  <div class="w-3 h-3 rounded-full bg-red-500 mr-3"></div>
+                  <strong class="text-gray-800">路径 B：质量 → 未来速度？</strong>
+                </div>
+                <p class="text-sm text-gray-700 mb-2">这是关键发现：<strong>技术债务会显著拖慢未来的开发</strong>。</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-center">
+                  <div class="p-3 bg-red-50 rounded">
+                    <div class="text-2xl font-bold text-red-700 mb-1">-50.3%</div>
+                    <p class="text-xs text-gray-600">静态分析警告增加100%，导致下月代码行数减少</p>
+                  </div>
+                  <div class="p-3 bg-red-50 rounded">
+                    <div class="text-2xl font-bold text-red-700 mb-1">-64.5%</div>
+                    <p class="text-xs text-gray-600">代码复杂度增加100%，导致下月代码行数减少</p>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow border">
+                <div class="flex items-center mb-2">
+                  <div class="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                  <strong class="text-gray-800">路径 C：Cursor的直接影响</strong>
+                </div>
+                <p class="text-sm text-gray-700">即使控制所有动态因素，Cursor的采用仍直接导致<strong>代码复杂度增加9.0%</strong>。这表明AI生成的代码可能<strong>天生就更复杂</strong>。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="coeff-box">
+            <strong>核心循环：</strong> Cursor采用 → <span class="text-green-700">(短期)速度大幅提升</span> + <span class="text-red-700">(直接)代码复杂度增加</span> → <span class="text-red-700">技术债务积累</span> → <span class="text-red-700">未来速度下降</span> → 抵消初期增益。
+          </div>
+        </div>
+
+        <!-- 图像占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-image mr-2"></i>技术细节：动态处理效应图
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 动态处理效应估计 (事件研究图)
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图示意</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2：动态处理效应图，横轴为相对于Cursor采用月份的月份数（-6到+6），纵轴为处理效应大小（对数尺度）。图中显示Lines Added在0和+1月有高峰然后回落，而Static Analysis Warnings和Code Complexity在0月后持续处于正效应区间。" class="max-w-full h-auto rounded-lg mx-auto">
+                <p class="text-xs text-gray-500 mt-4">（注：此处为原图示意，实际分析需查看论文原文或复现包）</p>
+              </div>
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 估计的动态处理效应（采用前后6个月）。所有结果变量均为对数转换。估计使用Borusyak et al. (2024)估计器。第-1月被省略作为反事实基线。阴影区域表示95%置信区间。
+              </div>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>平行趋势检验：</strong> 在采用前（-6至-2月），处理组和控制组的趋势没有显著差异（效应围绕0波动），这支持了DiD的核心假设。</li>
+                <li><strong>速度的瞬态性：</strong> “Lines Added”的效应在采用当月（0）和下月（+1）达到顶峰，之后迅速衰减并变得不显著。</li>
+                <li><strong>质量的持续性：</strong> “Static Analysis Warnings”和“Code Complexity”的效应在采用后立即变为正数，并在整个观察的后6个月内保持显著为正，表明质量影响是持续的。</li>
+                <li><strong>效应异质性：</strong> 论文的稳健性检查（图2的Row 2-4）显示，对于持续使用Cursor的项目，这些效应（尤其是质量下降）更加明显。</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <section id="discussion-conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          讨论、局限性与结论
+        </h2>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-comments mr-2 text-green-500"></i>讨论：如何解释这些发现？
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-bold text-gray-800 mb-3">1. 为什么速度增益是短暂的？</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>新奇效应与实验：</strong> 开发者初期在AI擅长的任务（如原型构建）上积极尝试，带来爆发式产出。</li>
+                <li><strong>挫折与弃用：</strong> 当遇到AI不擅长的复杂任务（如调试、理解现有代码）时，验证和修复AI代码的认知开销可能导致工具使用减少或完全弃用。</li>
+                <li><strong>技术债务的反噬：</strong> 如GMM模型所示，积累的复杂度和缺陷直接拖慢了后续开发。</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-bold text-gray-800 mb-3">2. AI生成的代码天生更复杂吗？</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>证据表明是的。即使控制速度，Cursor仍直接导致复杂度增加。</li>
+                <li>可能原因：LLM的训练目标侧重于通过测试或功能正确性，而非代码简洁性、可读性。</li>
+                <li>这引入了“理解税”，增加了长期维护成本。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="mt-6">
+            <h4 class="font-bold text-gray-800 mb-3">3. 对实践的启示</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="tech-card bg-blue-50 p-4">
+                <h5 class="font-bold text-blue-700 mb-2"><i class="fas fa-tools mr-1"></i>过程适配</h5>
+                <p class="text-sm">需要<strong>与AI速度相匹配的质量保证流程</strong>，如基于质量度量的重构冲刺、强制测试覆盖率。</p>
+              </div>
+              <div class="tech-card bg-green-50 p-4">
+                <h5 class="font-bold text-green-700 mb-2"><i class="fas fa-edit mr-1"></i>工具设计</h5>
+                <p class="text-sm">下一代AI助手应成为“质量结对程序员”，而不仅仅是代码生成器，需实时标记复杂度、建议重构。</p>
+              </div>
+              <div class="tech-card bg-purple-50 p-4">
+                <h5 class="font-bold text-purple-700 mb-2"><i class="fas fa-code mr-1"></i>代码审查</h5>
+                <p class="text-sm">团队应将AI生成代码视为需要额外审查，特别关注是否存在更简单的等效实现。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 局限性 -->
+        <div class="limitations-box mb-8">
+          <h4 class="font-bold text-yellow-700 text-xl mb-4 flex items-center">
+            <i class="fas fa-clipboard-list mr-2"></i>研究的局限性
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 class="font-semibold text-gray-800 mb-2">内部效度威胁</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li><strong>观测到的采用：</strong> 只捕捉到提交了Cursor配置文件的仓库。未提交配置的用户行为未知。</li>
+                <li><strong>使用强度未知：</strong> 有配置文件不代表持续高强度使用。研究估计的是“意向处理（ITT）”效应。</li>
+                <li><strong>控制组污染：</strong> 控制组项目也可能使用其他AI工具（如Copilot），这会使估计效应相对于“完全不用AI”的真实效应偏小。</li>
+                <li><strong>残留混杂：</strong> 尽管匹配和固定效应控制了许多因素，但无法完全排除不可观测的混杂（如团队文化、开发者技能）。</li>
+              </ul>
+            </div>
+            <div>
+              <h5 class="font-semibold text-gray-800 mb-2">外部效度威胁</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li><strong>上下文特定：</strong> 研究基于开源项目（GitHub，≥10 stars）。企业环境（有强制代码审查、QA团队）的结果可能不同。</li>
+                <li><strong>工具特定：</strong> 结论基于Cursor，其他LLM智能体助手可能表现不同。</li>
+                <li><strong>语言偏差：</strong> 样本主要为TypeScript、Python、JavaScript项目。</li>
+                <li><strong>快速演变的领域：</strong> 研究涵盖2024-2025年，LLM能力和工具本身在飞速改进，结论可能随时间变化。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 结论 -->
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500 p-6 rounded-r-lg">
+          <h3 class="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
+            <i class="fas fa-flag-checkered mr-3"></i>结论
+          </h3>
+          <p class="text-gray-700 mb-4 leading-relaxed">
+            本研究首次通过严谨的因果推断方法，提供了LLM智能体助手在真实软件项目中长期影响的大规模实证证据。研究发现，<strong>AI辅助编码并非纯粹的生产力福音</strong>，而是一个包含<strong>短期增益</strong>和<strong>长期代价</strong>的复杂权衡。
+          </p>
+          <div class="coeff-box text-center text-lg font-semibold my-6">
+            Cursor的采用导致：显著但短暂的开发速度提升 + 持续的技术债务积累 → 后者抑制未来速度。
+          </div>
+          <p class="text-gray-700">
+            这揭示了一个<strong>自我强化的循环</strong>，其中初始的生产力激增可能为未来的维护负担埋下种子。要真正实现AI辅助软件开发的潜力，业界和学术界需要共同关注如何设计工具和流程，在利用AI的速度优势的同时，<strong>将质量保证提升为同等重要的设计目标</strong>。这项研究标志着我们从对AI生产力的“盲目乐观”或“全盘否定”，迈向了更细致、更基于证据的理解阶段。
+          </p>
+        </div>
+      </section>
+
+      <!-- 给“博士生”的总结 -->
+      <div class="bg-gradient-to-r from-pink-50 to-orange-50 border-l-4 border-pink-500 p-6 rounded-r-lg mt-12">
+        <h3 class="text-2xl font-bold text-pink-800 mb-4 flex items-center">
+          <i class="fas fa-user-graduate mr-3"></i>费曼教授给博士生的一页纸总结
+        </h3>
+        <div class="space-y-4 text-gray-700">
+          <p><strong>这篇论文研究了一个简单但重要的问题：</strong> 用AI（具体是Cursor这个智能编程助手）写代码，到底能不能让项目变得更快更好？</p>
+          <p><strong>他们怎么研究的？</strong> 不像很多实验室小实验，作者们在真实世界（GitHub）里找了800多个用了Cursor的开源项目，又用统计方法配了1300多个没用Cursor但很像的项目作为对比组。然后他们像医生做药物试验一样，比较这两组项目在用Cursor<strong>之前和之后</strong>的变化差异。这个方法叫“双重差分”，能尽量排除其他干扰，看到Cursor本身的“药效”。</p>
+          <p><strong>发现了什么？</strong>
+            <ul class="list-disc list-inside ml-4 space-y-2">
+              <li><strong>好消息（但很短）：</strong> 刚用Cursor的头两个月，项目写代码的速度（特别是代码行数）暴增了3-5倍！</li>
+              <li><strong>坏消息（且持久）：</strong> 但同时，代码的“毛病”（静态分析警告）多了30%，代码变得更“绕”、更难看懂（复杂度高了41%）。而且，这些质量问题<b>不会随时间消失</b>。</li>
+              <li><strong>更坏的消息：</strong> 那些积累起来的“代码毛病”和“绕来绕去的复杂度”，会像债务一样，<strong>反过来让项目未来的开发速度变慢</strong>。这就形成了一个恶性循环：AI让你写得快 → 代码质量变差 → 未来改代码、加功能变慢 → 抵消了最初的速度优势。</li>
+            </ul>
+          </p>
+          <p><strong>核心结论：</strong> AI辅助编码不是魔法。它能带来短期的生产力爆发，但如果不加管理，会以牺牲长期的代码健康和维护性为代价。要想用好AI，开发团队必须配套加强代码审查、测试和重构，<strong>让质量追赶速度</strong>。</p>
+          <p><strong>对你（博士生）的启发：</strong> 做研究要关注真实世界的长期效应。评价一个技术（比如AI），不能只看它当下多“炫酷”或短期多“高效”，必须看它引入系统后，如何改变整个系统的动态平衡和长期演进。这需要巧妙的研究设计（如这里的因果推断）和耐心。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，旨在可视化讲解论文核心思想，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

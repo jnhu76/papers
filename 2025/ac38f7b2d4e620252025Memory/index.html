@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory in the Age of AI Agents: A Survey - 深度解析</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100 font-medium;
+    }
+    details > summary {
+      list-style: none;
+    }
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen text-gray-800">
+
+  <nav class="nav-scroll bg-white/95 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200 shadow-sm">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-2 md:space-x-6 hide-scrollbar items-center">
+        <a href="#abstract" class="nav-item whitespace-nowrap"><i class="fas fa-file-alt mr-2"></i>摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap"><i class="fas fa-layer-group mr-2"></i>背景与辨析</a>
+        <a href="#forms" class="nav-item whitespace-nowrap"><i class="fas fa-shapes mr-2"></i>记忆形式</a>
+        <a href="#functions" class="nav-item whitespace-nowrap"><i class="fas fa-cogs mr-2"></i>记忆功能</a>
+        <a href="#dynamics" class="nav-item whitespace-nowrap"><i class="fas fa-sync-alt mr-2"></i>动态机制</a>
+        <a href="#frontiers" class="nav-item whitespace-nowrap"><i class="fas fa-rocket mr-2"></i>前沿与挑战</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap"><i class="fas fa-flag-checkered mr-2"></i>结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-6 md:p-10">
+      
+      <div class="mb-12 md:mb-16 border-b pb-8 border-gray-200">
+        <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight text-center md:text-left">
+          Memory in the Age of AI Agents: A Survey
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 p-6 rounded-r-lg shadow-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-800 block mb-1 text-sm uppercase tracking-wide">核心作者团队</strong>
+                <div class="text-lg font-medium">Yuyang Hu, Shichun Liu, et al.</div>
+                <div class="text-sm text-gray-600 mt-1">Renmin University of China, National University of Singapore, Fudan University 等联合出品</div>
+              </div>
+              <div>
+                <strong class="text-blue-800 block mb-1 text-sm uppercase tracking-wide">发布信息</strong>
+                <div class="flex items-center">
+                  <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded text-sm font-mono mr-3">arXiv:2512.13564v1</span>
+                  <span class="text-sm text-gray-500">15 Dec 2025</span>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-800 block mb-1 text-sm uppercase tracking-wide">研究领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">AI Agents</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">Memory Systems</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">LLMs</span>
+                  <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-semibold">Cognitive Architecture</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-800 block mb-1 text-sm uppercase tracking-wide">核心贡献</strong>
+                <div class="text-sm">提出了基于形式(Forms)、功能(Functions)和动态(Dynamics)的Agent记忆统一分类法。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 mb-12 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <i class="fas fa-robot text-amber-600 text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                AI 辅助解析
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              本文档由人工智能辅助生成，旨在为初学者提供该学术论文的结构化导读。内容基于论文原文 [arXiv:2512.13564v1] 进行逻辑重组与可视化呈现。请以原始论文为最终依据。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <section id="abstract" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-blue-100 text-blue-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-file-alt"></i>
+          </span>
+          摘要：记忆是Agent的基石
+        </h2>
+        
+        <div class="prose max-w-none text-gray-600 mb-8">
+          <p class="text-lg leading-relaxed">
+            虽然大语言模型（LLM）能力强大，但它们本质上是“健忘”的。为了实现通用人工智能（AGI），Agent必须具备<strong>长期推理、持续适应和有效交互</strong>的能力，这一切都依赖于记忆。当前的Agent记忆研究非常碎片化，术语混乱。本文提出了一个全新的分类体系，从<strong>形式（Forms）、功能（Functions）和动态（Dynamics）</strong>三个维度重新定义了Agent记忆系统。
+          </p>
+        </div>
+
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-lg shadow-sm">
+          <h4 class="font-bold text-green-800 mb-4 flex items-center text-lg">
+            <i class="fas fa-trophy mr-3"></i>论文核心贡献
+          </h4>
+          <ul class="space-y-3 text-gray-700">
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+              <span><strong>统一分类法：</strong> 提出了 Forms-Functions-Dynamics 三角分类模型，解决了领域内定义混乱的问题。</span>
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+              <span><strong>系统性综述：</strong> 详细梳理了Token级、参数化、潜在记忆三种形式，以及事实、经验、工作记忆三种功能。</span>
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+              <span><strong>未来展望：</strong> 指出了从检索式记忆向生成式记忆转变，以及RL（强化学习）驱动的自动化记忆管理的趋势。</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-16 border border-gray-200">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-800 hover:text-blue-600 transition-colors py-2 flex items-center">
+          <i class="fas fa-map mr-3 text-blue-500"></i>技术概览：Agent记忆全景图 (Figure 1)
+          <span class="ml-auto text-xs text-gray-400 font-normal">点击展开详情</span>
+        </summary>
+        
+        <div class="mt-6 space-y-6">
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: Overview of agent memory
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            <div class="image-placeholder bg-gray-50 p-4 rounded-lg text-center">
+              <img src="./images/fig1.png" alt="Figure 1: Agent Memory Taxonomy Overview" class="max-w-full h-auto rounded shadow-sm mx-auto">
+            </div>
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-100">
+              <strong>图注解析:</strong> 该图展示了Agent记忆的三维空间。底座是<strong>形式(Forms)</strong>（Token级、参数化、潜在）；纵向切片是<strong>功能(Functions)</strong>（事实、经验、工作）；上方连接线展示了<strong>动态(Dynamics)</strong>过程（如上下文压缩、经验内化、KV生成）。这是一个理解全文结构的地图。
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <section id="background-motivation" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-layer-group"></i>
+          </span>
+          背景与概念辨析
+        </h2>
+
+        <div class="bg-blue-50 p-6 rounded-lg mb-8 border border-blue-100">
+          <h3 class="font-bold text-blue-800 mb-4 text-lg">什么是Agent记忆？</h3>
+          <p class="text-gray-700 mb-4">
+            Agent记忆不仅仅是数据库。它是使Agent能够从过去的交互中学习、保持行为一致性并在复杂环境中进行长期规划的认知基质。
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-2 border-b pb-2">❌ 传统的 RAG</h4>
+              <p class="text-sm text-gray-600">主要关注从静态知识库中检索信息以回答单次查询。它是只读的，不随交互进化。</p>
+            </div>
+            <div class="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
+              <h4 class="font-bold text-gray-800 mb-2 border-b pb-2">✅ Agent Memory</h4>
+              <p class="text-sm text-gray-600">关注在多轮交互中维护一个<strong>持久的、自我进化的</strong>认知状态。它会记录经验、更新事实，并改变未来的行为。</p>
+            </div>
+          </div>
+        </div>
+
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 border border-gray-200">
+          <summary class="cursor-pointer font-semibold text-gray-800 hover:text-indigo-600 transition-colors py-2 flex items-center">
+            <i class="fas fa-project-diagram mr-3 text-indigo-500"></i>技术细节：Agent Memory vs LLM Memory vs RAG (Figure 2)
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700"><i class="fas fa-image mr-2 text-indigo-500"></i>原图 2: Conceptual Comparison</h5>
+                <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gray-50 p-4 rounded-lg text-center">
+                <img src="./images/fig2.png" alt="Figure 2: Venn Diagram comparison" class="max-w-full h-auto rounded mx-auto">
+              </div>
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>核心差异:</strong> 
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                  <li><strong>LLM Memory:</strong> 关注模型内部架构优化（如KV Cache压缩）。</li>
+                  <li><strong>RAG:</strong> 关注静态外部知识的检索。</li>
+                  <li><strong>Context Engineering:</strong> 关注瞬时上下文窗口的资源管理。</li>
+                  <li><strong>Agent Memory:</strong> 包含了上述技术的交集，但独特之处在于<strong>持久性</strong>和<strong>自我进化</strong>。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="forms" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-purple-100 text-purple-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-shapes"></i>
+          </span>
+          记忆形式：存储介质是什么？
+        </h2>
+        
+        <p class="text-gray-600 mb-6 text-lg">
+          这回答了“记忆存在哪里”的问题。论文将记忆的物理载体分为三类：
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-3 text-blue-600">
+              <i class="fas fa-align-left text-2xl mr-3"></i>
+              <h3 class="font-bold text-lg">1. Token-level Memory</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">以自然语言或离散符号形式存储在外部数据库中。最常见、可读性最强。</p>
+            <div class="bg-gray-50 p-3 rounded text-xs space-y-2">
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-400 mr-2"></span><strong>扁平 (Flat):</strong> 列表、对话日志 (MemGPT)。</div>
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span><strong>平面 (Planar):</strong> 知识图谱、树状结构。</div>
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-blue-600 mr-2"></span><strong>层级 (Hierarchical):</strong> 多层摘要金字塔 (GraphRAG)。</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-3 text-green-600">
+              <i class="fas fa-brain text-2xl mr-3"></i>
+              <h3 class="font-bold text-lg">2. Parametric Memory</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">将知识内化到模型权重中。类似于人类的“本能”或“肌肉记忆”。</p>
+            <div class="bg-gray-50 p-3 rounded text-xs space-y-2">
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-green-400 mr-2"></span><strong>内部参数:</strong> 通过微调(SFT)直接修改模型。</div>
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span><strong>外部参数:</strong> 使用LoRA或Adapter模块存储特定记忆。</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+            <div class="flex items-center mb-3 text-purple-600">
+              <i class="fas fa-microchip text-2xl mr-3"></i>
+              <h3 class="font-bold text-lg">3. Latent Memory</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">以连续向量或KV Cache形式存在。机器原生语言，信息密度极高。</p>
+            <div class="bg-gray-50 p-3 rounded text-xs space-y-2">
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-purple-400 mr-2"></span><strong>生成式:</strong> 压缩成 summary vectors。</div>
+              <div class="flex items-center"><span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span><strong>复用式:</strong> 直接保存 KV Cache 状态。</div>
+            </div>
+          </div>
+        </div>
+
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 border border-gray-200">
+          <summary class="cursor-pointer font-semibold text-gray-800 hover:text-purple-600 transition-colors py-2 flex items-center">
+            <i class="fas fa-sitemap mr-3 text-purple-500"></i>技术细节：Token-level 记忆的拓扑结构 (Figure 3)
+          </summary>
+          <div class="mt-6 space-y-6">
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">原图 3: Taxonomy of token-level memory</h5>
+                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gray-50 p-4 rounded-lg text-center">
+                <img src="./images/fig3.png" alt="Figure 3: Token-level memory structures" class="max-w-full h-auto rounded mx-auto">
+              </div>
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>结构演进:</strong>
+                <ul class="list-disc list-inside mt-2">
+                  <li><strong>1D (Flat):</strong> 像流水账，简单序列。优点是容易追加，缺点是检索困难。</li>
+                  <li><strong>2D (Planar):</strong> 像思维导图，引入Graph/Tree结构，支持关系跳转。</li>
+                  <li><strong>3D (Hierarchical):</strong> 像图书馆索引，多层级抽象。底层是细节，高层是摘要。支持从宏观到微观的推理。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="functions" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-green-100 text-green-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-cogs"></i>
+          </span>
+          记忆功能：用来做什么？
+        </h2>
+
+        <p class="text-gray-600 mb-6 text-lg">
+          这回答了“为什么需要记忆”的问题。论文超越了简单的“长期/短期”二分法，提出了更细粒度的功能分类。
+        </p>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+            <div class="p-6 hover:bg-green-50 transition-colors">
+              <div class="flex items-center mb-4 text-green-700">
+                <i class="fas fa-book text-2xl mr-3"></i>
+                <h3 class="font-bold text-lg">事实记忆 (Factual)</h3>
+              </div>
+              <p class="text-sm text-gray-600 mb-4"><strong>"Agent知道什么？"</strong></p>
+              <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                <li><strong>用户事实:</strong> 用户的喜好、身份、历史承诺。保证对话的一致性。</li>
+                <li><strong>环境事实:</strong> 世界知识、文档状态。保证对世界的认知准确。</li>
+                <li><span class="text-xs bg-gray-200 px-2 py-0.5 rounded">类比：陈述性记忆</span></li>
+              </ul>
+            </div>
+
+            <div class="p-6 hover:bg-blue-50 transition-colors">
+              <div class="flex items-center mb-4 text-blue-700">
+                <i class="fas fa-flask text-2xl mr-3"></i>
+                <h3 class="font-bold text-lg">经验记忆 (Experiential)</h3>
+              </div>
+              <p class="text-sm text-gray-600 mb-4"><strong>"Agent如何改进？"</strong></p>
+              <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                <li><strong>案例 (Cases):</strong> 过去的成功/失败轨迹。</li>
+                <li><strong>策略 (Strategies):</strong> 从经验中提炼的高级工作流。</li>
+                <li><strong>技能 (Skills):</strong> 可执行的代码或API调用序列。</li>
+                <li><span class="text-xs bg-gray-200 px-2 py-0.5 rounded">类比：程序性记忆</span></li>
+              </ul>
+            </div>
+
+            <div class="p-6 hover:bg-red-50 transition-colors">
+              <div class="flex items-center mb-4 text-red-700">
+                <i class="fas fa-chalkboard text-2xl mr-3"></i>
+                <h3 class="font-bold text-lg">工作记忆 (Working)</h3>
+              </div>
+              <p class="text-sm text-gray-600 mb-4"><strong>"Agent正在思考什么？"</strong></p>
+              <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                <li><strong>任务内管理:</strong> 在单次任务中维护上下文。</li>
+                <li><strong>上下文折叠:</strong> 压缩长历史，保留关键状态。</li>
+                <li><strong>认知规划:</strong> 当前的行动计划和草稿。</li>
+                <li><span class="text-xs bg-gray-200 px-2 py-0.5 rounded">类比：大脑的工作台</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 border border-gray-200">
+          <summary class="cursor-pointer font-semibold text-gray-800 hover:text-green-600 transition-colors py-2 flex items-center">
+            <i class="fas fa-project-diagram mr-3 text-green-500"></i>技术细节：功能分类体系 (Figure 6)
+          </summary>
+          <div class="mt-6">
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">原图 6: Functional taxonomy</h5>
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gray-50 p-4 rounded-lg text-center">
+                <img src="./images/fig6.png" alt="Figure 6: Functional taxonomy" class="max-w-full h-auto rounded mx-auto">
+              </div>
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                <strong>解释:</strong> 图中展示了三类记忆如何相互作用。事实记忆提供知识库，经验记忆提供技能进化的路径，而工作记忆是处理当前任务的动态暂存区。
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="dynamics" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-orange-100 text-orange-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-sync-alt"></i>
+          </span>
+          动态机制：记忆如何运转？
+        </h2>
+
+        <div class="space-y-8">
+          <div class="flex flex-col md:flex-row gap-6 items-start">
+            <div class="flex-shrink-0 w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl">1</div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-800 mb-2">记忆形成 (Formation)</h3>
+              <p class="text-gray-600 mb-3">如何从原始数据中提取有价值的信息？</p>
+              <div class="bg-white border border-gray-200 p-4 rounded-lg">
+                <ul class="space-y-2 text-sm">
+                  <li><strong class="text-blue-700">语义摘要:</strong> 将长文本压缩成概要 (如 MemGPT)。</li>
+                  <li><strong class="text-blue-700">知识蒸馏:</strong> 提取特定的事实三元组或经验规则。</li>
+                  <li><strong class="text-blue-700">结构化构建:</strong> 建立知识图谱或层级树。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col md:flex-row gap-6 items-start">
+            <div class="flex-shrink-0 w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-xl">2</div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-800 mb-2">记忆演化 (Evolution)</h3>
+              <p class="text-gray-600 mb-3">如何维护记忆库，使其保持准确和高效？</p>
+              <div class="bg-white border border-gray-200 p-4 rounded-lg">
+                <ul class="space-y-2 text-sm">
+                  <li><strong class="text-purple-700">合并 (Consolidation):</strong> 将碎片信息融合成一般性见解。</li>
+                  <li><strong class="text-purple-700">更新 (Updating):</strong> 解决新旧信息冲突，修正错误。</li>
+                  <li><strong class="text-purple-700">遗忘 (Forgetting):</strong> 基于时间或重要性修剪冗余信息。</li>
+                </ul>
+              </div>
+              <div class="mt-4">
+                <img src="./images/fig9.png" alt="Figure 9: Memory Evolution" class="w-full h-auto rounded border border-gray-200 p-1">
+                <p class="text-xs text-center text-gray-500 mt-1">Figure 9: 记忆演化机制全景</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col md:flex-row gap-6 items-start">
+            <div class="flex-shrink-0 w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-xl">3</div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-800 mb-2">记忆检索 (Retrieval)</h3>
+              <p class="text-gray-600 mb-3">如何在正确的时间找到正确的信息？</p>
+              <div class="bg-white border border-gray-200 p-4 rounded-lg">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <strong class="block text-green-700 mb-1">何时检索？</strong>
+                    <span class="text-gray-600">从被动触发转向Agent主动决定(Timing & Intent)。</span>
+                  </div>
+                  <div>
+                    <strong class="block text-green-700 mb-1">如何查询？</strong>
+                    <span class="text-gray-600">查询重写(Rewriting)与分解(Decomposition)。</span>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <strong class="block text-green-700 mb-1">检索策略</strong>
+                    <span class="text-gray-600">从简单的关键词匹配(Lexical)进化到语义(Semantic)及图搜索(Graph)，甚至混合检索。</span>
+                  </div>
+                </div>
+              </div>
+              
+              <details class="technical-details mt-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <summary class="cursor-pointer text-sm font-semibold text-gray-700 hover:text-green-600">
+                  <i class="fas fa-search mr-2"></i>查看检索流程分类图 (Figure 10)
+                </summary>
+                <div class="mt-3 text-center">
+                  <img src="./images/fig10.png" alt="Figure 10: Retrieval Taxonomy" class="max-w-full h-auto rounded">
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="frontiers" class="content-section mobile-optimized mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-red-100 text-red-600 w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-rocket"></i>
+          </span>
+          前沿趋势与未来挑战
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-magic text-purple-500 mr-2"></i>
+              从“检索”到“生成”
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              传统的RAG是“查找并粘贴”。未来的Agent将采用<strong>生成式记忆(Generative Memory)</strong>，即Agent不只是检索原始片段，而是根据当前上下文动态合成或重构出最相关的记忆表示。这更像人类的记忆重建过程。
+            </p>
+          </div>
+
+          <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-robot text-blue-500 mr-2"></i>
+              RL驱动的记忆管理
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              目前的记忆规则（如什么该存、什么该忘）多是人工设计的启发式规则。未来将通过<strong>强化学习(Reinforcement Learning)</strong>让Agent自己学会管理记忆，形成完全端到端优化的记忆策略 (Figure 11)。
+            </p>
+          </div>
+
+          <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-users text-green-500 mr-2"></i>
+              多模态与多Agent共享
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              Agent不仅处理文本，还要处理视觉、音频。此外，多Agent协作需要高效的<strong>共享记忆(Shared Memory)</strong>机制，实现集体智能，同时解决读写冲突和隐私问题。
+            </p>
+          </div>
+
+          <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-shield-alt text-red-500 mr-2"></i>
+              可信记忆 (Trustworthy)
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              Agent记忆可能泄露隐私或产生幻觉。未来的系统必须具备<strong>可解释性</strong>（知道为什么记住了这个）和<strong>安全性</strong>（可遗忘权、访问控制）。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="conclusion" class="content-section mobile-optimized mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center border-b pb-4 border-gray-100">
+          <span class="bg-gray-800 text-white w-10 h-10 rounded-lg flex items-center justify-center mr-4 text-lg">
+            <i class="fas fa-flag-checkered"></i>
+          </span>
+          结论
+        </h2>
+        <div class="bg-gray-50 p-6 rounded-lg border-l-4 border-gray-800">
+          <p class="text-gray-700 text-lg font-medium mb-4">
+            "记忆不是辅助性的存储机制，而是Agent实现时间一致性、持续适应和长程能力的基质。"
+          </p>
+          <p class="text-gray-600 leading-relaxed">
+            本文通过统一的分类法（形式、功能、动态）整理了碎片化的研究领域。我们正处于一个转折点：从静态的LLM转向具备自我进化能力的Agent。记忆系统的设计将决定这一转变的成败。未来的方向是<strong>完全可学习、自组织、多模态</strong>的记忆系统。
+          </p>
+        </div>
+      </section>
+
+      <div class="mt-12 pt-8 border-t border-gray-200 text-center">
+        <p class="text-gray-500 text-sm mb-4">
+          <i class="fas fa-table mr-2"></i>本文整理了详尽的 Benchmark (Table 8) 和 开源框架 (Table 9) 列表，建议研究者查阅原文附录。
+        </p>
+        <a href="#" class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors font-medium">
+          <i class="fas fa-external-link-alt mr-2"></i>
+          查看 GitHub 资源列表 (Github: Agent-Memory-Paper-List)
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      // 滚动监听高亮导航
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          if (window.scrollY >= (sectionTop - 150)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          if (targetSection) {
+            window.scrollTo({
+              top: targetSection.offsetTop - 100,
+              behavior: 'smooth'
+            });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

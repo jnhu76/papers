@@ -1,0 +1,10 @@
+{
+  "id": "a7c3e9b1f2042023FastLane",
+  "title": "The FastLanes Compression Layout: Decoding >100 Billion Integers per Second with Scalar Code",
+  "authors": ["Azim Afroozeh", "Peter Boncz"],
+  "year": 2023,
+  "conference": "PVLDB",
+  "category": "数据库系统",
+  "keywords": ["数据压缩", "SIMD", "列式存储", "向量化执行", "轻量级压缩", "位打包", "解码性能"],
+  "abstract": "The open-source FastLanes project aims to improve big data formats, such as Parquet, ORC and columnar database formats, in multiple ways. In this paper, we significantly accelerate decoding of all common Light-Weight Compression (LWC) schemes: DICT, FOR, DELTA and RLE through better data-parallelism. We do so by re-designing the compression layout using two main ideas: (i) generalizing the value interleaving technique in the basic operation of bit-(un)packing by targeting a virtual 1024-bits SIMD register, (ii) reordering the tuples in all columns of a table in the same Unified Transposed Layout that puts tuple chunks in a common \"04261537\" order (explained in the paper); allowing for maximum independent work for all possible basic SIMD lane widths: 8, 16, 32, and 64 bits.\n\nWe address the software development, maintenance and future-proofness challenges of increasing hardware diversity, by defining a virtual 1024-bits instruction set that consists of simple operators supported by all SIMD dialects; and also, importantly, by scalar code. The interleaved and tuple-reordered layout actually makes scalar decoding faster, extracting more data-parallelism from today's wide-issue CPUs. Importantly, the scalar version can be fully auto-vectorized by modern compilers, eliminating technical debt in software caused by platform-specific SIMD intrinsics.\n\nMicro-benchmarks on Intel, AMD, Apple and AWS CPUs show that FastLanes accelerates decoding by factors (decoding >40 values per CPU cycle). FastLanes can make queries faster, as compressing the data reduces bandwidth needs, while decoding is almost free."
+}

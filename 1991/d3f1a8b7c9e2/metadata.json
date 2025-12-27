@@ -1,0 +1,10 @@
+{
+  "id": "d3f1a8b7c9e2",
+  "title": "What Every Computer Scientist Should Know About Floating-Point Arithmetic",
+  "authors": ["DAVID GOLDBERG"],
+  "year": 1991,
+  "conference": "ACM Comput. Surv.",
+  "category": "计算机算术",
+  "keywords": ["浮点运算", "IEEE 754", "舍入误差", "异常处理", "数值稳定性", "guard digit", "ULP"],
+  "abstract": "Floating-point arithmetic is considered an esoteric subject by many people. This is rather surprising, because floating-point is ubiquitous in computer systems: Almost every language has a floating-point datatype; computers from PCs to supercomputers have floating-point accelerators; most compilers will be called upon to compile floating-point algorithms from time to time, and virtually every operating system must respond to floating-point exceptions such as overflow. This paper presents a tutorial on the aspects of floating-point that have a direct impact on designers of computer systems. It begins with background on floating-point representation and rounding error, continues with a discussion of the IEEE floating-point standard, and concludes with examples of how computer system builders can better support floating point."
+}
