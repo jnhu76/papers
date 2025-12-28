@@ -1,0 +1,10 @@
+{
+  "id": "b5c8d9e2f1a32022Spooky",
+  "title": "Spooky: Granulating LSM-Tree Compactions Correctly",
+  "authors": ["Niv Dayan", "Tamar Weiss", "Shmuel Dashevsky", "Michael Pan", "Edward Bortnikov", "Moshe Twitto"],
+  "year": 2022,
+  "conference": "VLDB",
+  "category": "数据库系统",
+  "keywords": ["LSM-Tree", "Compaction", "Write Amplification", "Space Amplification", "Storage Utilization", "Garbage Collection", "Key-Value Stores"],
+  "abstract": "Existing methods for granulating LSM-tree compactions either waste most of the available storage capacity or involve exorbitant write-amplification. We introduce Spooky, the first approach to achieve high storage utilization and moderate write-amplification at the same time."
+}
