@@ -1,0 +1,10 @@
+{
+  "id": "d3a8f2b1c5e72025JustRL",
+  "title": "JustRL: Scaling a 1.5B LLM with a Simple RL Recipe",
+  "authors": ["Bingxiang He", "Zekai Qu", "Zeyuan Liu", "Yinghao Chen", "Yuxin Zuo", "Cheng Qian", "Kaiyan Zhang", "Weize Chen", "Chaojun Xiao", "Ganqu Cui", "Ning Ding", "Zhiyuan Liu"],
+  "year": 2025,
+  "conference": "JMLR",
+  "category": "强化学习",
+  "keywords": ["JustRL", "简单强化学习", "大语言模型", "数学推理", "单阶段训练"],
+  "abstract": "Recent advances in reinforcement learning for large language models have converged on increasing complexity: multi-stage training pipelines, dynamic hyperparameter schedules, and curriculum learning strategies. This raises a fundamental question: **Is this complexity necessary?** We present **JustRL**, a minimal approach using single-stage training with fixed hyperparameters that achieves state-of-the-art performance on two 1.5B reasoning models (54.9% and 64.3% average accuracy across nine mathematical benchmarks) while using 2\u00d7 less compute than sophisticated approaches. The same hyperparameters transfer across both models without tuning, and training exhibits smooth, monotonic improvement over 4,000+ steps without the collapses or plateaus that typically motivate interventions. Critically, ablations reveal that adding \"standard tricks\" like explicit length penalties and robust verifiers may degrade performance by collapsing exploration. These results suggest that the field may be adding complexity to solve problems that disappear with a stable, scaled-up baseline. We release our models and code to establish a simple, validated baseline for the community."
+}

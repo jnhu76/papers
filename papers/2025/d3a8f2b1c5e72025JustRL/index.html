@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JustRL: Scaling a 1.5B LLM with a Simple RL Recipe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          JustRL: Scaling a 1.5B LLM with a Simple RL Recipe
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Bingxiang He, Zekai Qu, Zeyuan Liu, Yinghao Chen, Yuxin Zuo, Cheng Qian, Kaiyan Zhang, Weize Chen, Chaojun Xiao, Ganqu Cui, Ning Ding, Zhiyuan Liu</div>
+                <div class="text-sm text-gray-600 mt-1">1Tsinghua University, 2University of Illinois Urbana-Champaign, 3Shanghai AI Lab</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">联系方式</strong>
+                <div>hbx24@mails.tsinghua.edu.cn</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">项目资源</strong>
+                <div class="space-y-2">
+                  <div><a href="https://huggingface.co/collections/hbx/justrl" class="text-blue-600 hover:underline">HuggingFace模型集</a></div>
+                  <div><a href="https://github.com/thunlp/JustRL" class="text-blue-600 hover:underline">GitHub代码库</a></div>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">核心贡献</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">简化强化学习</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">单阶段训练</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">固定超参数</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">计算高效</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-3 text-gray-700">
+            <li><strong>极简方法</strong>: 使用单阶段训练+固定超参数，避免了多阶段训练和动态调度</li>
+            <li><strong>高性能</strong>: 在两个1.5B推理模型上达到SOTA性能（平均准确率54.9%和64.3%）</li>
+            <li><strong>高计算效率</strong>: 比复杂方法减少2倍计算资源消耗</li>
+            <li><strong>训练稳定性</strong>: 4000+步训练中呈现平滑单调改进，无崩溃或平台期</li>
+            <li><strong>泛化性</strong>: 相同超参数在不同模型间无需调参即可迁移</li>
+          </ul>
+        </div>
+        
+        <div class="space-y-4 text-gray-700 leading-relaxed">
+          <p>近年来，用于大型语言模型的强化学习方法趋向于增加复杂性：多阶段训练管道、动态超参数调度和课程学习策略。这篇论文提出了一个根本性问题：<strong class="text-red-600">这种复杂性真的必要吗？</strong></p>
+          
+          <p>作者提出了<strong>JustRL</strong>——一种极简方法，使用单阶段训练和固定超参数，在两个1.5B推理模型上达到了最先进的性能，同时使用了比复杂方法少2倍的计算资源。相同的超参数在两个模型之间无需调参即可迁移，训练过程呈现出超过4000步的平滑单调改进，没有出现通常需要干预的崩溃或平台期。</p>
+          
+          <p>关键的是，消融实验揭示，添加"标准技巧"如显式长度惩罚和鲁棒验证器可能会通过压缩探索空间而降低性能。这些结果表明，该领域可能正在增加复杂性来解决那些在使用稳定、扩大规模的基线时会消失的问题。</p>
+          
+          <blockquote class="border-l-4 border-purple-500 pl-6 py-3 bg-purple-50 italic text-gray-700 my-6">
+            <i class="fas fa-quote-left text-purple-400 mr-2"></i>
+            "Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away."
+            <div class="mt-2 text-right text-sm text-gray-600">— Antoine de Saint-Exupéry, Airman's Odyssey</div>
+          </blockquote>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>当前研究趋势
+            </h4>
+            <p class="text-gray-700 text-sm">近期LLM强化学习研究趋向于增加复杂性，包括多阶段训练、动态超参数、自适应温度控制、响应长度惩罚等。这种复杂性增长提出了一个问题：是否所有这些都是必需的？</p>
+          </div>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-balance-scale mr-2"></i>蒸馏 vs 强化学习
+            </h4>
+            <p class="text-gray-700 text-sm">小型模型领域偏爱蒸馏方法，但蒸馏受限于教师模型的能力。当教师模型性能达到平台期时，进一步改进变得困难。RL可以在蒸馏饱和后提供进一步改进。</p>
+          </div>
+        </div>
+        
+        <div class="space-y-4 text-gray-700 leading-relaxed">
+          <h3 class="font-bold text-gray-800 text-xl mb-4">研究动机</h3>
+          
+          <p>近年来，像OpenAI的o1和DeepSeek-R1这样的大型语言模型已经证明了大规模强化学习与可验证奖励在数学和编码等具有挑战性的推理任务中的显著有效性。然而，对于较小的轻量级模型，该领域采取了不同的路径。</p>
+          
+          <p>领先的公司更倾向于使用蒸馏方法，本质上是在大型教师模型的输出上进行监督微调，而不是直接进行RL训练。这种方法在实际中是有意义的：蒸馏是高效、稳定的，并能带来直接的性能提升。Qwen3的强到弱蒸馏和DeepSeek-R1都证明了这种策略对于小型语言模型的有效性。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg my-6">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>关键洞察
+            </h5>
+            <p class="text-gray-700">蒸馏有一个根本性限制：它受限于教师模型的能力。当研究人员依赖蒸馏来提高小型模型的性能时，他们会遇到一个上限，特别是当教师模型的更新不频繁时。即使增加数据和延长训练时间，一旦教师模型的性能达到平台期，进一步获得性能提升就会变得困难。</p>
+          </div>
+          
+          <p>相比之下，一旦蒸馏过程达到饱和，RL可以提供进一步的改进，使其在这种情况下成为关键方法。同时，用于小型语言模型的RL因不稳定和困难而闻名，需要越来越复杂的技术才能可靠工作。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-red-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-bug mr-2"></i>当前方法的复杂性增长
+          </h4>
+          <p class="text-gray-700">过去一年中，作者们看到了用于小型模型的RL训练稳定和改进方法的激增：多阶段训练管道、动态超参数调度、自适应温度控制、响应长度惩罚，以及各种形式的数据整理和过滤。这种技术激增提出了一个重要问题：<strong class="text-red-600">这种复杂性是必要的吗？</strong></p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-4 rounded-lg border border-gray-300 shadow-sm">
+            <h5 class="font-bold text-gray-800 mb-3">方法学挑战</h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm">
+              <li><strong>难以归因</strong>: 不同工作结合不同方法子集并报告不同结果时，很难确定真正驱动性能的是什么</li>
+              <li><strong>问题混淆</strong>: 许多近期工作引用训练不稳定作为其技术的动机，但这些技术应用于已经复杂的基线上</li>
+              <li><strong>技术堆叠</strong>: 累积的"最佳实践"可能在相互对抗，而不是对抗RL的基本挑战</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-300 shadow-sm">
+            <h5 class="font-bold text-gray-800 mb-3">实际训练挑战</h5>
+            <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm">
+              <li><strong>奖励崩溃</strong>: 训练过程中奖励信号突然下降</li>
+              <li><strong>熵漂移</strong>: 策略熵值不稳定变化</li>
+              <li><strong>长度爆炸</strong>: 模型生成响应过长</li>
+              <li><strong>训练平台期</strong>: 性能改进停滞不前</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 技术方法对比表 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-table mr-2"></i>技术方法对比：近期小型语言模型的RL技术使用情况
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">模型</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EC</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">THP</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TTP</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RKL</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LC</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AT</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RR</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DS</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ST</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-blue-600">STILL-3-1.5B</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">Jan '25</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-blue-600">DeepScaleR-1.5B</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">Feb '25</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-blue-600">ProRL-V1</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">✔</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">May '25</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-DeepSeek</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✔</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">Nov '25</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-Nemotron</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✔</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">Nov '25</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术缩写说明：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>EC=Entropy Control</strong> (熵控制)</li>
+                <li><strong>THP=True Hyperparameters</strong> (真超参数)</li>
+                <li><strong>TTP=True Training Prompt</strong> (真训练提示)</li>
+                <li><strong>RKL=Reset KL Reference</strong> (重置KL参考)</li>
+                <li><strong>LC=Length Control</strong> (长度控制)</li>
+                <li><strong>AT=Adaptive Temperature</strong> (自适应温度)</li>
+                <li><strong>RR=Rollout Rescue</strong> (Rollout救援)</li>
+                <li><strong>DS=Dynamic Sampling</strong> (动态采样)</li>
+                <li><strong>ST=Split Training Stages</strong> (拆分训练阶段)</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="text-gray-700 leading-relaxed">
+          <p>作者在本文中探讨了<strong>是否可以用更简单的方法实现稳定、有竞争力的训练</strong>。他们将极简设置应用于两个流行的1.5B推理模型，使用从常见实践中推导出的固定超参数进行单阶段训练。结果匹配或超越了更复杂的方法，同时使用了2倍更少的计算资源。</p>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg my-6">
+            <h5 class="font-bold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>研究假设
+            </h5>
+            <p class="text-gray-700">作者的目标不是反对所有技术或声称找到了最优方法，而是提供证据表明更简单的基线应该得到比它们已经获得的更多的关注。他们提供了一个简单的实践，包含最少的技巧集，可以增强那些接近其蒸馏极限的模型的性能。该领域可能会从建立什么是根本足够的内容开始，然后再增加额外的复杂性。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-4">JustRL: 极简化设计</h3>
+          <p class="text-gray-700 mb-4">作者的方法经过深思熟虑地保持简单。他们将自己限制在RL的基础知识范围内，避免了在近期工作中变得常见的多阶段管道、动态调度和专门技术。</p>
+        </div>
+        
+        <!-- 训练设置技术细节 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>训练设置技术细节
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图占位符 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: JustRL训练性能曲线
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: JustRL训练性能曲线，展示单阶段训练下AIME24性能从28%提升到58%" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> JustRL通过简单的单阶段训练实现显著的性能提升。(a) DeepSeek-R1-Distill-Qwen-1.5B到JustRL-DeepSeek-1.5B的扩展，AIME24 (avg@32) 性能曲线，在4,000步中从28%提升到58%；(b) OpenMath-Nemotron-1.5B到我们的1.5B推理SOTA模型JustRL-Nemotron-1.5B，展示其在3,000步训练中达到最终70+%分数的训练过程。
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>核心算法与设置：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>核心算法:</strong> 使用veRL [Sheng et al., 2025]中GRPO的默认实现，带有二元结果奖励</li>
+                <li><strong>奖励信号:</strong> 来自DAPO [Yu et al., 2025]的轻量级基于规则的验证器，没有像SymPy这样可以增加计算开销的符号数学库</li>
+                <li><strong>唯一使用的技术:</strong> 使用"clip higher"，这是在长期RL训练中用于稳定性的成熟实践。作者将其视为基线的一部分，而不是添加的技术</li>
+              </ul>
+            </div>
+            
+            <!-- 超参数配置表 -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h5 class="font-semibold text-gray-700 mb-4 text-center">固定超参数配置（用于两个JustRL模型）</h5>
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">超参数</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">值</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Advantage Estimator</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">GRPO</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Use KL Loss</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">No</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Use Entropy Regularization</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">No</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Train Batch Size</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">256</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Max Prompt Length</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">1k</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Max Response Length</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">15k</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">PPO Mini Batch Size</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">64</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">PPO Micro Batch Size/GPU</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">1</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Clip Ratio Range</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">[0.8, 1.28]</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Learning Rate</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">1e-6 (constant)</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Temperature</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">1.0</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Rollout N</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">8</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Reward Function</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">DAPO [Yu et al., 2025]</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现原则：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">保持简单:</strong>
+                  <ul class="list-disc list-inside mt-1">
+                    <li><strong>单阶段训练:</strong> 没有渐进式上下文延长，没有课程切换，没有阶段转换。从头到尾连续训练</li>
+                    <li><strong>固定超参数:</strong> 没有自适应温度调度，没有动态批量大小调整，没有训练中期参考模型重置</li>
+                    <li><strong>标准数据:</strong> 在DAPO-Math-17k上训练，没有离线难度过滤或在线动态采样策略</li>
+                    <li><strong>基础提示:</strong> 简单的后缀提示，无需调参："Please reason step by step, and put your final answer within \boxed{}."</li>
+                    <li><strong>长度控制:</strong> 简单地将最大上下文长度设置为16K令牌，而不是使用显式长度惩罚项</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-sync-alt mr-2"></i>训练基础设施
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+              <li><strong>硬件:</strong> 每个模型使用32个A800-80GB GPU</li>
+              <li><strong>训练时间:</strong> 约15天</li>
+              <li><strong>超参数:</strong> 相同超参数适用于两个模型，无需每个模型调参</li>
+              <li><strong>训练步骤:</strong> DeepSeek模型4,380步，Nemotron模型3,440步</li>
+            </ul>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>关键设计决策
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+              <li><strong>简化优先:</strong> 移除多阶段训练和动态调度</li>
+              <li><strong>稳定性优先:</strong> 固定超参数提供稳定训练信号</li>
+              <li><strong>数据中立:</strong> 使用标准数据集，无动态过滤</li>
+              <li><strong>提示简洁:</strong> 使用简单提示，无复杂工程</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="font-bold text-gray-800 text-xl mb-4">评估协议</h3>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <p class="text-gray-700 mb-3">作者基于POLARIS [An et al., 2025]的可复现评估脚本评估了九个具有挑战性的数学推理任务：</p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>基准测试:</strong> AIME 2024, AIME 2025, AMC 2023, MATH-500, Minerva Math, Olympiad-Bench, HMMT Feb 2025, CMIMC 2025, BRUMO 2025</li>
+              <li><strong>评估协议:</strong> 报告Pass@1准确率，每个问题平均N个采样响应（MATH-500、Minerva Math和OlympiadBench使用N=4；其他使用N=32）</li>
+              <li><strong>生成参数:</strong> 温度0.7，top-p 0.9，最多允许32K令牌用于生成</li>
+              <li><strong>验证器增强:</strong> 使用CompassVerifier-3B [Liu et al., 2025c]增强现有系统，以解决基于规则的验证器的假阴性问题</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 扩展较弱基线：JustRL-DeepSeek-1.5B -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>实验1：扩展较弱基线 (JustRL-DeepSeek-1.5B)
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h5 class="font-semibold text-gray-700 mb-4 text-center">DeepSeek-R1-Distill-Qwen-1.5B骨干网的结果</h5>
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">模型</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AIME24</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AIME25</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AMC23</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MATH</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minerva</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Olympiad</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HMMT</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BRUMO</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CMIMC</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Backbone</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">29.90</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">22.40</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">63.82</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">84.90</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">34.65</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">45.95</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">13.44</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">30.94</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">12.89</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">37.65</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">DeepScaleR-1.5B</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">40.21</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">28.65</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">73.83</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">89.30</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">39.34</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">52.79</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">18.96</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">40.00</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">21.00</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">44.88</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">ProRL-V2</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">51.87</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">35.73</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">88.75</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">92.00</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">49.03</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">67.84</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">19.38</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">47.29</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">25.86</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">53.08</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-DeepSeek</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">52.60</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">38.75</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">91.02</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">91.65</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">51.47</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">67.99</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">21.98</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">52.71</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">25.63</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">54.87</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="mt-3 text-xs text-gray-500">
+                <p>*所有分数除MATH-500、Minerva和OlympiadBench使用@32采样外；这三个使用@4。*BroRL结果正式报告但模型未发布；部分基准测试不可用。</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-blue-700">主要发现:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li><strong>平均性能:</strong> 54.87% vs ProRL-V2的53.08%</li>
+                    <li><strong>领先基准:</strong> 九个基准中领先六个</li>
+                    <li><strong>广泛改进:</strong> 而非针对单一任务的过拟合</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-blue-700">计算效率:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li><strong>计算成本:</strong> 仅ProRL-V2的一半</li>
+                    <li><strong>训练稳定性:</strong> 超过4,000步的平滑单调改进</li>
+                    <li><strong>无需干预:</strong> 无振荡或平台期</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 计算成本对比表 -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h5 class="font-semibold text-gray-700 mb-4 text-center">DeepSeek-R1-Distill-Qwen-1.5B基础模型的计算成本对比</h5>
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">模型</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">动态采样*</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练步骤</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练批量大小</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rollout N</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最大上下文长度</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">令牌预算(约)</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">DeepScaleR-1.5B</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">✗</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">1,750</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">128</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">8</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">8k→16k→24k</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2.2×10⁶k</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">ProRL-V1</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">✓</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2,450</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">256</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">16→32→16</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">8k→16k</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2.1×10⁸k</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">ProRL-V2</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">✓</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">+1,000</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">256</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">16→32→16</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">8k→16k→8k</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2.8×10⁸k</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">BroRL</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">✓</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">+191</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">128</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">512</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">16k</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">6.8×10⁸k</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-DeepSeek</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">4,380</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">256</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">8</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">16k</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">1.4×10⁸k</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="mt-3 text-xs text-gray-500">
+                <p>*按照POLARIS [An et al., 2025]，使用估计的50%过滤比率的动态采样。ProRL-V2从ProRL-V1继续（+1,000步），BroRL从ProRL-V2继续（+191步）。</p>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 扩展较强基线：JustRL-Nemotron-1.5B -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>实验2：扩展较强基线 (JustRL-Nemotron-1.5B)
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h5 class="font-semibold text-gray-700 mb-4 text-center">OpenMath-Nemotron-1.5B骨干网的结果</h5>
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">模型</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AIME24</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AIME25</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AMC23</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MATH</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minerva</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Olympiad</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HMMT</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BRUMO</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CMIMC</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">Backbone</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">58.75</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">48.44</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">90.55</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">92.40</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">26.93</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">71.70</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">30.10</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">61.67</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">30.08</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">56.74</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">QuestA</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">71.56</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">62.08</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">93.44</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">92.95</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">32.08</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">72.28</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">40.94</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">67.50</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">41.48</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">63.81</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-Nemotron</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">69.69</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">62.92</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">96.02</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">94.15</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">30.24</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">76.59</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">40.63</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">66.88</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">41.72</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">64.32</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="mt-3 text-xs text-gray-500">
+                <p>*所有分数除MATH-500、Minerva和OlympiadBench使用@32采样外；这三个使用@4。</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能对比分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-blue-700">主要发现:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li><strong>平均性能:</strong> 64.32% vs QuestA的63.81%</li>
+                    <li><strong>领先基准:</strong> 九个基准中领先五个</li>
+                    <li><strong>方法对比:</strong> QuestA使用课程学习，JustRL使用简单方法</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-blue-700">技术差异:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li><strong>QuestA:</strong> 问题增强+部分CoT解决方案作为提示</li>
+                    <li><strong>JustRL:</strong> 仅标准问答对，无增强或课程设计</li>
+                    <li><strong>数据需求:</strong> QuestA需要完整推理轨迹，JustRL不需要</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 计算成本对比表 -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h5 class="font-semibold text-gray-700 mb-4 text-center">OpenMath-Nemotron-1.5B基础模型的计算成本对比</h5>
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">模型</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">动态采样*</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练步骤</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">训练批量大小</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rollout N</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最大上下文长度</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">令牌预算(约)</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-700">QuestA</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">✓</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2,000</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">128</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">16</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">32k</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">2.6×10⁸k</td>
+                  </tr>
+                  <tr class="bg-green-50">
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">JustRL-Nemotron</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">✗</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">3,440</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">256</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">8</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">16k</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-700">1.1×10⁸k</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="mt-3 text-xs text-gray-500">
+                <p>*使用估计的50%过滤比率的动态采样。尽管有更多的训练步骤，JustRL-Nemotron使用了2.4倍更少的计算资源。</p>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 训练动态分析 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-line mr-2"></i>训练动态分析
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图占位符 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: JustRL-DeepSeek-1.5B的训练动态
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: JustRL-DeepSeek-1.5B的训练动态分析，包括策略熵、平均奖励和平均响应长度" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> JustRL-DeepSeek-1.5B的训练动态。(a) 策略熵在整个训练过程中保持稳定，在1.2-1.4之间自然振荡，没有漂移或崩溃。(b) 平均奖励显示平滑、单调的改进，从负值到约0.4，表明在没有平台期突破干预的情况下持续学习。(c) 响应长度自然收敛，从初始的冗长（约7,000令牌）到稳定范围（4,000-5,000令牌），最大上下文长度为16k，没有显式长度惩罚。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-balance-scale mr-2"></i>策略熵
+                </h5>
+                <p class="text-sm text-gray-700">图2(a)显示策略熵在后期训练步骤中在1.0到1.6之间振荡，没有系统性向上漂移（探索崩溃）或向下漂移（过早收敛），表明简单的"clip higher"技术对于大规模RL表现良好。</p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-chart-line mr-2"></i>平均奖励
+                </h5>
+                <p class="text-sm text-gray-700">图2(b)显示平均奖励从大约-0.6上升到+0.4。曲线有噪声，但趋势明显是向上的。更重要的是，没有延长的平台期或突然下降，这通常会在多阶段方法中触发干预。</p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-3 flex items-center">
+                  <i class="fas fa-ruler mr-2"></i>平均响应长度
+                </h5>
+                <p class="text-sm text-gray-700">模型开始时冗长，生成平均约8,000令牌的响应。没有任何显式长度惩罚，它自然压缩到第1,000步的4,000-5,000令牌，并保持这个范围。这种有机压缩可能比显式惩罚更稳健。</p>
+              </div>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h5 class="font-semibold text-yellow-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-exclamation-triangle mr-2"></i>与典型RL的对比：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <p>作者没有计算资源来进行广泛的受控比较，但文献提供了背景。许多近期工作明确引用训练不稳定作为他们技术的动机：</p>
+                <ul class="list-disc list-inside ml-4 space-y-2">
+                  <li><strong>ProRL-v2 [Hu et al., 2025a]:</strong> 在观察到长度漂移后引入计划长度惩罚</li>
+                  <li><strong>BroRL [Hu et al., 2025b]:</strong> 在遇到平台期后将rollouts增加到数百个</li>
+                  <li><strong>多个工作 [Liu et al., 2025a, Min et al., 2024]:</strong> 当KL散度变得太大时应用KL正则化和重置参考模型，这限制了训练上限</li>
+                </ul>
+                <p>作者的训练没有表现出任何这些需要干预的病理现象。</p>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 消融研究 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-flask mr-2"></i>消融研究
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图占位符 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 消融研究结果
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 消融研究结果，展示添加过长度惩罚和鲁棒验证器对性能的影响" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 消融研究结果。(a) AIME 2024性能在约2,000步后出现分歧。作者的基本配方达到55%，而添加过长度惩罚在50%处平台期，添加两种修改在45%处平台期。(b) 熵：两种修改显示探索崩溃（熵约0.5-0.6），而基本配方显示健康的振荡（约1.2-1.4）。
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>消融研究设置：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <p>作者从JustRL-DeepSeek-1.5B的基本配方开始进行了两项消融研究，均训练了3,000+步：</p>
+                <ul class="list-disc list-inside ml-4 space-y-2">
+                  <li><strong>w/ 过长度惩罚:</strong> 为最后4k令牌添加显式长度惩罚项（如DAPO [Yu et al., 2025]中使用）</li>
+                  <li><strong>w/ 过长度惩罚 + 鲁棒验证器:</strong> 进一步添加来自DeepScaleR [Luo et al., 2025]的更复杂的验证器以减少假阴性</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h5 class="font-bold text-red-700 mb-3 flex items-center">
+                  <i class="fas fa-ban mr-2"></i>过长度惩罚的影响
+                </h5>
+                <p class="text-sm text-gray-700">作者假设显式惩罚冗长响应可能通过推动模型更快地趋向简洁来提高训练效率。相反，性能显著下降作为权衡。图3(b)中的熵图揭示了原因：显式惩罚压缩了探索，将熵驱动到0.5-0.6，而基本方法中的范围为1.2-1.4。显式惩罚似乎产生了与学习目标冲突的压力，迫使模型在探索什么真正有效之前过早收敛到更短的响应。</p>
+              </div>
+              
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h5 class="font-bold text-orange-700 mb-3 flex items-center">
+                  <i class="fas fa-shield-alt mr-2"></i>鲁棒验证器的影响
+                </h5>
+                <p class="text-sm text-gray-700">作者进一步假设减少假阴性（正确解决方案被标记为错误）将提供更清晰的学习信号。然而，即使在归一化奖励尺度后，它的使用导致更差的最终性能，在AIME 2024上平台期为45%。作者提供两种可能的解释：首先，更严格的基验证器通过减少"完美"分数创造了更丰富的学习信号谱，而鲁棒验证器的宽容性提供了较少细微差别的指导。其次，更严格的验证器对精确格式化的依赖可能迫使模型发展更稳健的内部计算，当验证器在外部纠正错误时，这种激励就会丢失。</p>
+              </div>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-graduation-cap mr-2"></i>消融研究启示：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <p>这些结果揭示了两个重要的教训：</p>
+                <ol class="list-decimal list-inside ml-4 space-y-2">
+                  <li><strong>并非所有"标准技巧"都能跨上下文迁移:</strong> 过长度惩罚在DAPO的设置中有效，但在作者的环境中降低性能，表明技术与其他设计选择以复杂且有时不可预测的方式相互作用。</li>
+                  <li><strong>更简单的方法并不总是更容易改进:</strong> 作者测试了两种看似合理的修改，两者都使情况变得更糟，表明基本配方实现了一种微妙的平衡，容易被额外的干预破坏。</li>
+                </ol>
+                <p class="mt-3">作者希望澄清这些消融的局限性。他们测试了两个特定的修改，但许多其他技术仍未探索：课程学习、自适应温度调度、参考模型重置、不同的验证器设计，以及各种形式的数据增强。其中一些可能会改进作者的基线。作者的观点不是额外的技术<em>从不</em>有帮助，而是它们应该根据经验进行验证，而不是假设它们是有益的。</p>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 rounded-r-lg">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+            <i class="fas fa-check-circle mr-2"></i>主要实验发现总结
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 class="font-semibold text-gray-800 mb-2">性能优势</h5>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>DeepSeek模型: 54.87%平均准确率 vs ProRL-V2的53.08%</li>
+                <li>Nemotron模型: 64.32%平均准确率 vs QuestA的63.81%</li>
+                <li>计算效率: 减少2倍计算资源使用</li>
+              </ul>
+            </div>
+            <div>
+              <h5 class="font-semibold text-gray-800 mb-2">训练稳定性</h5>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>超过4,000步的平滑单调改进</li>
+                <li>无奖励崩溃、熵漂移或长度爆炸</li>
+                <li>策略熵稳定在健康范围(1.2-1.4)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论与讨论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-lightbulb mr-2"></i>主要启示
+            </h4>
+            <div class="text-gray-700 space-y-3">
+              <p>具有健康熵、单调奖励和自然长度收敛的平滑训练曲线与通常作为复杂技术动机的不稳定性形成对比。作者的负消融显示，添加"改进"会主动降低性能。这表明复杂性有时可能解决由其他设计选择产生的症状，而不是基本的RL挑战。</p>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-yellow-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-question-circle mr-2"></i>未知领域与局限
+            </h4>
+            <div class="text-gray-700 space-y-3">
+              <p>作者证明了简单RL运作良好，但无法隔离原因。是超参数吗？训练数据集？验证器设计？三者的相互作用？作者的结果也仅限于1.5B规模的数学推理中的两个骨干网。泛化到其他领域、模型大小和任务仍然是一个开放问题。</p>
+            </div>
+          </div>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-tools mr-2"></i>何时复杂性可能帮助
+            </h4>
+            <div class="text-gray-700 space-y-3">
+              <p>作者不提倡简单作为教条。在极端计算约束下，当遇到作者未面对的特定失败模式时，当推动超越当前性能上限时，或在具有更嘈杂奖励信号的领域中，额外的技术可能是有价值的。作者的论点是有方法学意义的：<strong class="text-green-700">首先建立简单基线，然后仅在识别出它解决的具体问题时添加复杂性。</strong></p>
+            </div>
+          </div>
+          
+          <div class="bg-purple-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-gavel mr-2"></i>方法论建议
+            </h4>
+            <div class="text-gray-700 space-y-3">
+              <p>关于小型模型的RL的辩论被复杂性对于稳定性和性能是必要的假设所笼罩。作者着手回答一个直接的问题：如果我们对小型语言模型应用RL，而不使用已成为标准实践的专业技术，会发生什么？通过回归到更简单的方法，作者的发现提供了一个清晰的答案：具有稳定基础的足够规模可以匹配复杂技术。</p>
+              <p>作者从两个基础模型开始，使用具有固定超参数的单阶段训练实现了相当或更好的性能，匹配或超越了采用多阶段训练和课程学习的方法，同时使用了2倍更少的计算资源。比最终数字更引人注目的是路径：数千步的平滑、稳定改进，没有通常需要防止训练崩溃的干预。</p>
+              <p class="font-bold text-purple-700">作者主张方法学转变：<strong>从简单开始，扩大规模，仅在简单、稳健的基线明显失败时才添加复杂性。</strong>如果简单性比当前实践假设的更常足够，这似乎值得关注。</p>
+            </div>
+          </div>
+          
+          <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-exclamation-triangle mr-2"></i>局限性与未来工作
+            </h4>
+            <div class="text-gray-700 space-y-3">
+              <p>作者的工作有几个局限性。首先，作者的结果仅限于1.5B参数规模的数学推理任务，泛化到其他领域（例如编码、一般问答）和模型大小仍未探索。其次，虽然作者证明了简单性有效，但无法明确隔离哪些特定组件（超参数、验证器设计、训练数据）对成功最关键。第三，作者的计算预算，虽然低于一些复杂方法，但对于资源受限的研究人员来说可能仍然过高。最后，作者尚未探索当推动到更长的训练周期时，作者的方法是否保持优势，或者额外的技术是否在规模上变得必要。</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-12 p-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl">
+          <h3 class="text-2xl font-bold mb-6 text-center">论文核心价值总结</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="text-center">
+              <div class="text-4xl mb-2">🚀</div>
+              <h4 class="font-bold text-lg mb-2">性能突破</h4>
+              <p class="text-sm opacity-90">在两个1.5B模型上达到SOTA性能，超越复杂方法</p>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl mb-2">💰</div>
+              <h4 class="font-bold text-lg mb-2">计算高效</h4>
+              <p class="text-sm opacity-90">减少2倍计算资源消耗，降低研究门槛</p>
+            </div>
+            <div class="text-center">
+              <div class="text-4xl mb-2">⚖️</div>
+              <h4 class="font-bold text-lg mb-2">方法论贡献</h4>
+              <p class="text-sm opacity-90">挑战复杂性必要性假设，提倡简单优先原则</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动展开第一个技术细节部分
+      const firstDetails = document.querySelector('.technical-details');
+      if (firstDetails) {
+        firstDetails.open = true;
+      }
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
