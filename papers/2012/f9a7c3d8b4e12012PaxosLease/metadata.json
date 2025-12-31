@@ -1,0 +1,10 @@
+{
+  "id": "f9a7c3d8b4e12012PaxosLease",
+  "title": "PaxosLease: Diskless Paxos for Leases",
+  "authors": ["Marton Trencseni", "Attila Gazso", "Holger Reinhardt"],
+  "year": 2012,
+  "conference": "Arxiv",
+  "category": "分布式系统",
+  "keywords": ["分布式算法", "租约", "Paxos", "容错", "一致性", "高可用性", "lease"],
+  "abstract": "This paper describes PaxosLease, a distributed algorithm for lease negotiation. PaxosLease is based on Paxos, but does not require disk writes or clock synchrony. PaxosLease is used for master lease negotiation in the open-source Keyspace and ScalienDB replicated key-value stores."
+}
