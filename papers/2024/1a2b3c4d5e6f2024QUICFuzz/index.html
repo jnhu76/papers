@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QUIC-Fuzz: An Effective Greybox Fuzzer For The QUIC Protocol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+      .nav-item {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      transition: all 0.2s ease;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      color: #4b5563;
+    }
+    .nav-item:hover {
+      color: #3b82f6;
+      background-color: #eff6ff;
+    }
+    .nav-item.active {
+      color: #3b82f6;
+      background-color: #dbeafe;
+    }
+    .content-section {
+      padding: 1.5rem 0;
+    }
+    @media (min-width: 768px) {
+      .content-section {
+        padding: 2rem 0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200 shadow-sm">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-4 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">
+          <i class="fas fa-file-alt mr-2 text-blue-500"></i>摘要
+        </a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">
+          <i class="fas fa-layer-group mr-2 text-blue-500"></i>背景与动机
+        </a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">
+          <i class="fas fa-exclamation-triangle mr-2 text-blue-500"></i>问题与挑战
+        </a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">
+          <i class="fas fa-cogs mr-2 text-blue-500"></i>设计与实现
+        </a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">
+          <i class="fas fa-chart-line mr-2 text-blue-500"></i>测试与评估
+        </a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">
+          <i class="fas fa-flag-checkered mr-2 text-blue-500"></i>结论
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          QUIC-Fuzz: An Effective Greybox Fuzzer For The QUIC Protocol
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">作者信息</strong>
+                <div class="text-lg font-medium">Kian Kai Ang, Damith C. Ranasinghe</div>
+                <div class="text-gray-600 mt-1">University of Adelaide, Australia</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">发表信息</strong>
+                <div>计算机网络安全领域</div>
+                <div class="text-sm text-gray-600 mt-1">预印本 arXiv:2503.19402v1</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">开源地址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border break-all">
+                  https://github.com/QUICTester/QUIC-Fuzz
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">QUIC</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Fuzzing</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">Network Security</span>
+                  <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">Protocol Testing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>QUIC-Fuzz原型</strong>：针对QUIC协议的灰盒模糊测试器，专门解决安全传输层协议的测试挑战</li>
+          <li><strong>QUIC专用加密模块</strong>：能够在保持消息完整性的前提下对加密的QUIC消息进行变异</li>
+          <li><strong>同步协议</strong>：减少非确定性行为影响，实现模糊测试器与目标之间的快速同步通信</li>
+          <li><strong>快照协议</strong>：自动化保存服务器状态，显著减少目标初始化开销</li>
+          <li><strong>实际漏洞发现</strong>：在6个QUIC服务器实现中发现10个新安全漏洞，获得2个CVE编号和bug赏金</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            这篇论文提出了<b>QUIC-Fuzz</b>，一个针对QUIC协议的高效灰盒模糊测试器。QUIC是一种安全的传输层协议，为低延迟、可靠的传输流提供了统一的安全传输层，代表了互联网的新特性和能力。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-bullseye mr-2"></i>解决的问题
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>安全传输层协议的模糊测试挑战</li>
+                <li>加密消息的完整性保护</li>
+                <li>非确定性行为影响测试效率</li>
+                <li>目标初始化开销大</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>取得成果
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>代码覆盖率提升高达84%</li>
+                <li>发现10个新安全漏洞</li>
+                <li>获得2个CVE编号</li>
+                <li>执行速度25次/秒</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <h5 class="font-semibold text-amber-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>给智力低下博士生的解释
+            </h5>
+            <p class="text-sm text-gray-700">
+              <strong>简单说</strong>：这篇论文就像是给QUIC协议做了一个"压力测试工具"。QUIC是互联网上一种新的安全通信协议，作者创建了一个工具，能自动生成各种"异常"数据包去测试QUIC服务器的安全性，发现了不少真正的安全漏洞。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-shield-alt mr-2 text-blue-500"></i>
+              QUIC协议的重要性
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">QUIC的特点</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>基于UDP的安全传输层协议</li>
+                  <li>HTTP/3的底层传输协议</li>
+                  <li>提供5种不同的安全配置</li>
+                  <li>支持多流并发传输</li>
+                  <li>减少连接建立延迟</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">为什么需要测试QUIC？</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>QUIC被广泛用于互联网应用</li>
+                  <li>实现中的bug会影响大量用户</li>
+                  <li>安全漏洞可能导致严重攻击</li>
+                  <li>复杂协议设计容易引入错误</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-history mr-2 text-blue-500"></i>
+              模糊测试的发展
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-bold text-gray-700 mb-2">传统模糊测试的局限性</h4>
+                <p class="text-gray-700">
+                  现有的网络协议模糊测试器主要针对应用层协议，对于像QUIC这样的安全传输层协议存在以下问题：
+                </p>
+                <ul class="list-disc list-inside mt-2 text-sm text-gray-700 space-y-1">
+                  <li>无法处理加密消息</li>
+                  <li>忽略消息完整性保护</li>
+                  <li>难以处理协议状态</li>
+                  <li>测试效率低下</li>
+                </ul>
+              </div>
+              
+              <!-- 原图1占位符 -->
+              <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: QUIC Basic握手过程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: QUIC Basic握手过程，显示Initial、Handshake和1-RTT数据包的交互" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> QUIC Basic握手过程，显示Initial、Handshake和1-RTT数据包的交互。方括号内是数据包编号。
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-question-circle mr-2"></i>给智力低下博士生的解释
+            </h4>
+            <p class="text-gray-700">
+              <strong>背景理解</strong>：QUIC就像是互联网上的"安全快递系统"，负责把数据安全地从一端送到另一端。这个系统很复杂，可能有bug，作者想做一个"自动化测试员"，专门找这个系统的安全问题。
+              <br><br>
+              <strong>为什么重要</strong>：如果QUIC有漏洞，黑客可能窃听你的网络通信，或者让服务器崩溃。作者的工具就是提前发现这些问题的"安全扫描器"。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 挑战1 -->
+            <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+              <div class="flex items-center mb-4">
+                <div class="bg-red-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-lock text-red-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-red-700">挑战1: 输入完整性与可解释性</h3>
+              </div>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>QUIC消息是加密的且有完整性保护</li>
+                <li>直接变异会破坏消息完整性</li>
+                <li>无效消息被目标直接丢弃</li>
+                <li>无法获取详细的状态反馈</li>
+              </ul>
+            </div>
+            
+            <!-- 挑战2 -->
+            <div class="bg-amber-50 p-6 rounded-lg border border-amber-200">
+              <div class="flex items-center mb-4">
+                <div class="bg-amber-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-random text-amber-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-amber-700">挑战2: 非确定性行为</h3>
+              </div>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>相同输入可能触发不同代码路径</li>
+                <li>资源调度和超时影响行为</li>
+                <li>难以可靠地重用测试用例</li>
+                <li>阻碍探索更深层的代码</li>
+              </ul>
+            </div>
+            
+            <!-- 挑战3 -->
+            <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+              <div class="flex items-center mb-4">
+                <div class="bg-purple-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-clock text-purple-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-purple-700">挑战3: 测试执行开销</h3>
+              </div>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>每次测试需要启动新目标实例</li>
+                <li>初始化过程耗时(1-30ms)</li>
+                <li>包括解析配置、加载库、初始化加密</li>
+                <li>显著降低测试效率</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 技术细节：挑战可视化 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：挑战的深层理解
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 挑战1技术解释 -->
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h5 class="font-semibold text-red-700 mb-3 flex items-center">
+                  <i class="fas fa-lock mr-2"></i>挑战1技术解释
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>加密保护:</strong> QUIC使用三层加密(Initial, Handshake, 1-RTT)，每层使用不同的密钥</li>
+                  <li><strong>完整性检查:</strong> 每个受保护的消息都有完整性校验，失败则丢弃</li>
+                  <li><strong>反馈有限:</strong> 传统模糊测试器只能看到数据包类型，无法了解内部状态</li>
+                  <li><strong>示例:</strong> 相同Initial数据包可能包含PING、CRYPTO或CONNECTION_CLOSE帧</li>
+                </ul>
+              </div>
+              
+              <!-- 挑战2技术解释 -->
+              <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <h5 class="font-semibold text-amber-700 mb-3 flex items-center">
+                  <i class="fas fa-random mr-2"></i>挑战2技术解释
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-amber-700">非确定性来源:</strong>
+                    <p>QUIC的可靠数据传输机制(如重传、流量控制)受时间因素影响。相同输入在不同时间可能触发不同代码路径。</p>
+                  </div>
+                  <div>
+                    <strong class="text-amber-700">影响:</strong>
+                    <p>模糊测试器难以可靠地到达特定协议状态，阻碍状态探索和漏洞发现。</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 挑战3技术解释 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+                  <i class="fas fa-clock mr-2"></i>挑战3技术解释
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">初始化步骤:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>加载共享库</li>
+                      <li>解析配置文件</li>
+                      <li>初始化加密原语</li>
+                      <li>绑定网络套接字</li>
+                      <li>设置传输参数</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">性能影响:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>测试用例执行速度下降</li>
+                      <li>资源利用率低</li>
+                      <li>长时间测试成本高</li>
+                      <li>难以进行大规模测试</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>给智力低下博士生的比喻解释
+            </h4>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-green-700">挑战1比喻:</strong>
+                <p class="text-gray-700">就像你想测试一个"加密保险箱"，但不知道密码。传统方法就是胡乱扭动密码锁，结果永远打不开。作者的方法是先知道密码，打开保险箱，修改里面的东西，再锁上。</p>
+              </div>
+              
+              <div>
+                <strong class="text-green-700">挑战2比喻:</strong>
+                <p class="text-gray-700">就像你每天走同一条路回家，但有时会遇到交通灯，有时会遇到施工绕道。传统测试器无法控制这些"意外"，作者的方法就像是给这条路装上交通控制系统。</p>
+              </div>
+              
+              <div>
+                <strong class="text-green-700">挑战3比喻:</strong>
+                <p class="text-gray-700">就像每次测试都需要重新启动电脑，等5分钟才能开始。作者的方法就像是给电脑做了"休眠快照"，瞬间就能恢复到测试状态。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 系统架构概述 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+              QUIC-Fuzz系统架构
+            </h3>
+            
+            <!-- 原图2占位符 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: QUIC-Fuzz架构概览
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: QUIC-Fuzz架构概览，显示三个核心组件：QUIC专用加密模块、同步协议和快照协议" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> QUIC-Fuzz架构概览，显示三个核心组件：QUIC专用加密模块使模糊测试器(原型为ALFNet)生成完整性保护的输入；同步协议允许模糊测试器与目标(QUT)之间的同步通信；快照协议确定保存状态的战略位置以减少服务器初始化开销。
+              </div>
+            </div>
+            
+            <!-- 架构组件可视化 -->
+            <div class="architecture-placeholder mt-8">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- 组件1 -->
+                <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 text-center transform transition-transform hover:scale-105">
+                  <div class="bg-blue-100 p-4 rounded-full inline-block mb-4">
+                    <i class="fas fa-key text-blue-600 text-3xl"></i>
+                  </div>
+                  <h4 class="font-bold text-blue-700 text-lg mb-3">QUIC专用加密模块</h4>
+                  <p class="text-gray-700 text-sm">解决挑战1：输入完整性与可解释性</p>
+                  <ul class="text-left mt-3 text-sm text-gray-600 space-y-1">
+                    <li>• 解密种子消息</li>
+                    <li>• 对明文进行变异</li>
+                    <li>• 重新加密保护完整性</li>
+                    <li>• 解密目标响应</li>
+                  </ul>
+                </div>
+                
+                <!-- 组件2 -->
+                <div class="bg-green-50 p-6 rounded-lg border border-green-200 text-center transform transition-transform hover:scale-105">
+                  <div class="bg-green-100 p-4 rounded-full inline-block mb-4">
+                    <i class="fas fa-sync-alt text-green-600 text-3xl"></i>
+                  </div>
+                  <h4 class="font-bold text-green-700 text-lg mb-3">同步协议</h4>
+                  <p class="text-gray-700 text-sm">解决挑战2：非确定性行为</p>
+                  <ul class="text-left mt-3 text-sm text-gray-600 space-y-1">
+                    <li>• 监控发送/接收操作</li>
+                    <li>• 协调模糊测试器与目标</li>
+                    <li>• 消除手动超时设置</li>
+                    <li>• 提高测试吞吐量</li>
+                  </ul>
+                </div>
+                
+                <!-- 组件3 -->
+                <div class="bg-purple-50 p-6 rounded-lg border border-purple-200 text-center transform transition-transform hover:scale-105">
+                  <div class="bg-purple-100 p-4 rounded-full inline-block mb-4">
+                    <i class="fas fa-camera text-purple-600 text-3xl"></i>
+                  </div>
+                  <h4 class="font-bold text-purple-700 text-lg mb-3">快照协议</h4>
+                  <p class="text-gray-700 text-sm">解决挑战3：测试执行开销</p>
+                  <ul class="text-left mt-3 text-sm text-gray-600 space-y-1">
+                    <li>• 监控系统调用</li>
+                    <li>• 确定安全快照点</li>
+                    <li>• 捕获初始化状态</li>
+                    <li>• 快速恢复目标实例</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- 数据流向指示 -->
+              <div class="flex flex-col md:flex-row justify-center items-center text-gray-600 mb-8">
+                <div class="bg-white p-4 rounded-lg border border-gray-300 mb-4 md:mb-0 md:mr-4">
+                  <i class="fas fa-database text-blue-500 text-2xl mb-2"></i>
+                  <p class="font-medium">种子输入</p>
+                </div>
+                <i class="fas fa-arrow-right text-2xl text-gray-400 mb-4 md:mb-0 md:mx-4"></i>
+                <div class="bg-white p-4 rounded-lg border border-gray-300 mb-4 md:mb-0 md:mx-4">
+                  <i class="fas fa-key text-green-500 text-2xl mb-2"></i>
+                  <p class="font-medium">加密模块</p>
+                </div>
+                <i class="fas fa-arrow-right text-2xl text-gray-400 mb-4 md:mb-0 md:mx-4"></i>
+                <div class="bg-white p-4 rounded-lg border border-gray-300 mb-4 md:mb-0 md:mx-4">
+                  <i class="fas fa-sync-alt text-purple-500 text-2xl mb-2"></i>
+                  <p class="font-medium">同步控制</p>
+                </div>
+                <i class="fas fa-arrow-right text-2xl text-gray-400 mb-4 md:mb-0 md:mx-4"></i>
+                <div class="bg-white p-4 rounded-lg border border-gray-300">
+                  <i class="fas fa-server text-amber-500 text-2xl mb-2"></i>
+                  <p class="font-medium">目标服务器</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 技术实现细节 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-code mr-2 text-blue-500"></i>
+              技术实现细节
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- QUIC-AFLNet -->
+              <div class="bg-blue-50 p-5 rounded-lg">
+                <h4 class="font-bold text-blue-700 text-lg mb-4 flex items-center">
+                  <i class="fas fa-network-wired mr-2"></i>QUIC-AFLNet组件
+                </h4>
+                <ul class="space-y-3">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>基于ALFNet(commit 6d86ca0c)扩展</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>集成QUIC专用加密模块</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>使用OpenSSL-3.0.2库</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>支持TLS1.3强制密码套件</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>3830行代码实现</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- Snapfuzz+ -->
+              <div class="bg-green-50 p-5 rounded-lg">
+                <h4 class="font-bold text-green-700 text-lg mb-4 flex items-center">
+                  <i class="fas fa-bolt mr-2"></i>Snapfuzz+组件
+                </h4>
+                <ul class="space-y-3">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>基于Snapfuzz(commit ef005157)扩展</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>实现同步和快照协议</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>扩展系统调用处理</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>支持QUIC服务器实现范式</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                    <span>724行代码实现</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 种子处理机制 -->
+            <div class="mt-8 bg-amber-50 p-5 rounded-lg border border-amber-200">
+              <h4 class="font-bold text-amber-700 text-lg mb-4 flex items-center">
+                <i class="fas fa-seedling mr-2"></i>种子处理机制
+              </h4>
+              <div class="space-y-4">
+                <div class="flex items-start">
+                  <div class="bg-amber-100 p-2 rounded-lg mr-4">
+                    <i class="fas fa-lock text-amber-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700">加密种子解密</h5>
+                    <p class="text-sm text-gray-600">从种子中提取DCID，使用HKDF-Extract推导Initial secret</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="bg-amber-100 p-2 rounded-lg mr-4">
+                    <i class="fas fa-edit text-amber-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700">明文变异</h5>
+                    <p class="text-sm text-gray-600">在明文状态下进行安全变异，避免破坏完整性</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="bg-amber-100 p-2 rounded-lg mr-4">
+                    <i class="fas fa-save text-amber-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700">种子保存</h5>
+                    <p class="text-sm text-gray-600">保存未加密输入和加密密钥，便于重现和分析</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 给智力低下博士生的解释 -->
+          <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 mb-4 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>给智力低下博士生的技术理解
+            </h4>
+            
+            <div class="space-y-4">
+              <div>
+                <strong class="text-purple-700">QUIC-Fuzz的工作流程:</strong>
+                <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-2">
+                  <li><strong>准备阶段:</strong> 先"偷看"正常的QUIC通信，记录下加密的数据包（种子）</li>
+                  <li><strong>解密:</strong> 用正确的方法打开这些加密数据包，看到里面的真实内容</li>
+                  <li><strong>变异:</strong> 修改这些内容，制造各种"异常"情况</li>
+                  <li><strong>重新加密:</strong> 把修改后的内容重新加密，保持看起来"合法"</li>
+                  <li><strong>发送测试:</strong> 把这些"伪装"的数据包发给QUIC服务器测试</li>
+                  <li><strong>分析响应:</strong> 查看服务器反应，判断是否有漏洞</li>
+                </ol>
+              </div>
+              
+              <div>
+                <strong class="text-purple-700">三个核心技术的比喻:</strong>
+                <ul class="list-disc list-inside mt-2 text-gray-700 space-y-2">
+                  <li><strong>加密模块:</strong> 就像是一个"翻译官"，能把加密的QUIC消息翻译成我们能看懂的语言，修改后再翻译回去</li>
+                  <li><strong>同步协议:</strong> 就像是"交通警察"，确保测试数据按顺序发送接收，不会乱套</li>
+                  <li><strong>快照协议:</strong> 就像是"快速保存游戏"，不用每次都从头开始，直接从保存点继续</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 实验设置 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-flask mr-2 text-blue-500"></i>
+              实验设置
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h4 class="font-bold text-gray-700 mb-4">测试环境</h4>
+                <ul class="space-y-3 text-gray-700">
+                  <li class="flex items-start">
+                    <i class="fas fa-microchip text-blue-500 mt-1 mr-3"></i>
+                    <span><strong>CPU:</strong> AMD Ryzen Threadripper 3990X</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-memory text-blue-500 mt-1 mr-3"></i>
+                    <span><strong>内存:</strong> 256 GB RAM</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-server text-blue-500 mt-1 mr-3"></i>
+                    <span><strong>分配:</strong> 每个模糊测试实例分配一个核心</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-gray-700 mb-4">对比基准</h4>
+                <ul class="space-y-3 text-gray-700">
+                  <li class="flex items-start">
+                    <i class="fas fa-balance-scale text-green-500 mt-1 mr-3"></i>
+                    <span><strong>Fuzziruction-Net:</strong> 安全协议模糊测试的SOTA</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-robot text-purple-500 mt-1 mr-3"></i>
+                    <span><strong>CharAFL:</strong> 使用LLM的网络协议模糊测试器</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-network-wired text-amber-500 mt-1 mr-3"></i>
+                    <span><strong>ALFNet:</strong> 状态感知网络协议模糊测试器</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 测试目标表格 -->
+            <div class="mt-8 overflow-x-auto">
+              <h4 class="font-bold text-gray-700 mb-4">测试的QUIC服务器目标</h4>
+              <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">服务器名称</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">提交版本</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">语言</th>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">来源</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">Google-quiche</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">i409746</td>
+                    <td class="py-3 px-4 border-b">C++</td>
+                    <td class="py-3 px-4 border-b text-blue-600">Google</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">LSQUIC</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">e412867</td>
+                    <td class="py-3 px-4 border-b">C</td>
+                    <td class="py-3 px-4 border-b text-blue-600">Lite Speed</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">Ngtcp2</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">e23728</td>
+                    <td class="py-3 px-4 border-b">C/C++</td>
+                    <td class="py-3 px-4 border-b text-blue-600">开源社区</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">Picoquic</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">844777</td>
+                    <td class="py-3 px-4 border-b">C</td>
+                    <td class="py-3 px-4 border-b text-blue-600">开源社区</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">Quicly</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">6409272</td>
+                    <td class="py-3 px-4 border-b">C</td>
+                    <td class="py-3 px-4 border-b text-blue-600">开源社区</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b">Xquic</td>
+                    <td class="py-3 px-4 border-b font-mono text-sm">ac6f7f7, 6803065</td>
+                    <td class="py-3 px-4 border-b">C</td>
+                    <td class="py-3 px-4 border-b text-blue-600">Alibaba</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- 代码覆盖率结果 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+              代码覆盖率对比
+            </h3>
+            
+            <!-- 原图3占位符 -->
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-8">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 分支覆盖率对比结果
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 模糊测试器在48小时执行的十次试验中实现的中位分支覆盖率（以千计）。彩色区域表示模糊测试器实现的最佳/最差覆盖率。" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 模糊测试器在48小时执行的十次试验中实现的中位分支覆盖率（以千计）。彩色区域表示模糊测试器实现的最佳/最差覆盖率。值得注意的是，我们模糊测试了Xquic（阿里巴巴）的两个版本，这里报告的覆盖率对应于我们在识别报告的错误之前模糊测试的版本。
+              </div>
+            </div>
+            
+            <!-- 性能对比可视化 -->
+            <div class="performance-chart-placeholder mt-8">
+              <div class="flex items-center justify-center mb-6">
+                <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700 text-xl">性能对比分析</h6>
+              </div>
+              
+              <!-- 性能指标模拟 -->
+              <div class="space-y-6 mb-8">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">QUIC-Fuzz (本文):</span>
+                    <span class="text-sm font-bold text-green-600">+84% 提升</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-6">
+                    <div class="bg-green-500 h-6 rounded-full flex items-center justify-end pr-4" style="width: 95%">
+                      <span class="text-white text-sm font-bold">95%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">Fuzziruction-Net:</span>
+                    <span class="text-sm font-bold text-blue-600">基准对比</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-6">
+                    <div class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-4" style="width: 70%">
+                      <span class="text-white text-sm font-bold">70%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">CharAFL:</span>
+                    <span class="text-sm font-bold text-purple-600">使用LLM</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-6">
+                    <div class="bg-purple-500 h-6 rounded-full flex items-center justify-end pr-4" style="width: 50%">
+                      <span class="text-white text-sm font-bold">50%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">ALFNet (基线):</span>
+                    <span class="text-sm font-bold text-gray-600">传统方法</span>
+                  </div>
+                  <div class="flex-1 bg-gray-200 rounded-full h-6">
+                    <div class="bg-gray-500 h-6 rounded-full flex items-center justify-end pr-4" style="width: 40%">
+                      <span class="text-white text-sm font-bold">40%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 关键结果 -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-green-50 p-4 rounded-lg">
+                  <strong class="text-green-700 block mb-2">执行速度</strong>
+                  <div class="text-2xl font-bold text-green-600">25 exec/s</div>
+                  <p class="text-gray-600 text-xs mt-1">QUIC-Fuzz的执行速度</p>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-lg">
+                  <strong class="text-blue-700 block mb-2">对比基准</strong>
+                  <div class="text-2xl font-bold text-blue-600">0.2 exec/s</div>
+                  <p class="text-gray-600 text-xs mt-1">Fuzziruction-Net的执行速度</p>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg">
+                  <strong class="text-purple-700 block mb-2">速度提升</strong>
+                  <div class="text-2xl font-bold text-purple-600">125×</div>
+                  <p class="text-gray-600 text-xs mt-1">QUIC-Fuzz相对更快</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 漏洞发现结果 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-bug mr-2 text-blue-500"></i>
+              漏洞发现结果
+            </h3>
+            
+            <div class="space-y-6">
+              <!-- 漏洞统计 -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-red-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-red-600">10</div>
+                  <div class="text-sm font-medium text-gray-700">新安全漏洞</div>
+                </div>
+                
+                <div class="bg-amber-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-amber-600">2</div>
+                  <div class="text-sm font-medium text-gray-700">CVE编号</div>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-green-600">6/10</div>
+                  <div class="text-sm font-medium text-gray-700">仅QUIC-Fuzz发现</div>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-blue-600">1</div>
+                  <div class="text-sm font-medium text-gray-700">Bug赏金奖励</div>
+                </div>
+              </div>
+              
+              <!-- 漏洞详情 -->
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">漏洞ID</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">描述</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">严重性</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="hover:bg-red-50">
+                      <td class="py-3 px-4 border-b font-mono">M1/CVE-2024-45402</td>
+                      <td class="py-3 px-4 border-b">Picotls中处理意外公钥长度时的双重释放</td>
+                      <td class="py-3 px-4 border-b"><span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">高危</span></td>
+                      <td class="py-3 px-4 border-b"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">已修复</span></td>
+                    </tr>
+                    <tr class="hover:bg-amber-50">
+                      <td class="py-3 px-4 border-b font-mono">M5/CVE-2024-45396</td>
+                      <td class="py-3 px-4 border-b">Quicly中在排水状态处理ACK帧时的断言失败</td>
+                      <td class="py-3 px-4 border-b"><span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">高危</span></td>
+                      <td class="py-3 px-4 border-b"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">已修复</span></td>
+                    </tr>
+                    <tr class="hover:bg-blue-50">
+                      <td class="py-3 px-4 border-b font-mono">M10</td>
+                      <td class="py-3 px-4 border-b">Xquic中记录版本协商事件时的空指针解引用</td>
+                      <td class="py-3 px-4 border-b"><span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs">中危</span></td>
+                      <td class="py-3 px-4 border-b"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">已修复</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- 漏洞发现对比 -->
+              <div class="bg-gray-50 p-5 rounded-lg">
+                <h4 class="font-bold text-gray-700 mb-4">漏洞发现能力对比</h4>
+                
+                <!-- 原图4占位符 -->
+                <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 4: 生存概率图
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig4.png" alt="论文图4: 四个漏洞（M1、M5、M7、M10、M11，如表1所述）在48小时内的生存概率图，如表2所示，至少有两个基准模糊测试器发现。只有M10被所有模糊测试器发现。" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 四个漏洞（M1、M5、M7、M10、M11，如表1所述）在48小时内的生存概率图，如表2所示，至少有两个基准模糊测试器发现。只有M10被所有模糊测试器发现。
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">发现速度对比</h5>
+                    <ul class="space-y-3 text-sm text-gray-700">
+                      <li class="flex items-start">
+                        <i class="fas fa-bolt text-green-500 mt-1 mr-2"></i>
+                        <span><strong>QUIC-Fuzz:</strong> 3个漏洞在4小时内100%发现率</span>
+                      </li>
+                      <li class="flex items-start">
+                        <i class="fas fa-walking text-blue-500 mt-1 mr-2"></i>
+                        <span><strong>Fuzziruction-Net:</strong> 1个漏洞在29小时内100%发现率</span>
+                      </li>
+                      <li class="flex items-start">
+                        <i class="fas fa-tachometer-alt text-purple-500 mt-1 mr-2"></i>
+                        <span><strong>M10漏洞:</strong> QUIC-Fuzz在5分钟内100%发现</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">独家发现</h5>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                      <p class="text-sm text-gray-700">
+                        <strong>6个漏洞仅被QUIC-Fuzz发现</strong>，表明其独特的技术优势：
+                      </p>
+                      <ul class="list-disc list-inside mt-2 text-xs text-gray-600 space-y-1">
+                        <li>加密模块支持深度状态探索</li>
+                        <li>同步协议提高测试可靠性</li>
+                        <li>快照协议支持大规模测试</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 消融实验 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-clipboard-check mr-2 text-blue-500"></i>
+              消融实验分析
+            </h3>
+            
+            <div class="space-y-6">
+              <p class="text-gray-700">
+                为了验证QUIC-Fuzz各个组件的有效性，作者进行了消融实验，逐步添加各个模块，观察对代码覆盖率的影响。
+              </p>
+              
+              <!-- 消融实验结果可视化 -->
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">QUIC服务器</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">ALFNet (基线)</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">+加密模块</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">+同步协议</th>
+                      <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">完整QUIC-Fuzz</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="hover:bg-blue-50">
+                      <td class="py-3 px-4 border-b font-medium">Google-quiche</td>
+                      <td class="py-3 px-4 border-b">8984</td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">10584 (+18%)</span>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">11545 (+9%)</span>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">11913 (+3%)</span>
+                      </td>
+                    </tr>
+                    <tr class="hover:bg-blue-50">
+                      <td class="py-3 px-4 border-b font-medium">Xquic</td>
+                      <td class="py-3 px-4 border-b">3569</td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">5784 (+62%)</span>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">6211 (+7%)</span>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <span class="text-green-600 font-bold">6262 (+1%)</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                  <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-key mr-2"></i>加密模块效果
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>最大提升: 62%</strong> (Xquic)
+                  </p>
+                  <p class="text-xs text-gray-600 mt-2">
+                    解决输入完整性问题，使变异输入能被目标有效处理
+                  </p>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg">
+                  <h5 class="font-bold text-green-700 mb-3 flex items-center">
+                    <i class="fas fa-sync-alt mr-2"></i>同步协议效果
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>显著改善非确定性</strong>
+                  </p>
+                  <p class="text-xs text-gray-600 mt-2">
+                    消除手动超时设置，提高测试吞吐量
+                  </p>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg">
+                  <h5 class="font-bold text-purple-700 mb-3 flex items-center">
+                    <i class="fas fa-camera mr-2"></i>快照协议效果
+                  </h5>
+                  <p class="text-sm text-gray-700">
+                    <strong>执行速度: 25 exec/s</strong>
+                  </p>
+                  <p class="text-xs text-gray-600 mt-2">
+                    减少初始化开销，相比基准提升125倍
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 给智力低下博士生的解释 -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-award mr-2"></i>给智力低下博士生的评估理解
+            </h4>
+            
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700">实验结果总结:</strong>
+                <p class="text-gray-700 mt-2">
+                  QUIC-Fuzz在测试中表现非常出色，就像是一个"超级学霸"：
+                </p>
+                <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-2">
+                  <li><strong>成绩最好:</strong> 代码覆盖率比其他工具高84%</li>
+                  <li><strong>发现问题最多:</strong> 找到了10个安全漏洞，其中6个只有它能找到</li>
+                  <li><strong>速度最快:</strong> 测试速度是其他工具的125倍</li>
+                  <li><strong>获得认可:</strong> 获得了2个CVE编号和bug赏金</li>
+                </ol>
+              </div>
+              
+              <div>
+                <strong class="text-blue-700">为什么QUIC-Fuzz这么厉害?</strong>
+                <ul class="list-disc list-inside mt-2 text-gray-700 space-y-2">
+                  <li><strong>解决了核心难题:</strong> 其他工具无法有效处理加密消息，QUIC-Fuzz可以</li>
+                  <li><strong>测试更深入:</strong> 能探索到QUIC协议的深层状态和功能</li>
+                  <li><strong>效率更高:</strong> 快照技术大幅减少了等待时间</li>
+                  <li><strong>可靠性更强:</strong> 同步技术确保测试结果稳定可重现</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg">
+                <strong class="text-green-700">实用价值:</strong>
+                <p class="text-sm text-gray-700 mt-1">
+                  这个工具已经被证明能发现真实世界QUIC实现中的安全漏洞，可以帮助Google、阿里巴巴等公司提高产品安全性，保护用户数据安全。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论与未来工作
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 主要结论 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-check-circle mr-2 text-green-500"></i>
+              主要结论
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="space-y-6">
+                <div class="bg-green-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i>技术贡献
+                  </h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                      <i class="fas fa-star text-green-500 mt-1 mr-2"></i>
+                      <span>首个针对IETF标准QUIC的有效灰盒模糊测试器</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-star text-green-500 mt-1 mr-2"></i>
+                      <span>解决了安全传输层协议模糊测试的核心挑战</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-star text-green-500 mt-1 mr-2"></i>
+                      <span>三个创新模块：加密、同步、快照</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-star text-green-500 mt-1 mr-2"></i>
+                      <span>开源实现：https://github.com/QUICTester/QUIC-Fuzz</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div class="bg-blue-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-shield-alt mr-2"></i>实际影响
+                  </h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                      <i class="fas fa-bug text-red-500 mt-1 mr-2"></i>
+                      <span>发现10个新的安全漏洞</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-certificate text-amber-500 mt-1 mr-2"></i>
+                      <span>获得2个CVE编号分配</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-trophy text-yellow-500 mt-1 mr-2"></i>
+                      <span>收到bug赏金奖励</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-code-branch text-purple-500 mt-1 mr-2"></i>
+                      <span>提高QUIC实现的安全性和鲁棒性</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="space-y-6">
+                <div class="bg-purple-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                    <i class="fas fa-balance-scale mr-2"></i>性能优势
+                  </h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-up text-green-500 mt-1 mr-2"></i>
+                      <span><strong>代码覆盖率:</strong> 提升高达84%</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-bolt text-yellow-500 mt-1 mr-2"></i>
+                      <span><strong>执行速度:</strong> 25 exec/s，比基准快125倍</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-exclamation-triangle text-red-500 mt-1 mr-2"></i>
+                      <span><strong>漏洞发现:</strong> 6个漏洞仅被QUIC-Fuzz发现</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-rocket text-blue-500 mt-1 mr-2"></i>
+                      <span><strong>测试效率:</strong> 快速同步和快照技术减少开销</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                <div class="bg-amber-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-amber-700 mb-3 flex items-center">
+                    <i class="fas fa-university mr-2"></i>学术价值
+                  </h4>
+                  <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start">
+                      <i class="fas fa-book text-blue-500 mt-1 mr-2"></i>
+                      <span>为安全传输层协议测试建立新基准</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-puzzle-piece text-green-500 mt-1 mr-2"></i>
+                      <span>提供可复现的研究方法和工具</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-users text-purple-500 mt-1 mr-2"></i>
+                      <span>促进QUIC协议生态系统的安全性</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 局限性 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2 text-amber-500"></i>
+              局限性与未来工作
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h4 class="font-bold text-amber-700 mb-4">当前局限性</h4>
+                <div class="space-y-4">
+                  <div class="flex items-start bg-red-50 p-4 rounded-lg">
+                    <i class="fas fa-key text-red-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">临时值处理</h5>
+                      <p class="text-sm text-gray-600 mt-1">需要手动配置处理Connection ID等临时值，Fuzziruction-Net能自动处理</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start bg-amber-50 p-4 rounded-lg">
+                    <i class="fas fa-server text-amber-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">Rust服务器支持</h5>
+                      <p class="text-sm text-gray-600 mt-1">目前不支持Rust实现的QUIC服务器(如Nego, Quiche, Quinn等)</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start bg-blue-50 p-4 rounded-lg">
+                    <i class="fas fa-language text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">语法感知变异</h5>
+                      <p class="text-sm text-gray-600 mt-1">目前使用随机变异，未考虑数据包结构和语法</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-green-700 mb-4">未来研究方向</h4>
+                <div class="space-y-4">
+                  <div class="flex items-start bg-green-50 p-4 rounded-lg">
+                    <i class="fas fa-robot text-green-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">LLM增强</h5>
+                      <p class="text-sm text-gray-600 mt-1">探索使用大语言模型进行语法感知变异和下一消息预测</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start bg-purple-50 p-4 rounded-lg">
+                    <i class="fas fa-expand-arrows-alt text-purple-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">协议扩展</h5>
+                      <p class="text-sm text-gray-600 mt-1">支持更多安全传输层协议，如TLS 1.3、WireGuard等</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start bg-blue-50 p-4 rounded-lg">
+                    <i class="fas fa-cogs text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-gray-700">自动化改进</h5>
+                      <p class="text-sm text-gray-600 mt-1">减少手动配置，提高工具的自动化程度和易用性</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 论文的不足之处（AI分析） -->
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-lg border border-red-200">
+            <h3 class="text-xl font-bold text-red-800 mb-6 flex items-center">
+              <i class="fas fa-search-minus mr-2"></i>
+              AI分析：论文的不足之处
+            </h3>
+            
+            <div class="space-y-6">
+              <div class="bg-white p-5 rounded-lg border border-gray-200">
+                <h4 class="font-bold text-gray-700 mb-3">方法学局限性</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>手动配置要求高:</strong> 需要手动配置Handshake和1-RTT密钥，限制了工具的自动化程度</li>
+                  <li><strong>随机变异策略:</strong> 缺乏语法感知变异，可能错过特定类型的漏洞</li>
+                  <li><strong>状态空间有限:</strong> 虽然解决了加密问题，但状态探索可能仍受限于种子质量</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-5 rounded-lg border border-gray-200">
+                <h4 class="font-bold text-gray-700 mb-3">实验设计局限性</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>测试目标有限:</strong> 仅测试了6个C/C++实现的服务器，未涵盖Rust等其他语言实现</li>
+                  <li><strong>时间限制:</strong> 48小时的测试周期可能不足以发现所有深层次漏洞</li>
+                  <li><strong>性能指标单一:</strong> 主要依赖代码覆盖率，缺乏其他安全指标评估</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-5 rounded-lg border border-gray-200">
+                <h4 class="font-bold text-gray-700 mb-3">技术深度局限性</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>加密处理简化:</strong> 仅支持TLS_AES_128_GCM_SHA256密码套件，未涵盖QUIC所有加密选项</li>
+                  <li><strong>系统调用覆盖不全:</strong> 系统调用处理可能未覆盖所有QUIC实现模式</li>
+                  <li><strong>扩展性挑战:</strong> 二进制重写方法对新型服务器架构的适应性有限</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-5 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-3">给智力低下博士生的批判性思考</h4>
+                <p class="text-gray-700">
+                  <strong>这篇论文虽然很好，但也不是完美的:</strong>
+                </p>
+                <ul class="list-disc list-inside mt-2 text-gray-700 space-y-2">
+                  <li><strong>工具不够"智能":</strong> 还需要人工帮忙设置一些参数</li>
+                  <li><strong>测试范围有限:</strong> 只测试了一部分QUIC服务器，可能还有其他服务器有漏洞</li>
+                  <li><strong>可能错过复杂漏洞:</strong> 随机变异就像"乱枪打鸟"，可能打不中某些隐藏很深的漏洞</li>
+                  <li><strong>未来可以更好:</strong> 结合AI技术，让工具更智能；测试更多类型的服务器；发现更多类型的漏洞</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 最终总结 -->
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-8 rounded-lg border border-green-300 text-center">
+            <i class="fas fa-trophy text-5xl text-yellow-500 mb-6"></i>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">QUIC-Fuzz：安全传输层协议测试的新标杆</h3>
+            <p class="text-gray-700 text-lg mb-6">
+              这篇论文展示了针对QUIC协议的高效灰盒模糊测试器的设计与实现，通过创新的加密模块、同步协议和快照协议，解决了安全传输层协议测试的核心挑战。
+            </p>
+            
+            <div class="flex flex-col md:flex-row justify-center gap-6">
+              <a href="https://github.com/QUICTester/QUIC-Fuzz" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
+                <i class="fab fa-github mr-3 text-xl"></i>
+                访问开源代码
+              </a>
+              
+              <div class="bg-white border border-gray-300 py-3 px-6 rounded-lg">
+                <div class="text-sm text-gray-600">引用本文</div>
+                <div class="font-mono text-xs mt-1">Kian Kai Ang, Damith C. Ranasinghe. "QUIC-Fuzz: An Effective Greybox Fuzzer For The QUIC Protocol"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      // 高亮当前导航项
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 120)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          if (targetSection) {
+            window.scrollTo({
+              top: targetSection.offsetTop - 100,
+              behavior: 'smooth'
+            });
+          }
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+      
+      // 技术细节展开/收起交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        const summary = details.querySelector('summary');
+        summary.addEventListener('click', function() {
+          details.classList.toggle('open');
+        });
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function(){
+        if(!expanded){
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;z-index:10000;";
+          details.innerHTML = `
+            <div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div>
+            <div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：${new Date().toLocaleDateString('zh-CN')}</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;color:#999;font-size:11px;">
+              基于论文: QUIC-Fuzz: An Effective Greybox Fuzzer For The QUIC Protocol
+            </div>
+          `;
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if(details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

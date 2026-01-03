@@ -1,0 +1,10 @@
+{
+  "id": "1a2b3c4d5e6f2024QUIC-Fuz",
+  "title": "QUIC-Fuzz: An Effective Greybox Fuzzer For The QUIC Protocol",
+  "authors": ["Kian Kai Ang", "Damith C. Ranasinghe"],
+  "year": 2024,
+  "conference": "arXiv",
+  "category": "网络与信息安全",
+  "keywords": ["模糊测试", "网络协议", "QUIC", "greybox fuzzing", "network security", "协议安全", "漏洞发现"],
+  "abstract": "Network applications are routinely under attack. We consider the problem of developing an effective and efficient fuzzer for the recently ratified QUIC network protocol to uncover security vulnerabilities. QUIC offers a _unified_ transport layer for low latency, reliable transport _streams_ that is _inherently_ secure, ultimately representing a complex protocol design characterised by new features and capabilities for the Internet. Fuzzing a _secure transport layer_ protocol is not trivial. The interactive, strict, rule-based, asynchronous nature of communications with a target, the stateful nature of interactions, security mechanisms to protect communications (such as integrity checks and encryption), and inherent overheads (such as target initialisation) challenge _generic_ network protocol fuzzers. We discuss and address the challenges pertinent to fuzzing transport layer protocols (like QUIC), developing mechanisms that enable fast, effective fuzz testing of QUIC implementations to build a prototype _grey-box_ mutation-based fuzzer--QUIC-Fuzz. We test 6, _well-maintained_ server-side implementations, including from Google and Alibaba with QUIC-Fuzz. The results demonstrate the fuzzer is both highly effective and generalisable. Our testing uncovered _10 new_ security vulnerabilities, precipitating 2 CVE assignments thus far. In code coverage, QUIC-Fuzz outperforms other existing state-of-the-art network protocol fuzzers--Fuzziruction-Net, CharAFL, and ALFNet--with up to an 84% increase in code coverage where QUIC-Fuzz outperformed _statistically significantly_ across all targets and with _a majority of bugs_ only discoverable by QUIC-Fuzz. We open-source QUIC-Fuzz on GitHub https://github.com/QUICTester/QUIC-Fuzz."
+}
