@@ -1,0 +1,10 @@
+{
+    "id": "f7b5c9e12a8d2022dissecti",
+    "title": "Dissecting Tensor Cores via Microbenchmarks: Latency, Throughput and Numeric Behaviors",
+    "authors": ["Wei Sun", "Ang Li", "Tong Geng", "Sander Stujik", "Henk Corporaal"],
+    "year": 2022,
+    "conference": "arXiv",
+    "category": "高性能计算与计算机体系结构",
+    "keywords": ["Tensor Cores", "微基准测试", "延迟", "吞吐量", "数值行为", "Ampere架构", "低精度浮点运算"],
+    "abstract": "Tensor Cores have been an important unit to accelerate Fused Matrix Multiplication Accumulation (MMA) in all NVIDIA GPUs since Volta Architecture. To program Tensor Cores, users have to use either legacy wmma APIs or current mma APIs. Legacy wmma APIs are more easy-to-use but can only exploit limited features and power of Tensor Cores. Specifically, wmma APIs support fewer operand shapes and can not leverage the new sparse matrix multiplication feature of the newest Ampere Tensor Cores. However, the performance of current programming interface has not been well explored. Furthermore, the computation numeric behaviors of low-precision floating points (TF32, BF16, and FP16) supported by the newest Ampere Tensor Cores are also mysterious. In this paper, we explore the throughput and latency of current programming APIs. We also intuitively study the numeric behaviors of Tensor Cores MMA and profile the intermediate operations including multiplication, addition of inner product, and accumulation. All codes used in this work can be found in https://github.com/sunlex0717/DissectingTensorCores."
+}
