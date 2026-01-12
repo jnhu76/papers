@@ -1,0 +1,10 @@
+{
+  "id": "0d1b2a3c4e5f1981I",
+  "title": "I/O COMPLEXITY: THE RED-BLUE PEBBLE GAME",
+  "authors": ["Hong, Jia-Wei", "H. T. Kung"],
+  "year": 1981,
+  "conference": "STOC",
+  "category": "计算机理论",
+  "keywords": ["I/O复杂度", "红蓝卵石游戏", "下界", "FFT", "矩阵乘法", "图划分"],
+  "abstract": "In this paper, the red-blue pebble game is proposed to model the input-output complexity of algorithms. Using the pebble game formulation, a number of lower bound results for the I/O requirement are proven. For example, it is shown that to perform the n-point FFT or the ordinary nxn matrix multiplication algorithm with O(S) memory, at least Ω(n log n/log S) or Ω(n^3/√S), respectively, time is needed for the I/O. Similar results are obtained for algorithms for several other problems. All of the lower bounds presented are the best possible in the sense that they are achievable by certain decomposition schemes.\n\nResults of this paper may provide insight into the difficult task of balancing I/O and computation in special-purpose system designs. For example, for the n-point FFT, the lower bound on I/O time implies that an S-point device achieving a speed-up ratio of order log S over the conventional O(n log n) time implementation is all one can hope for."
+}
