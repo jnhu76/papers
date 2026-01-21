@@ -1,0 +1,10 @@
+{
+  "id": "a1b2c3d4e5f62026Humanity",
+  "title": "Humanity's Last Hallucination: A Forensic Audit of the Scientific Insolvency in GPQA and HLE",
+  "authors": ["Sammy Zeng"],
+  "year": 2026,
+  "conference": "arXiv",
+  "category": "自然语言处理",
+  "keywords": ["大语言模型", "基准测试", "科学破产", "GPQA", "HLE", "Humanity's Last Exam", "幻觉"],
+  "abstract": "This study conducts a forensic audit of GPQA and HLE, which are widely regarded as the \"gold standards\" for measuring the limits of machine intelligence. Through a four-phase progressive verification process, we reveal severe scientific insolvency issues in both datasets: the inherent error rate lower bounds for GPQA and HLE are as high as 26.8% and 58.0% (37.2% overall), respectively. These systematic fallacies stem from factual errors, missing parameters, and transcription mistakes. Our research shows that GPQA is essentially an \"advanced intellectual booby trap from the old era,\" while HLE is a \"scientific ruin dismembered by filtering mechanisms.\" These two benchmarks have transformed from rulers for measuring intelligence into noise generators measuring how well models fit logical fallacies, causing the ruler we use to measure AI evolution to become severely distorted."
+}
