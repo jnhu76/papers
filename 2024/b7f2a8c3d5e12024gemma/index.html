@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemma: Open Models Based on Gemini Research and Technology - 可视化学习指南</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: all 0.3s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .performance-bar {
+      transition: width 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap"><i class="fas fa-file-alt mr-2"></i>摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap"><i class="fas fa-layer-group mr-2"></i>背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap"><i class="fas fa-exclamation-triangle mr-2"></i>问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap"><i class="fas fa-cogs mr-2"></i>设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap"><i class="fas fa-chart-line mr-2"></i>测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap"><i class="fas fa-flag-checkered mr-2"></i>结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-4 md:p-8">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Gemma: Open Models Based on Gemini Research and Technology
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">作者信息</strong>
+                <div class="text-lg font-medium">Gemma Team, Google DeepMind</div>
+                <div class="text-sm text-gray-600 mt-1">Google DeepMind 研究团队</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">发表信息</strong>
+                <div class="text-lg">技术报告，2024年2月</div>
+                <div class="text-sm text-gray-600 mt-1">arXiv预印本: 2403.08295v4</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">大语言模型</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">开源模型</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">模型安全</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">Transformer</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">核心贡献</strong>
+                <div class="text-sm">轻量级开源模型、安全评估框架、高性能推理</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献高亮框 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+          <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+            <i class="fas fa-trophy mr-3"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-3 text-gray-700">
+            <li><strong>轻量级开源模型家族：</strong>发布2B和7B参数的开放模型，基于Gemini研究技术</li>
+            <li><strong>全面的安全评估：</strong>在11个文本任务中超越同类开源模型，提供详细的安全性评估</li>
+            <li><strong>负责任的开源策略：</strong>采用结构化方法确保模型安全部署，减少潜在风险</li>
+            <li><strong>高性能推理能力：</strong>在数学、代码和推理任务上表现卓越，超越多个大型模型</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-10 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <i class="fas fa-exclamation-triangle text-amber-600 text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mr-2 mt-0.5"></i>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要：这篇文章解决什么问题？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-semibold text-gray-700 mb-4">一句话概括</h3>
+          <p class="text-gray-700 mb-6 text-lg leading-relaxed">
+            Gemma论文提出了一个基于Gemini技术的轻量级开源大语言模型家族，旨在平衡高性能与安全责任，为研究社区提供可访问的先进AI工具。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div class="tech-card bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-weight-hanging mr-2"></i>模型规模
+              </h4>
+              <p class="text-gray-700">提供2B和7B两种参数规模，分别针对不同计算环境和应用场景</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>安全重点
+              </h4>
+              <p class="text-gray-700">强调负责任的开源，提供全面的安全评估和风险缓解策略</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>性能表现
+              </h4>
+              <p class="text-gray-700">在18个文本任务中的11个超越同类开源模型，数学和代码能力突出</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 原图1：语言理解和生成性能 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>技术细节：图1 - 语言理解和生成性能对比
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: Language understanding and generation performance of Gemma 7B
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: Gemma 7B与同类规模开源模型在不同能力上的性能对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Gemma 7B在不同能力上与同类规模开源模型的对比。将标准学术基准评估按能力分组并平均得分；详细性能分解见表6。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>多维度评估：</strong>图1展示了Gemma 7B在多个能力维度（如语言理解、推理、代码生成等）上的综合表现</li>
+                <li><strong>基准对比：</strong>与Mistral、LLaMA等同类规模开源模型进行系统比较</li>
+                <li><strong>性能优势：</strong>Gemma在多个关键任务上表现优于竞争对手，特别是在需要深度理解的任务上</li>
+                <li><strong>标准化评估：</strong>采用学术界广泛认可的基准测试，确保结果的可比性和可靠性</li>
+              </ul>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">关键发现:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>在18个文本任务中的11个超越同类模型</li>
+                    <li>数学和代码任务表现尤为突出</li>
+                    <li>安全基准测试中表现优异</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">评估意义:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>验证了轻量级模型的有效性</li>
+                    <li>证明了开源模型的竞争力</li>
+                    <li>为社区提供了可靠的基准参照</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机：为什么需要Gemma？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-semibold text-gray-700 mb-4">研究背景</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-5 rounded-lg">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-history mr-2"></i>技术演进
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>基于Transformer架构的持续演进</li>
+                <li>从BERT、T5到Gemini的技术积累</li>
+                <li>大规模语言模型训练技术的成熟</li>
+                <li>开源生态系统的需求增长</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-lg">
+              <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-balance-scale mr-2"></i>市场需求
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>对轻量级高性能模型的需求</li>
+                <li>开发者和研究者的可访问性需求</li>
+                <li>安全负责任AI的重要性凸显</li>
+                <li>开源与闭源模型的平衡需求</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-700 mb-4 mt-8">研究动机</h3>
+          <div class="space-y-4">
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3">
+                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-800 font-bold">1</span>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-800 mb-1">填补轻量级开源模型的空白</h4>
+                <p class="text-gray-700">虽然存在大型开源模型（如LLaMA），但缺乏经过充分安全评估的轻量级高质量模型</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3">
+                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 text-green-800 font-bold">2</span>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-800 mb-1">推动负责任的开源AI</h4>
+                <p class="text-gray-700">通过开源高质量模型并附带全面的安全评估，为AI社区树立负责任开源的典范</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 mt-1 mr-3">
+                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-purple-100 text-purple-800 font-bold">3</span>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-800 mb-1">降低AI研究和应用门槛</h4>
+                <p class="text-gray-700">为更多开发者和研究者提供高质量的基础模型，促进AI技术的普及和创新</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战：Gemma面临哪些困难？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-semibold text-gray-700 mb-6">主要技术挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-red-50 to-orange-50 p-5 rounded-lg border border-red-100">
+              <h4 class="font-bold text-red-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-weight mr-2"></i>规模与性能的平衡
+              </h4>
+              <p class="text-gray-700 mb-3">如何在保持模型轻量化的同时不牺牲性能？</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>2B和7B参数规模的性能优化</li>
+                <li>计算效率与模型能力的权衡</li>
+                <li>内存占用与推理速度的平衡</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-5 rounded-lg border border-yellow-100">
+              <h4 class="font-bold text-yellow-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>安全与开放的矛盾
+              </h4>
+              <p class="text-gray-700 mb-3">如何确保开源模型不被恶意使用？</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>防止模型权重被用于恶意目的</li>
+                <li>减少有毒内容和偏见的生成</li>
+                <li>平衡开放访问与风险控制</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-brain mr-2"></i>模型能力的全面性
+              </h4>
+              <p class="text-gray-700 mb-3">如何确保小模型在多任务上表现优异？</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>数学推理和代码生成的优化</li>
+                <li>多语言能力的保持</li>
+                <li>常识推理能力的提升</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-100">
+              <h4 class="font-bold text-purple-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-database mr-2"></i>数据质量与隐私
+              </h4>
+              <p class="text-gray-700 mb-3">如何确保训练数据的安全性和高质量？</p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li>敏感信息的过滤和移除</li>
+                <li>防止训练数据记忆和泄露</li>
+                <li>数据多样性与质量的平衡</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-700 mb-4 mt-8">论文中明确指出的挑战</h3>
+          <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <i class="fas fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                <div>
+                  <p class="font-medium text-gray-800">无法完全防止恶意使用</p>
+                  <p class="text-gray-700 text-sm mt-1">尽管有使用条款禁止恶意使用，但无法完全防止不良行为者微调Gemma用于恶意目的</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <i class="fas fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                <div>
+                  <p class="font-medium text-gray-800">开源模型的风险管理</p>
+                  <p class="text-gray-700 text-sm mt-1">相比API托管的模型，提供模型权重带来了新的负责任部署挑战，包括有毒语言生成和个人信息泄露风险</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <i class="fas fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                <div>
+                  <p class="font-medium text-gray-800">评估框架的不足</p>
+                  <p class="text-gray-700 text-sm mt-1">开源模型的潜在危害尚未明确定义，也缺乏成熟的评估框架，需要持续研究和改进</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现：Gemma如何解决问题？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-semibold text-gray-700 mb-6">模型架构设计</h3>
+          
+          <!-- 模型参数对比表 -->
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">参数</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">Gemma 2B</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">Gemma 7B</th>
+                  <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">技术说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">模型维度 (d_model)</td>
+                  <td class="py-3 px-4 border-b font-mono">2048</td>
+                  <td class="py-3 px-4 border-b font-mono">3072</td>
+                  <td class="py-3 px-4 border-b text-sm text-gray-600">隐藏层维度，决定模型容量</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">层数 (Layers)</td>
+                  <td class="py-3 px-4 border-b font-mono">18</td>
+                  <td class="py-3 px-4 border-b font-mono">28</td>
+                  <td class="py-3 px-4 border-b text-sm text-gray-600">Transformer解码器层数量</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">注意力头数 (Num heads)</td>
+                  <td class="py-3 px-4 border-b font-mono">8</td>
+                  <td class="py-3 px-4 border-b font-mono">16</td>
+                  <td class="py-3 px-4 border-b text-sm text-gray-600">多头注意力机制的头数</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">KV头数 (Num KV heads)</td>
+                  <td class="py-3 px-4 border-b font-mono">1</td>
+                  <td class="py-3 px-4 border-b font-mono">1</td>
+                  <td class="py-3 px-4 border-b text-sm text-gray-600">多查询注意力优化</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-3 px-4 border-b">词汇表大小</td>
+                  <td class="py-3 px-4 border-b font-mono">256,128</td>
+                  <td class="py-3 px-4 border-b font-mono">256,128</td>
+                  <td class="py-3 px-4 border-b text-sm text-gray-600">继承自Gemini的多语言词汇表</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h4 class="font-semibold text-gray-800 mb-4">关键技术改进</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-5 rounded-lg">
+              <h5 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>多查询注意力 (MQA)
+              </h5>
+              <p class="text-gray-700 text-sm">2B模型采用多查询注意力（num_kv_heads=1），7B模型使用多头注意力，基于研究发现MQA在小规模模型上效果良好</p>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-lg">
+              <h5 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-compass mr-2"></i>旋转位置编码 (RoPE)
+              </h5>
+              <p class="text-gray-700 text-sm">使用旋转位置嵌入替代绝对位置编码，在各层中应用，并共享输入输出嵌入以减少模型大小</p>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg">
+              <h5 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>GeGLU激活函数
+              </h5>
+              <p class="text-gray-700 text-sm">用GeGLU激活函数的近似版本替代标准ReLU非线性，提升模型表达能力</p>
+            </div>
+            
+            <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-5 rounded-lg">
+              <h5 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-ruler-combined mr-2"></i>RMSNorm标准化
+              </h5>
+              <p class="text-gray-700 text-sm">使用RMSNorm对每个Transformer子层（注意力层和前馈层）的输入进行标准化，稳定训练过程</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">训练基础设施</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 class="font-bold text-gray-800 mb-3">硬件配置</h4>
+              <div class="space-y-4">
+                <div class="flex items-center">
+                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-microchip text-blue-600"></i>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-800">TPUv5e集群</p>
+                    <p class="text-sm text-gray-600">7B模型：16个pod，共4096个TPUv5e芯片</p>
+                    <p class="text-sm text-gray-600">2B模型：2个pod，共512个TPUv5e芯片</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center">
+                  <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-network-wired text-green-600"></i>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-800">网络拓扑</p>
+                    <p class="text-sm text-gray-600">256芯片pod，配置为16×16的2D环面拓扑</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="font-bold text-gray-800 mb-3">软件栈</h4>
+              <div class="space-y-4">
+                <div class="flex items-center">
+                  <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fab fa-python text-purple-600"></i>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-800">Jax + Pathways</p>
+                    <p class="text-sm text-gray-600">采用"单控制器"编程范式，简化开发流程</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center">
+                  <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-cogs text-yellow-600"></i>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-800">编译优化</p>
+                    <p class="text-sm text-gray-600">GSPMD分区器和MegaScale XLA编译器</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 碳足迹信息 -->
+          <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-lg border border-emerald-200 mt-8">
+            <h4 class="font-bold text-emerald-700 mb-3 flex items-center">
+              <i class="fas fa-leaf mr-2"></i>碳足迹评估
+            </h4>
+            <p class="text-gray-700 mb-2">预训练Gemma模型的碳排放估计为 <span class="font-bold text-emerald-700">~131 tCO₂eq</span></p>
+            <p class="text-sm text-gray-600">基于TPU数据中心报告的小时能源使用量计算，并考虑了数据中心创建和维护的额外能耗。Google数据中心通过能效、可再生能源购买和碳抵消实现碳中和。</p>
+          </div>
+          
+          <!-- 训练数据处理 -->
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">训练数据与处理</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg">
+              <h5 class="font-bold text-blue-700 mb-3">数据规模</h5>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-blue-600 mb-1">6T</div>
+                <div class="text-sm text-gray-600">Gemma 7B训练token数</div>
+              </div>
+              <div class="text-center mt-4">
+                <div class="text-3xl font-bold text-blue-600 mb-1">3T</div>
+                <div class="text-sm text-gray-600">Gemma 2B训练token数</div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-lg">
+              <h5 class="font-bold text-green-700 mb-3">数据来源</h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>主要英语网页文档</li>
+                <li>数学相关文本</li>
+                <li>代码数据</li>
+                <li>非多模态、非多语言优化</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg">
+              <h5 class="font-bold text-purple-700 mb-3">数据处理</h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>使用Gemini的SentencePiece分词器子集</li>
+                <li>词汇表大小：256k tokens</li>
+                <li>过滤有害、低质量内容</li>
+                <li>移除个人和敏感信息</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 指令微调 -->
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">指令微调 (Instruction Tuning)</h3>
+          <div class="space-y-6">
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-lg border border-blue-200">
+              <h5 class="font-bold text-blue-700 mb-3">监督微调 (SFT)</h5>
+              <p class="text-gray-700 mb-3">使用纯文本、仅英语的合成和人工生成的提示-响应对进行监督微调</p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-white p-3 rounded border">
+                  <p class="font-medium text-gray-800">数据选择</p>
+                  <p class="text-gray-600">基于语言模型并行评估选择数据混合</p>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <p class="font-medium text-gray-800">评估方法</p>
+                  <p class="text-gray-600">使用更大、高能力模型表达对响应的偏好</p>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <p class="font-medium text-gray-800">能力测试</p>
+                  <p class="text-gray-600">构造特定提示集测试指令遵循、事实性、创造力、安全性</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-50 to-teal-50 p-5 rounded-lg border border-green-200">
+              <h5 class="font-bold text-green-700 mb-3">人类反馈强化学习 (RLHF)</h5>
+              <p class="text-gray-700 mb-3">基于人类评分者的偏好对训练奖励函数，使用新型强化学习算法优化策略</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-white p-3 rounded border">
+                  <p class="font-medium text-gray-800">偏好收集</p>
+                  <p class="text-gray-600">收集人类评分者的偏好对，在Bradley-Terry模型下训练奖励函数</p>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <p class="font-medium text-gray-800">策略优化</p>
+                  <p class="text-gray-600">训练策略以优化奖励函数，防止奖励黑客攻击</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 对话格式示例 -->
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-200">
+              <h5 class="font-bold text-purple-700 mb-3">对话格式控制</h5>
+              <div class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                <div class="text-green-400">User:</div>
+                <div class="ml-4">&lt;start_of_turn&gt;user</div>
+                <div class="ml-8">Knock knock.&lt;/end_of_turn&gt;</div>
+                <div class="mt-2 text-blue-400">Model:</div>
+                <div class="ml-4">&lt;start_of_turn&gt;model</div>
+                <div class="ml-8">Who's there?&lt;/end_of_turn&gt;</div>
+                <div class="mt-2 text-green-400">User:</div>
+                <div class="ml-4">&lt;start_of_turn&gt;user</div>
+                <div class="ml-8">Gemma.&lt;/end_of_turn&gt;</div>
+                <div class="mt-2 text-blue-400">Model:</div>
+                <div class="ml-4">&lt;start_of_turn&gt;model</div>
+                <div class="ml-8">Gemma who?&lt;/end_of_turn&gt;</div>
+              </div>
+              <p class="text-sm text-gray-600 mt-3">使用特殊控制令牌标记对话角色和轮次，确保模型在训练和推理时的分布一致性。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估：Gemma表现如何？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-semibold text-gray-700 mb-6">人类偏好评估</h3>
+          
+          <!-- 原图5：胜率对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：表5 - 人类偏好评估胜率
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 性能对比表 -->
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">模型</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">安全性胜率</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">指令遵循胜率</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">置信区间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b font-medium">Gemma 1.1 IT 7B</td>
+                      <td class="py-3 px-4 border-b">
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-3">
+                            <div class="bg-green-500 h-3 rounded-full performance-bar" style="width: 63.5%"></div>
+                          </div>
+                          <span class="font-bold text-green-600">63.5%</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-3">
+                            <div class="bg-blue-500 h-3 rounded-full performance-bar" style="width: 61.2%"></div>
+                          </div>
+                          <span class="font-bold text-blue-600">61.2%</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 border-b text-sm text-gray-600">[60.7%, 66.1%]<br>[59.3%, 63%]</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b font-medium">Gemma 1.1 IT 2B</td>
+                      <td class="py-3 px-4 border-b">
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-3">
+                            <div class="bg-green-500 h-3 rounded-full performance-bar" style="width: 60.1%"></div>
+                          </div>
+                          <span class="font-bold text-green-600">60.1%</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 border-b">
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-3">
+                            <div class="bg-blue-500 h-3 rounded-full performance-bar" style="width: 45%"></div>
+                          </div>
+                          <span class="font-bold text-blue-600">45%</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 border-b text-sm text-gray-600">[57.3%, 62.8%]<br>[43.1%, 46.9%]</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>对比基准：</strong>与Mistral v0.2 7B Instruct模型进行对比评估</li>
+                  <li><strong>测试规模：</strong>约1000个指令遵循提示和400个安全协议测试提示</li>
+                  <li><strong>评估方法：</strong>人类评分者对模型输出进行并行比较和偏好选择</li>
+                  <li><strong>胜率计算：</strong>平局情况均等分割，报告最终胜率</li>
+                </ul>
+              </div>
+              
+              <!-- 关键发现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-bullseye mr-2"></i>关键发现：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-green-700">Gemma 7B优势:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>指令遵循胜率：61.2% vs Mistral</li>
+                      <li>安全性胜率：63.5% vs Mistral</li>
+                      <li>全面超越竞争对手</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">Gemma 2B表现:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>尽管规模小，安全性胜率仍达60.1%</li>
+                      <li>证明小模型也能有良好安全性</li>
+                      <li>为轻量级部署提供可能</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">自动化基准测试</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div>
+              <h4 class="font-bold text-gray-800 mb-4">测试领域覆盖</h4>
+              <div class="space-y-3">
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">物理推理 (PIQA)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">社会推理 (SocialIQA)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">问答 (BoolQ, Natural Questions)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">代码生成 (HumanEval, MBPP)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">数学推理 (GSM8K, MATH)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">常识推理 (WinoGrande, CommonsenseQA)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span class="text-gray-700">阅读理解 (TriviaQA)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="font-bold text-gray-800 mb-4">关键性能亮点</h4>
+              <div class="space-y-4">
+                <div class="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg">
+                  <p class="font-bold text-blue-700">MMLU表现</p>
+                  <p class="text-gray-700 text-sm">Gemma 7B超越所有同类或更小规模的开源模型，甚至超过LLaMA2 13B等更大模型</p>
+                </div>
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
+                  <p class="font-bold text-green-700">数学能力突出</p>
+                  <p class="text-gray-700 text-sm">在GSM8K和MATH基准上至少领先其他模型10个百分点</p>
+                </div>
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
+                  <p class="font-bold text-purple-700">代码生成优势</p>
+                  <p class="text-gray-700 text-sm">在HumanEval上至少领先6个百分点，甚至超过专门代码微调的CodeLLaMA-7B</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 记忆化评估 -->
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">记忆化评估</h3>
+          
+          <!-- 原图2：记忆化率对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-brain mr-2"></i>技术细节：图2 - 记忆化率对比分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 对比不同模型家族的平均记忆化率
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: Gemma预训练模型与类似规模的PaLM和PaLM 2模型的记忆化率对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 对比Gemma预训练模型与类似规模的PaLM和PaLM 2模型的记忆化率。发现Gemma以与PaLM相当的速率记忆训练数据。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>评估方法：</strong>从每个语料库中采样10,000个文档，使用前50个token作为模型提示</li>
+                  <li><strong>精确记忆化：</strong>模型生成的后50个token与真实文本完全匹配</li>
+                  <li><strong>近似记忆化：</strong>使用10%编辑距离阈值捕捉潜在转述记忆</li>
+                  <li><strong>对比基准：</strong>与类似规模的PaLM和PaLM 2模型进行对比</li>
+                </ul>
+              </div>
+              
+              <!-- 关键发现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-shield-alt mr-2"></i>关键发现：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-green-700">低记忆化率:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>Gemma记忆化率与PaLM相当</li>
+                      <li>远低于早期模型</li>
+                      <li>证明数据过滤和训练技术的有效性</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">隐私保护:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>未发现敏感数据记忆化</li>
+                      <li>个人数据记忆化率极低</li>
+                      <li>数据过滤措施有效</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 安全基准测试 -->
+          <h3 class="text-xl font-semibold text-gray-700 mb-6 mt-10">安全基准测试</h3>
+          
+          <!-- 原图8：安全基准结果 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-shield-alt mr-2"></i>技术细节：表8 - 安全基准测试结果
+            </summary>
+            
+            <div class="mt-6">
+              <!-- 安全测试表 -->
+              <div class="overflow-x-auto mb-6">
+                <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">基准测试</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">度量</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">Mistral v0.2</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">Gemma 1.1 IT 7B</th>
+                      <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">Gemma 1.1 IT 2B</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b">RealToxicity</td>
+                      <td class="py-3 px-4 border-b">avg</td>
+                      <td class="py-3 px-4 border-b font-mono">8.44</td>
+                      <td class="py-3 px-4 border-b font-mono text-green-600 font-bold">7.03</td>
+                      <td class="py-3 px-4 border-b font-mono">8.04</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b">CrowS-Pairs</td>
+                      <td class="py-3 px-4 border-b">top-1</td>
+                      <td class="py-3 px-4 border-b font-mono">32.76</td>
+                      <td class="py-3 px-4 border-b font-mono text-green-600 font-bold">45.89</td>
+                      <td class="py-3 px-4 border-b font-mono">49.67</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b">TruthfulQA</td>
+                      <td class="py-3 px-4 border-b">48.54</td>
+                      <td class="py-3 px-4 border-b font-mono">44.24</td>
+                      <td class="py-3 px-4 border-b font-mono text-green-600 font-bold">45.34</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-3 px-4 border-b">Toxigen</td>
+                      <td class="py-3 px-4 border-b">61.77</td>
+                      <td class="py-3 px-4 border-b font-mono">29.64</td>
+                      <td class="py-3 px-4 border-b font-mono text-green-600 font-bold">38.75</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>RealToxicity:</strong> 测量模型生成有毒内容的倾向，分数越低越好</li>
+                  <li><strong>CrowS-Pairs:</th> 评估模型的社会偏见，测量对刻板印象的敏感性</li>
+                  <li><strong>TruthfulQA:</strong> 测试模型的事实性和真实性</li>
+                  <li><strong>Toxigen:</strong> 检测针对特定群体的仇恨言论生成</li>
+                  <li><strong>评估限制:</strong> 由于许可限制，无法在LLaMA-2上运行评估</li>
+                </ul>
+              </div>
+              
+              <!-- 关键发现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200 mt-4">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-check-circle mr-2"></i>关键发现：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-green-700">Gemma 7B优势:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>在6个标准安全基准上超越竞争对手</li>
+                      <li>RealToxicity得分显著更低（7.03 vs 8.44）</li>
+                      <li>证明安全优化的有效性</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">整体表现:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>安全性是Gemma设计的核心重点</li>
+                      <li>通过数据过滤和指令微调提升安全性</li>
+                      <li>为开源模型树立安全标杆</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论：学到了什么？有什么不足？
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+            <div>
+              <h3 class="text-xl font-semibold text-gray-700 mb-6">主要成就与贡献</h3>
+              
+              <div class="space-y-6">
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                    <i class="fas fa-trophy mr-2"></i>技术突破
+                  </h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>推出2B和7B参数的轻量级开源模型家族</li>
+                    <li>在18个文本任务中的11个超越同类开源模型</li>
+                    <li>数学和代码能力表现卓越</li>
+                    <li>全面的安全评估和风险缓解策略</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gradient-to-r from-blue-50 to-cyan-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-shield-alt mr-2"></i>安全责任
+                  </h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>开创负责任开源AI的新模式</li>
+                    <li>提供全面的安全基准测试结果</li>
+                    <li>发布生成式AI负责任工具包</li>
+                    <li>为社区提供安全开发指导</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold text-gray-700 mb-6">局限性与挑战</h3>
+              
+              <div class="space-y-6">
+                <div class="bg-gradient-to-r from-red-50 to-orange-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>技术局限性
+                  </h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>模型规模限制：仅提供2B和7B版本，缺乏更大规模选择</li>
+                    <li>非多模态：与Gemini不同，Gemma不支持图像等多模态输入</li>
+                    <li>英语为主：主要针对英语任务，多语言能力有限</li>
+                    <li>持续改进空间：与人类专家表现（89.8%）仍有差距</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gradient-to-r from-yellow-50 to-amber-50 p-5 rounded-lg">
+                  <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                    <i class="fas fa-balance-scale mr-2"></i>安全挑战
+                  </h4>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>无法完全防止恶意使用</li>
+                    <li>开源模型的风险管理比API托管更复杂</li>
+                    <li>缺乏成熟的开源模型评估框架</li>
+                    <li>潜在危害尚未完全明确和定义</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-700 mb-6">未来方向</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg">
+              <h5 class="font-bold text-blue-700 mb-3">技术演进</h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>扩展到更大参数规模</li>
+                <li>支持多模态能力</li>
+                <li>增强多语言理解</li>
+                <li>改进推理和事实性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-lg">
+              <h5 class="font-bold text-green-700 mb-3">安全增强</h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>开发更强大的缓解策略</li>
+                <li>建立开源模型评估标准</li>
+                <li>改进对齐和可控性</li>
+                <li>增强对抗性鲁棒性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-lg">
+              <h5 class="font-bold text-purple-700 mb-3">生态系统</h5>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>促进社区协作研究</li>
+                <li>开发更多应用场景</li>
+                <li>改进工具和文档</li>
+                <li>探索新的发布模式</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 核心观点总结 -->
+          <div class="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-300 mt-10">
+            <h4 class="font-bold text-purple-800 text-xl mb-4 flex items-center">
+              <i class="fas fa-graduation-cap mr-3"></i>给"博士生"的简单总结
+            </h4>
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <div class="flex-shrink-0 mt-1 mr-3">
+                  <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-500 text-white text-sm font-bold">1</span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800">Gemma是什么？</p>
+                  <p class="text-gray-700 text-sm">Google基于Gemini技术开发的轻量级开源AI模型，有2B和7B两个版本，性能好又相对安全。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex-shrink-0 mt-1 mr-3">
+                  <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-500 text-white text-sm font-bold">2</span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800">主要优点？</p>
+                  <p class="text-gray-700 text-sm">1) 比同类开源模型表现更好；2) 特别擅长数学和编程；3) 安全性经过严格测试；4) 完全开源可自由使用。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex-shrink-0 mt-1 mr-3">
+                  <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-500 text-white text-sm font-bold">3</span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800">有什么不足？</p>
+                  <p class="text-gray-700 text-sm">1) 不能完全防止坏人恶意使用；2) 只懂文字不懂图片；3) 主要懂英语；4) 和最好的闭源模型还有差距。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex-shrink-0 mt-1 mr-3">
+                  <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-500 text-white text-sm font-bold">4</span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-800">为什么重要？</p>
+                  <p class="text-gray-700 text-sm">证明开源AI也可以既强大又安全，为更多研究者和开发者提供好用的工具，推动AI技术普及。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 最终评估 -->
+          <div class="mt-10 p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-300">
+            <h4 class="font-bold text-gray-800 text-xl mb-4">论文作者的最终评估</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p class="text-gray-700 mb-4">
+                  <strong class="text-blue-700">风险评估：</strong>鉴于现有生态系统中已有更强大系统的可访问性，作者认为Gemma的发布对整体AI风险组合的影响可以忽略不计。
+                </p>
+                <p class="text-gray-700">
+                  <strong class="text-green-700">效益评估：</strong>考虑到这些模型在研究、审计和下游产品开发中的实用性，作者确信Gemma对AI社区的好处超过了所述风险。
+                </p>
+              </div>
+              <div class="flex items-center justify-center">
+                <div class="text-center">
+                  <div class="text-4xl font-bold text-green-600 mb-2">✓</div>
+                  <p class="font-medium text-gray-800">净效益为正</p>
+                  <p class="text-sm text-gray-600">作者认为发布Gemma利大于弊</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      setTimeout(() => {
+        document.querySelectorAll('.performance-bar').forEach(bar => {
+          const width = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => {
+            bar.style.width = width;
+          }, 100);
+        });
+      }, 500);
+      
+      // 技术卡片悬停效果
+      document.querySelectorAll('.tech-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px)';
+          this.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if(!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if(details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

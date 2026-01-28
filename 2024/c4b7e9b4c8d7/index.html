@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vexless: A Serverless Vector Data Management System Using Cloud Functions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: transform 0.2s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Vexless: A Serverless Vector Data Management System Using Cloud Functions
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Yongye Su, Yinqi Sun, Minjia Zhang, Jianguo Wang</div>
+                <div class="text-sm text-gray-600 mt-1">Purdue University, University of Illinois Urbana-Champaign</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>Proc. ACM Manag. Data 2, 3 (SIGMOD), Article 187 (June 2024)</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://doi.org/10.1145/3654990</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">向量数据库</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">云函数</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">无服务器计算</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">近似最近邻搜索</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>提出了第一个针对云函数优化的向量数据库系统Vexless</li>
+          <li>设计了基于约束K-Means的分片策略，实现云函数实例间的负载均衡</li>
+          <li>开发了优化的通信机制，显著降低函数间通信开销</li>
+          <li>提出了自适应调度算法，有效减少冷启动时间</li>
+          <li>在稀疏和突发工作负载下实现高达5.3倍的成本节约</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">云函数（如AWS Lambda和Azure Functions）正在成为云计算中的新兴计算范式，提供弹性、无服务器和低成本的云计算，非常适合突发和稀疏的工作负载。本文提出了Vexless，这是第一个针对云函数优化的向量数据库系统。</p>
+          
+          <p class="mb-4">作者提出了三种优化来解决关键挑战：</p>
+          <ul class="list-disc list-inside space-y-2 mb-4">
+            <li>使用全局协调器根据可用硬件资源将工作负载分配给云函数实例</li>
+            <li>利用有状态云函数消除同步过程中的昂贵通信</li>
+            <li>采用工作负载感知的云函数生命周期管理策略最小化冷启动开销</li>
+          </ul>
+          
+          <p>Vexless已在Azure Functions上实现。实验结果表明，与云VM实例相比，Vexless可以显著降低成本，特别是在突发和稀疏工作负载下，同时实现相似或更高的查询性能和准确性。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">向量相似性搜索</h3>
+          <p class="mb-4">向量相似性搜索作为向量数据库的基础，旨在在数据集中找到与查询向量相似的向量。相似性度量通常使用L2（欧几里得）或余弦距离。这本质上涉及找到查询向量的k个最近邻（k-NN）。</p>
+          
+          <p class="mb-4">由于高维数据的"维度灾难"问题，精确k-NN搜索在大规模数据集上计算成本高昂。因此，许多交互式应用使用近似最近邻（ANN）搜索算法，以稍低的召回率实现数量级更快的搜索速度。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-semibold text-blue-700 mb-2">ANN索引方法比较</h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li><strong>树基方法</strong>：随机kd树森林和K-Means树，在低维数据上表现稳定</li>
+              <li><strong>哈希方法</strong>：如LSH，在低召回率下查询速度快</li>
+              <li><strong>乘积量化方法</strong>：在高召回率设置下性能较差</li>
+              <li><strong>图基方法</strong>：如HNSW，是目前ANN的最先进算法</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">云函数</h3>
+          <p class="mb-4">云函数作为一种无服务器计算形式，允许用户仅以有效载荷函数的形式提交任务，云服务提供商负责底层基础设施管理。这包括自动配置和环境设置；在触发事件时启动服务器并执行有效载荷函数；在运行时通过启动更多实例进行扩展；在有效载荷完成时关闭服务器。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>云函数优势
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>无需服务器管理</li>
+                <li>细粒度计费模型</li>
+                <li>更快的启动时间（秒级 vs VM的分钟级）</li>
+                <li>自动扩展能力</li>
+              </ul>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-semibold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>云函数限制
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>单位资源成本高于VM</li>
+                <li>最大硬件资源有限</li>
+                <li>无状态特性需要额外存储服务</li>
+                <li>冷启动延迟问题</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">目标工作负载</h3>
+          <p class="mb-4">论文针对两种更适合云函数的工作负载：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-chart-bar mr-2"></i>稀疏工作负载
+              </h4>
+              <p class="text-gray-700">查询量低，系统无法始终完全利用。即使工作负载是连续的，只要稀疏，云函数就更适合。</p>
+            </div>
+            
+            <div class="tech-card bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 text-lg mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>突发工作负载
+              </h4>
+              <p class="text-gray-700">具有高峰时段和峰值。只要存在峰值，云函数就可以降低成本，因为它们按查询计费。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">在云函数上构建向量数据库面临三个主要挑战：</p>
+          
+          <div class="space-y-8">
+            <!-- 挑战1 -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="text-xl font-semibold text-red-600 mb-4 flex items-center">
+                <span class="bg-red-100 text-red-800 rounded-full w-8 h-8 flex items-center justify-center mr-3">1</span>
+                工作负载分片挑战
+              </h3>
+              <p class="mb-4">与虚拟机不同，云函数的资源只能由服务提供商自动配置并在运行时调整，这意味着每次调用的可用资源都会变化，并且每次调用也有资源上限。这需要适当划分工作负载以适应每个函数实例中的可用资源。</p>
+              
+              <div class="bg-red-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-red-700 mb-2">具体问题</h4>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>传统均匀分片会导致"拖尾任务"造成的高成本和增加的查询时间</li>
+                  <li>基于聚类的分片可能导致不均匀的集群，需要更多函数调用</li>
+                  <li>云函数内存限制严格（Azure Functions最大1.5GB）</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 挑战2 -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="text-xl font-semibold text-orange-600 mb-4 flex items-center">
+                <span class="bg-orange-100 text-orange-800 rounded-full w-8 h-8 flex items-center justify-center mr-3">2</span>
+                通信开销挑战
+              </h3>
+              <p class="mb-4">由于每个实例上的资源有限，工作负载以更细的粒度划分，处理同一查询的对等函数之间将有更频繁的同步。虽然可以通过优化通信协议来减轻同步开销，但由于云函数之间的通信依赖于高延迟的互联网连接，它仍然很显著。</p>
+              
+              <div class="bg-orange-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-orange-700 mb-2">通信方法比较</h4>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li><strong>基于全局存储的方法</strong>：使用Amazon S3等存储传输中间结果，延迟约10ms</li>
+                  <li><strong>基于HTTP的方法</strong>：使用函数的HTTP-API直接通信，延迟随消息大小增加</li>
+                  <li>两种方法都无法满足低延迟向量搜索需求</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 挑战3 -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="text-xl font-semibold text-yellow-600 mb-4 flex items-center">
+                <span class="bg-yellow-100 text-yellow-800 rounded-full w-8 h-8 flex items-center justify-center mr-3">3</span>
+                冷启动时间挑战
+              </h3>
+              <p class="mb-4">由于云函数是按需激活的，每次函数调用都会有冷启动延迟来启动和初始化环境和上下文，然后才能执行有效载荷函数。这可能导致冷启动调用的响应显著延迟，通常为几秒钟。</p>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-yellow-700 mb-2">冷启动成本分析</h4>
+                <ul class="list-disc list-inside space-y-1 text-gray-700">
+                  <li>简单解决方案是在其有效载荷完成后保持活动状态等待下一个有效载荷</li>
+                  <li>但对于相同的硬件配置，云函数保持活动的成本远高于虚拟机</li>
+                  <li>增加活动时间会显著增加成本，违背使用云函数的目的</li>
+                  <li>冷启动还包括加载约1GB大小的向量索引到DRAM的开销</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">系统概述</h3>
+          <p class="mb-4">Vexless采用分布式向量搜索方法，将每个云函数视为计算单元，将向量数据划分为不同的分片，为每个分片构建唯一索引，然后在这些分片中进行搜索。</p>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - Vexless系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: Vexless系统架构概述
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: Vexless系统架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Vexless系统架构概述，展示了协调器函数、聚合器、分片数据以及优化的通信机制。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>协调器函数:</strong> 作为无服务器资源协调器、任务分发器、函数生命周期调度器和结果聚合器</li>
+                  <li><strong>分片策略:</strong> 使用约束K-Means算法将向量数据水平分区为不同的数据集群分片</li>
+                  <li><strong>通信机制:</strong> 使用Azure Durable Functions作为集中式通信中心，协调工作函数之间的消息分发</li>
+                  <li><strong>冷启动优化:</strong> 采用有状态函数和启发式保持活动策略减少冷启动开销</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>系统基于Azure Functions构建，使用Azure Durable Functions作为协调器，Azure Queue Storage用于非阻塞异步通信。每个分片使用HNSW索引算法构建向量索引。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择HNSW作为索引算法是因为其在处理高维向量时的出色可扩展性以及在准确性和查询速度之间的良好平衡。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>采用约束K-Means算法确保分片平衡，避免内存溢出问题；使用半径阈值优化提高搜索效率；通过自适应调度算法减少冷启动时间。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">关键技术组件</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-cube mr-2"></i>基于约束K-Means的分片
+              </h4>
+              <p class="text-sm text-gray-700">解决传统K-Means分片不平衡问题，确保每个分片满足云函数内存约束</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-comments mr-2"></i>优化通信机制
+              </h4>
+              <p class="text-sm text-gray-700">使用有状态函数和消息队列减少函数间通信延迟</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-snowflake mr-2"></i>冷启动优化
+              </h4>
+              <p class="text-sm text-gray-700">采用倒带机制和勤勉搜索策略减少冷启动影响</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">分片策略与索引设计</h3>
+          <p class="mb-4">作者使用约束K-Means算法解决传统K-Means分片不平衡问题。约束K-Means确保每个分片满足云函数内存约束，但可能导致搜索效率降低，因为平衡聚类可能强制更多边界点实现更好平衡。</p>
+          
+          <!-- 分片对比图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-pie mr-2"></i>技术细节：图3 - 向量数据聚类结果比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 不同无监督聚类算法的向量数据聚类结果比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 不同聚类算法结果比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用不同无监督聚类算法对三个常见向量搜索数据集(SIFT1M, DEEP1B, GIST1M)的分区结果比较。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>传统K-Means问题:</strong> 即使预设min_points_per_centroid和max_points_per_centroid参数，也无法保证集群平衡</li>
+                  <li><strong>内存占用不均:</strong> 不同分片的内存占用可能达到内存容量限制的113%</li>
+                  <li><strong>约束K-Means优势:</strong> 产生最佳且平衡的结果，每个分片满足云函数内存约束</li>
+                  <li><strong>边界点处理:</strong> 引入半径阈值优化，通过添加小边界节点集提高搜索效率</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>数据集: SIFT1M, DEEP1B, GIST1M</li>
+                      <li>算法: 传统K-Means vs 约束K-Means</li>
+                      <li>评估指标: 内存占用平衡性</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>约束K-Means实现最佳平衡结果</li>
+                      <li>内存占用差异显著减少</li>
+                      <li>避免云函数内存溢出问题</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">搜索策略</h3>
+          <p class="mb-4">在Vexless中，无服务器向量搜索从接收用户端的查询向量(q)开始。协调器基于合格距离分数确定并激活q相关分区进行向量搜索。它计算q到不同分区质心的距离，然后通过比较距离分数确定其搜索分区DEF ID。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h4 class="font-semibold text-yellow-700 mb-2">搜索优化策略</h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>仅激活q相关分区而不是所有分区，实现成本效率</li>
+              <li>使用优化的通信机制确保来自多个DEF的组合结果被传递和聚合</li>
+              <li>返回的结果包括原始向量ID及其与查询向量对应距离的双值元组列表</li>
+              <li>基于返回的距离合并和重新排名所有top-k结果，返回全局top-k</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">通信机制优化</h3>
+          <p class="mb-4">Vexless引入混合无服务器架构进行向量搜索，显著最小化通信开销，同时保持无服务器云函数的成本优势。关键思想是在Vexless中结合有状态函数（如Azure Durable Function）作为协调器函数。</p>
+          
+          <!-- 通信机制对比图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-network-wired mr-2"></i>技术细节：图4 - 云通信开销比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 云通信开销比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: 云通信开销比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同通信解决方案的云通信开销比较，包括HTTP-based、Storage-based和Vexless的优化方法。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>HTTP-based方法:</strong> 随着通信消息大小增加，通信延迟从0.1KB的0.06ms增加到128KB的7.90ms</li>
+                  <li><strong>全局存储方法:</strong> 延迟相对稳定，但绝对延迟(~10ms)仍然是实现低延迟向量搜索的障碍</li>
+                  <li><strong>Vexless优化:</strong> 使用有状态函数和消息队列，通信开销降低一个数量级</li>
+                  <li><strong>性能提升:</strong> 支持无服务器云函数进行低延迟向量搜索，同时保持高搜索质量和低成本</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>使用Azure Durable Functions作为协调器函数，Azure Queue Storage作为消息队列。有状态函数能够跨多个函数调用保留状态，有助于停用后更快恢复，并最小化冷启动影响。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择Azure Durable Functions和Queue Storage是因为它们提供低延迟内部通道，消除同步过程中昂贵的基于HTTP和存储的通信需求。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>通过集中式通信中心协调工作函数之间的消息分发，每个工作函数也有使用Azure Queue Storage的双边消息队列确保非阻塞、异步通信。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">冷启动优化</h3>
+          <p class="mb-4">Vexless引入一种新方法减轻整体冷启动问题，同时最大化成本节约，采用两种策略：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-undo mr-2"></i>倒带机制
+              </h4>
+              <p class="text-gray-700">作为初始化和奖励机制运作。在接收随机查询向量q时，此方法首先使用完整生命周期启动任务相关有状态函数，然后观察最近查询工作负载，动态更改无服务器函数的生命周期，并在必要时刷新其"热"状态。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-search mr-2"></i>勤勉搜索机制
+              </h4>
+              <p class="text-gray-700">系统采用勤勉搜索策略，强调根据搜索策略在最可能的无服务器云函数目标分区内搜索，但也将任务分配给那些运行的DEF，让它们作为志愿者DEF工作，避免实例在其生命周期内闲置。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-semibold text-gray-700 mb-3">数据集</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 text-left">数据集</th>
+                    <th class="py-2 px-4 text-left">基础向量数量</th>
+                    <th class="py-2 px-4 text-left">查询向量数量</th>
+                    <th class="py-2 px-4 text-left">维度</th>
+                    <th class="py-2 px-4 text-left">数据类型</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-2 px-4">SIFT10M</td>
+                    <td class="py-2 px-4">10,000,000</td>
+                    <td class="py-2 px-4">10,000</td>
+                    <td class="py-2 px-4">128</td>
+                    <td class="py-2 px-4">int32</td>
+                  </tr>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-2 px-4">DEEP10M</td>
+                    <td class="py-2 px-4">10,000,000</td>
+                    <td class="py-2 px-4">10,000</td>
+                    <td class="py-2 px-4">96</td>
+                    <td class="py-2 px-4">float32</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4">GIST1M</td>
+                    <td class="py-2 px-4">1,000,000</td>
+                    <td class="py-2 px-4">1,000</td>
+                    <td class="py-2 px-4">960</td>
+                    <td class="py-2 px-4">int32</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-semibold text-blue-700 mb-2">评估指标</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li><strong>查询延迟:</strong> 在不同分钟级查询工作负载下顺序执行查询的平均执行时间（毫秒）</li>
+                <li><strong>准确性:</strong> 使用recall@10评估，衡量在算法返回的k个结果中真实top-k结果的百分比</li>
+                <li><strong>成本分析:</strong> 比较不同实现的月度成本</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2">实验环境</h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li><strong>VM基线:</strong> Azure计算优化VM F4，8GB内存</li>
+                <li><strong>云函数:</strong> Azure Functions，与VM相同的CPU配置</li>
+                <li><strong>索引算法:</strong> HNSW (HNSWLib)</li>
+                <li><strong>优化库:</strong> Numpy库，利用AVX2指令集优化SIMD</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">整体结果</h3>
+          <p class="mb-4">实验结果表明，Vexless在不同查询到达率场景下在性能成本比和延迟方面具有显著优势。</p>
+          
+          <!-- 整体性能结果图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图7 - 整体性能与成本比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 整体性能与成本比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 整体性能与成本比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 左两列显示在稀疏(a,d,g)和密集(b,e,h)工作负载下使用不同实现的向量搜索月度成本。右列显示三种实现的召回-延迟图。每行显示来自不同数据集(SIFT10M, DEEP10M和GIST1M)的结果。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>稀疏工作负载:</strong> Vexless提供高达<strong>5.3倍</strong>的月度成本节省，与静态配置的基于VM的解决方案相比，与朴素云函数实现相比高达<strong>6.5倍</strong></li>
+                  <li><strong>密集工作负载:</strong> Vexless继续在所有方面具有显著较低的月度成本</li>
+                  <li><strong>搜索性能:</strong> Vexless在三个不同数据集上实现最佳搜索性能</li>
+                  <li><strong>成本效率:</strong> Vexless的关键特性 - 最优分配无服务器资源，以成本有效的结果保证最佳搜索性能</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>数据集: SIFT10M, DEEP10M, GIST1M</li>
+                      <li>比较对象: Vexless vs VM基线 vs 朴素云函数实现</li>
+                      <li>工作负载: 稀疏和密集查询模式</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>Vexless在稀疏工作负载下成本节省5.3倍</li>
+                      <li>在密集工作负载下仍保持成本优势</li>
+                      <li>在所有数据集上实现最佳搜索性能</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 尾部延迟分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-tachometer-alt mr-2"></i>技术细节：图8 - 尾部延迟分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: Vexless和多线程VM在DEEP10M上的百分位搜索延迟比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 百分位搜索延迟比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Vexless和多线程VM在DEEP10M数据集上的百分位搜索延迟比较。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>一致性性能:</strong> Vexless在DEEP10M数据集上的向量搜索显示可靠性和一致性</li>
+                  <li><strong>百分位分析:</strong> 比较分析显示Vexless在平均、95th和99th百分位上始终优于基于VM的基准</li>
+                  <li><strong>尾部延迟优化:</strong> Vexless的优化设计确保即使在极端情况下也能保持稳定的性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">消融研究</h3>
+          <p class="mb-4">作者对DEEP10M数据集进行了相关性能评估，证明设计的每个部分的有效性。</p>
+          
+          <!-- 搜索策略分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-search mr-2"></i>技术细节：图9 - 搜索策略和冗余分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: Vexless中的搜索策略和冗余分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: 搜索策略和冗余分析" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> (a) DEEP10M上的分区搜索策略分析 (b) DEEP10M上的索引冗余分析
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>搜索策略分析:</strong> 将DEEP10M数据索引分布在四个分区上，然后通过将搜索任务分派到top-p(p = 100%, 75%, 50%, 25%)最接近的索引分区并激活它们进行一次查询搜索来进行分布式向量搜索</li>
+                  <li><strong>性能发现:</strong> 通过搜索更多索引分区，由于搜索范围更大，性能变得更好</li>
+                  <li><strong>成本优化:</strong> 与搜索所有分区相比，搜索top-75%最接近的索引分区不仅节省四分之一的搜索成本，而且具有与前者top-100%搜索策略相当的搜索性能</li>
+                  <li><strong>冗余分析:</strong> 在向量数据分片策略中，作者观察到一些向量，称为"边界向量"或"边界点"，与多个质心的距离几乎相等</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>通过管理解决此类问题，具有可变内存冗余比，Vexless在DEEP10M等数据集上展示搜索效率。图例中的百分比表示通过引入冗余边界向量索引相同数据范围增加的整体内存消耗。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>通过权衡冗余以获取搜索性能的索引，作者研究了分片和搜索阶段的索引和激活阈值，测试显示具有不同距离阈值的不同冗余选项也会对搜索效率产生很大影响。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>部分原因是影响无服务器云函数的激活比率，部分原因是边界点更多地包含在索引和进一步搜索中。因此，建立正确的激活阈值很重要。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">额外实验</h3>
+          <p class="mb-4">作者进行了多项额外实验，评估Vexless在不同工作负载和参数下的表现。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-semibold text-blue-700 mb-2">突发工作负载实验</h4>
+              <p class="text-gray-700">生成了具有高、中、低突发级别的三种合成工作负载。实验结果显示，在中等和高突发工作负载上，云函数实现更低的成本（给定相似的召回和性能）。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-semibold text-green-700 mb-2">真实工作负载实验</h4>
+              <p class="text-gray-700">添加了AnalyticDB和Twitter的两个真实世界工作负载。实验结果显示，在真实工作负载上，云函数获胜，因为工作负载确实是突发和稀疏的。</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-semibold text-purple-700 mb-2">稀疏性影响评估</h4>
+              <p class="text-gray-700">改变了空闲时间。结果显示，当空闲时间超过2分钟时，云函数更具成本效益。</p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-semibold text-yellow-700 mb-2">连续工作负载实验</h4>
+              <p class="text-gray-700">评估了以不同qps速率连续发出查询的成本。结果显示，对于Deep10M数据集，只要连续查询速率低于1000 qps（中等网站的查询速率），云函数就获胜。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">案例研究：图像搜索应用</h3>
+          <p class="mb-4">作者在端到端机器学习应用程序中测试了Vexless。选择图像搜索作为向量搜索的流行应用。</p>
+          
+          <!-- 图像搜索工作流 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-images mr-2"></i>技术细节：图15 - 图像搜索系统工作流
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 15: 图像搜索系统工作流
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig15.png" alt="论文图15: 图像搜索系统工作流" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 图像搜索系统的工作流程。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>工作流程:</strong> 图像搜索由在线查询处理中的两个步骤组成。首先，使用预训练神经网络将查询图像S转换为特征向量VS。其次，在向量数据库R中搜索此向量VS。</li>
+                  <li><strong>嵌入模型:</strong> 选择MobileNetV3作为嵌入模型，以其高质量嵌入和高吞吐量而闻名。</li>
+                  <li><strong>数据集:</strong> 选择具有100万张图像的ImageNet21的预处理子集用于数据集。图像被嵌入到1000维向量中，使用HNSW作为向量索引。</li>
+                  <li><strong>性能结果:</strong> 图像嵌入时间（图15中的步骤1）平均每张图像约0.18ms，而向量搜索（图15中的步骤2）需要2ms。向量搜索任务成本比图像嵌入高10倍，显然是此应用程序中的瓶颈。</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>嵌入模型: MobileNetV3</li>
+                      <li>数据集: ImageNet21子集(1M图像)</li>
+                      <li>向量维度: 1000</li>
+                      <li>索引算法: HNSW</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>图像嵌入时间: 0.18ms/图像</li>
+                      <li>向量搜索时间: 2ms</li>
+                      <li>向量搜索成本比图像嵌入高10倍</li>
+                      <li>向量搜索是大规模向量搜索应用中的瓶颈</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本文提出了Vexless，这是第一个为云函数构建的向量数据库，具有高弹性、低运营成本和细粒度计费模型的优势。实验表明，Vexless在稀疏和突发工作负载上比传统的基于VM的实现实现更好的成本效益。</p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>提出了第一个针对云函数优化的向量数据库系统Vexless</li>
+              <li>设计了基于约束K-Means的分片策略，实现云函数实例间的负载均衡</li>
+              <li>开发了优化的通信机制，使用有状态函数和消息队列减少函数间通信开销</li>
+              <li>提出了自适应调度算法，采用倒带机制和勤勉搜索策略减少冷启动时间</li>
+              <li>在稀疏和突发工作负载下实现高达5.3倍的成本节约</li>
+            </ul>
+          </div>
+          
+          <p class="mb-4">Vexless也很灵活，可以使用不同的索引方法，包括IVF和LSH，并且设计也可以推广到其他云平台，如AWS和GCP。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-semibold text-blue-700 mb-2">未来工作方向</h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>探索更多向量索引算法的集成和优化</li>
+              <li>扩展到多云环境，支持跨云平台的部署</li>
+              <li>优化更大规模数据集的处理能力</li>
+              <li>研究混合部署策略，结合VM和云函数的优势</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片的展开/收起
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

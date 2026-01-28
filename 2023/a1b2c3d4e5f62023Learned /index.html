@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learned Index: A Comprehensive Experimental Evaluation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .survey-analysis {
+        margin: 1rem 0;
+      }
+      .taxonomy-placeholder .grid {
+        grid-template-columns: 1fr;
+      }
+      .pdf-figure-container {
+        padding: 1rem;
+      }
+      .image-display {
+        padding: 1rem;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-purple-600 hover:bg-purple-50;
+    }
+    .nav-item.active {
+      @apply text-purple-600 bg-purple-100;
+    }
+    /* 图像交互样式 */
+    .pdf-figure-container img {
+      transition: transform 0.3s ease;
+    }
+    .pdf-figure-container img:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">引言</a>
+        <a href="#taxonomy" class="nav-item whitespace-nowrap">分类体系</a>
+        <a href="#methodology" class="nav-item whitespace-nowrap">方法综述</a>
+        <a href="#comparison" class="nav-item whitespace-nowrap">方法比较</a>
+        <a href="#application" class="nav-item whitespace-nowrap">应用领域</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">挑战与问题</a>
+        <a href="#trends" class="nav-item whitespace-nowrap">研究趋势</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Learned Index: A Comprehensive Experimental Evaluation
+        </h1>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Zhaoyan Sun, Xuanhe Zhou, Guoliang Li</div>
+                <div class="text-sm text-gray-600 mt-1">清华大学</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">发表信息</strong>
+                <div>PVLDB, 16(8): 1992 - 2004, 2023</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.14778/35945123594528</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">综述范围</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">14个索引方法</span>
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">5个数据集</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">多维评估</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-purple-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            索引可以通过避免全表扫描来提高查询处理性能。尽管传统索引（如B+树）已被广泛使用，学习索引被提出采用机器学习模型来减少查询延迟和索引大小。然而，现有的学习索引（1）没有在相同的实验框架下进行彻底评估，（2）没有在不同设置下进行全面比较（例如，键查找、键插入、并发操作、批量加载）。
+          </p>
+          <p class="text-gray-700 leading-relaxed">
+            本文详细回顾了现有的学习索引，并讨论了学习索引中关键组件的设计选择。我们提供了一个测试平台，便于研究人员设计和测试新的学习索引。我们在相同的实验框架下比较了最先进的学习索引，并提供了在各种实际场景下选择合适学习索引的指导。
+          </p>
+        </div>
+        
+        <!-- 研究领域概览 -->
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg mt-6">
+          <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+            <i class="fas fa-map mr-2"></i>研究领域概览
+          </h4>
+          <ul class="list-disc list-inside space-y-1 text-gray-700">
+            <li>领域发展时间线：从传统索引到学习索引的演进</li>
+            <li>核心技术分支：线性模型、非线性模型、混合模型</li>
+            <li>关键里程碑：RMI首次提出学习索引概念，ALEX引入可更新学习索引</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 引言 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-purple-500"></i>
+          引言
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-question-circle mr-2 text-blue-500"></i>研究动机
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>现有学习索引缺乏统一的评估框架</li>
+              <li>缺乏指导实践者选择合适学习索引的指南</li>
+              <li>缺乏设计和测试新学习索引的测试平台</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-bullseye mr-2 text-green-500"></i>研究贡献
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>构建了统一的评估框架</li>
+              <li>提供了广泛的研究发现和选择指南</li>
+              <li>开发了可重用的测试平台</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 学习索引基本概念 -->
+        <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 mb-6">
+          <h3 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+            <i class="fas fa-lightbulb mr-2"></i>学习索引基本概念
+          </h3>
+          <p class="text-gray-700 mb-3">
+            <strong>定义：</strong>给定一个排序的键-位置对列表D = {(k₀,p₀), (k₁,p₁), ...}，学习索引采用机器学习模型F来拟合从键K到位置P的映射H，并使用位置搜索来校正拟合误差|F(k)-H(k)|。
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="bg-white p-4 rounded border text-center">
+              <i class="fas fa-search text-2xl text-blue-500 mb-2"></i>
+              <div class="font-semibold text-blue-600">键查找</div>
+              <div class="text-sm text-gray-600 mt-1">使用学习模型识别键的位置</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <i class="fas fa-arrows-alt-h text-2xl text-green-500 mb-2"></i>
+              <div class="font-semibold text-green-600">范围查询</div>
+              <div class="text-sm text-gray-600 mt-1">查找键范围内的所有记录</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <i class="fas fa-plus-circle text-2xl text-purple-500 mb-2"></i>
+              <div class="font-semibold text-purple-600">键插入</div>
+              <div class="text-sm text-gray-600 mt-1">插入新键并可能更新索引结构</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 分类体系 -->
+      <section id="taxonomy" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-sitemap mr-3 text-purple-500"></i>
+          学习索引分类体系
+        </h2>
+        
+        <!-- 分类概览 -->
+        <div class="taxonomy-placeholder mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-project-diagram mr-2 text-blue-500"></i>按可变性分类
+              </h3>
+              <div class="space-y-4">
+                <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                  <h4 class="font-semibold text-blue-700 mb-2">不可变索引</h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700">
+                    <li>RMI</li>
+                    <li>PLEX</li>
+                    <li>PGM</li>
+                  </ul>
+                </div>
+                <div class="bg-green-50 p-4 rounded border border-green-200">
+                  <h4 class="font-semibold text-green-700 mb-2">可变索引</h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700">
+                    <li>DPGM</li>
+                    <li>XIndex</li>
+                    <li>FINEdex</li>
+                    <li>ALEX</li>
+                    <li>LIPP</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-cogs mr-2 text-green-500"></i>按数据拟合模型分类
+              </h3>
+              <div class="space-y-4">
+                <div class="bg-purple-50 p-4 rounded border border-purple-200">
+                  <h4 class="font-semibold text-purple-700 mb-2">线性模型</h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700">
+                    <li>线性插值模型 (MAB+tree)</li>
+                    <li>线性回归模型 (ALEX, SIndex)</li>
+                  </ul>
+                </div>
+                <div class="bg-orange-50 p-4 rounded border border-orange-200">
+                  <h4 class="font-semibold text-orange-700 mb-2">非线性模型</h4>
+                  <ul class="list-disc list-inside text-sm text-gray-700">
+                    <li>多项式拟合模型 (LIPP)</li>
+                    <li>神经网络模型 (RMI)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 学习索引设计要素 -->
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200 mb-8">
+          <h3 class="font-bold text-indigo-700 text-xl mb-4 flex items-center">
+            <i class="fas fa-puzzle-piece mr-2"></i>学习索引设计要素
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                <i class="fas fa-search mr-2 text-blue-500"></i>键查找设计
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>位置推断</li>
+                <li>位置搜索</li>
+                <li>范围查询支持</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                <i class="fas fa-plus mr-2 text-green-500"></i>键插入设计
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>原地插入策略</li>
+                <li>增量缓冲区策略</li>
+                <li>结构修改</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                <i class="fas fa-users mr-2 text-purple-500"></i>并发设计
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>节点内并发</li>
+                <li>节点间并发</li>
+                <li>缓冲区训练合并</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 方法综述 -->
+      <section id="methodology" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-purple-500"></i>
+          方法综述
+        </h2>
+        
+        <!-- 数据拟合模型 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-chart-line mr-2 text-blue-500"></i>数据拟合模型
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-lg text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-ruler-combined mr-2"></i>线性模型
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>线性插值模型</strong>：提取若干关键点，计算分段线性模型</li>
+                <li><strong>线性回归模型</strong>：计算所有点的最小平方差，调整斜率和截距参数</li>
+                <li><strong>优势</strong>：轻量级，训练和预测速度快</li>
+                <li><strong>劣势</strong>：对复杂数据分布拟合能力有限</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-lg text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-project-diagram mr-2"></i>非线性模型
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>多项式拟合模型</strong>：扩展线性回归为多项式模型</li>
+                <li><strong>神经网络模型</strong>：使用梯度下降训练，最小化预测误差</li>
+                <li><strong>优势</strong>：拟合能力强，支持更复杂的映射关系</li>
+                <li><strong>劣势</strong>：训练和预测开销大</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 线性 vs 非线性模型比较 -->
+          <div class="bg-gradient-to-r from-blue-50 to-orange-50 p-5 rounded-lg border border-blue-200 mb-6">
+            <h4 class="font-bold text-gray-800 mb-3 text-center">线性模型 vs 非线性模型</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white p-4 rounded border">
+                <h5 class="font-semibold text-blue-600 mb-2">线性模型</h5>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>✓ 训练和预测速度快</li>
+                  <li>✓ 内存占用小</li>
+                  <li>✗ 对复杂分布拟合能力有限</li>
+                  <li>✗ 每个节点容纳键数较少</li>
+                </ul>
+              </div>
+              <div class="bg-white p-4 rounded border">
+                <h5 class="font-semibold text-orange-600 mb-2">非线性模型</h5>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>✓ 预测精度高</li>
+                  <li>✓ 支持更复杂的映射关系</li>
+                  <li>✗ 训练和预测开销大</li>
+                  <li>✗ 实现复杂度高</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 插入策略 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-plus-circle mr-2 text-green-500"></i>插入策略
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-lg text-green-700 mb-3 flex items-center">
+                <i class="fas fa-buffer mr-2"></i>增量缓冲区策略
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>索引级缓冲区</strong>：所有插入操作共享一个缓冲区 (DPGM)</li>
+                <li><strong>节点级缓冲区</strong>：每个叶节点维护一个增量缓冲区 (XIndex, SIndex)</li>
+                <li><strong>键级缓冲区</strong>：为叶节点中的每个键分配缓冲区 (FINEdex)</li>
+                <li><strong>优势</strong>：插入性能高，减少结构修改频率</li>
+                <li><strong>劣势</strong>：查找时需要同时搜索索引和缓冲区</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-lg text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-edit mr-2"></i>原地插入策略
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>预留间隙</strong>：为每个节点预留一些间隙以容纳新键</li>
+                <li><strong>键移位</strong>：在目标位置和最近间隙之间移动键以腾出空间 (ALEX)</li>
+                <li><strong>创建新节点</strong>：为目标位置创建新节点 (LIPP)</li>
+                <li><strong>优势</strong>：查找性能高，不需要搜索缓冲区</li>
+                <li><strong>劣势</strong>：插入可能导致频繁的结构修改</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 结构修改触发条件 -->
+        <div class="bg-gradient-to-r from-red-50 to-yellow-50 p-5 rounded-lg border border-red-200">
+          <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>结构修改触发条件
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <i class="fas fa-weight text-red-500"></i>
+              </div>
+              <div class="font-semibold text-red-600">基于填充度</div>
+              <div class="text-xs text-gray-600 mt-1">节点中键值对数量超过阈值</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <i class="fas fa-bullseye text-blue-500"></i>
+              </div>
+              <div class="font-semibold text-blue-600">基于误差</div>
+              <div class="text-xs text-gray-600 mt-1">模型预测误差超过阈值</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <i class="fas fa-calculator text-green-500"></i>
+              </div>
+              <div class="font-semibold text-green-600">基于成本</div>
+              <div class="text-xs text-gray-600 mt-1">节点成本超过阈值 (ALEX)</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <i class="fas fa-exclamation text-purple-500"></i>
+              </div>
+              <div class="font-semibold text-purple-600">基于冲突</div>
+              <div class="text-xs text-gray-600 mt-1">映射到同一位置的键数超过阈值 (LIPP)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 方法比较 -->
+      <section id="comparison" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-balance-scale mr-3 text-purple-500"></i>
+          方法比较
+        </h2>
+        
+        <!-- 技术差异表格 -->
+        <div class="overflow-x-auto mb-8">
+          <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">索引</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">插入策略</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">结构修改</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">数据拟合模型</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">位置搜索</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">并发</th>
+                <th class="py-3 px-4 text-left font-semibold text-gray-700 border-b">批量加载</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr class="bg-blue-50">
+                <td class="py-3 px-4 font-medium text-gray-800">RMI</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">无</td>
+                <td class="py-3 px-4 text-gray-700">简单神经网络</td>
+                <td class="py-3 px-4 text-gray-700">仅叶节点</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">自上而下</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-medium text-gray-800">PGM</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">无</td>
+                <td class="py-3 px-4 text-gray-700">线性模型</td>
+                <td class="py-3 px-4 text-gray-700">所有节点</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">贪婪分割</td>
+              </tr>
+              <tr class="bg-green-50">
+                <td class="py-3 px-4 font-medium text-gray-800">DPGM</td>
+                <td class="py-3 px-4 text-gray-700">增量缓冲区</td>
+                <td class="py-3 px-4 text-gray-700">缓冲区合并</td>
+                <td class="py-3 px-4 text-gray-700">线性模型</td>
+                <td class="py-3 px-4 text-gray-700">所有节点</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">贪婪分割</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-medium text-gray-800">XIndex</td>
+                <td class="py-3 px-4 text-gray-700">增量缓冲区</td>
+                <td class="py-3 px-4 text-gray-700">缓冲区合并</td>
+                <td class="py-3 px-4 text-gray-700">RMI</td>
+                <td class="py-3 px-4 text-gray-700">所有节点</td>
+                <td class="py-3 px-4 text-gray-700">临时缓冲区</td>
+                <td class="py-3 px-4 text-gray-700">均匀分割</td>
+              </tr>
+              <tr class="bg-green-50">
+                <td class="py-3 px-4 font-medium text-gray-800">FINEdex</td>
+                <td class="py-3 px-4 text-gray-700">增量缓冲区</td>
+                <td class="py-3 px-4 text-gray-700">基于填充度</td>
+                <td class="py-3 px-4 text-gray-700">分段线性回归</td>
+                <td class="py-3 px-4 text-gray-700">所有节点</td>
+                <td class="py-3 px-4 text-gray-700">键级缓冲区</td>
+                <td class="py-3 px-4 text-gray-700">贪婪分割</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-medium text-gray-800">ALEX</td>
+                <td class="py-3 px-4 text-gray-700">原地插入</td>
+                <td class="py-3 px-4 text-gray-700">基于成本</td>
+                <td class="py-3 px-4 text-gray-700">线性模型</td>
+                <td class="py-3 px-4 text-gray-700">仅叶节点</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">基于成本分割</td>
+              </tr>
+              <tr class="bg-green-50">
+                <td class="py-3 px-4 font-medium text-gray-800">LIPP</td>
+                <td class="py-3 px-4 text-gray-700">原地插入</td>
+                <td class="py-3 px-4 text-gray-700">基于冲突</td>
+                <td class="py-3 px-4 text-gray-700">非线性模型</td>
+                <td class="py-3 px-4 text-gray-700">无</td>
+                <td class="py-3 px-4 text-gray-700">不支持</td>
+                <td class="py-3 px-4 text-gray-700">基于冲突分割</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- 性能比较 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-search mr-2 text-blue-500"></i>查找性能比较
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>无位置搜索</strong>：LIPP性能最佳，因为不进行位置搜索</li>
+              <li><strong>仅叶节点搜索</strong>：ALEX、RMI性能中等</li>
+              <li><strong>所有节点搜索</strong>：XIndex、FINEdex性能较差</li>
+              <li>P99延迟接近P50延迟，表明大多数键的查找延迟相似</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-plus mr-2 text-green-500"></i>插入性能比较
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>增量缓冲区策略</strong>：DPGM插入性能最佳</li>
+              <li><strong>原地插入策略</strong>：查找性能更好，但插入性能较差</li>
+              <li>对于复杂数据分布（如Osmc），学习索引没有优势</li>
+              <li>对于倾斜插入模式，传统索引表现更稳定</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 范围查询性能 -->
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-5 rounded-lg border border-yellow-200">
+          <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-arrows-alt-h mr-2 text-yellow-500"></i>范围查询性能
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-yellow-600 mb-2">学习索引表现</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>不可变索引性能优于可变索引</li>
+                <li>链接叶节点的索引（ALEX、B+树）性能最佳</li>
+                <li>LIPP范围查询性能最差</li>
+                <li>大多数时间花费在扫描叶节点的排序对</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-yellow-600 mb-2">与传统索引比较</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>学习索引在范围查询上没有显著优势</li>
+                <li>传统索引（B+树）表现稳定</li>
+                <li>范围查询性能主要受扫描开销影响</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 应用领域 -->
+      <section id="application" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-rocket mr-3 text-purple-500"></i>
+          应用领域与场景分析
+        </h2>
+        
+        <!-- 适用场景分析 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-green-700 mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>学习索引优势场景
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>简单数据分布（相对平滑的CDF，无突变）</li>
+              <li>读密集型工作负载</li>
+              <li>均匀插入模式</li>
+              <li>点查询为主的应用</li>
+              <li>内存数据库系统</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-red-700 mb-4 flex items-center">
+              <i class="fas fa-times-circle mr-2"></i>学习索引劣势场景
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>复杂数据分布（机器学习模型无法很好拟合）</li>
+              <li>写密集型工作负载</li>
+              <li>倾斜插入模式</li>
+              <li>大量范围查询</li>
+              <li>字符串键</li>
+              <li>并发操作</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 数据集分析 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-database mr-2 text-blue-500"></i>实验数据集
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2">Amzn</h4>
+              <div class="text-sm text-gray-600">
+                <p>Amazon图书ID及其销售热度</p>
+                <p class="mt-1"><strong>特点：</strong>2亿个非重复整数键</p>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2">Face</h4>
+              <div class="text-sm text-gray-600">
+                <p>Facebook用户ID</p>
+                <p class="mt-1"><strong>特点：</strong>2亿个非重复整数键</p>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2">Wiki</h4>
+              <div class="text-sm text-gray-600">
+                <p>Wikipedia文章ID及其编辑时间戳</p>
+                <p class="mt-1"><strong>特点：</strong>2亿对，最多21,026个重复整数键</p>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2">Osmc</h4>
+              <div class="text-sm text-gray-600">
+                <p>OpenStreetMap中的单元格ID</p>
+                <p class="mt-1"><strong>特点：</strong>2亿个非重复整数键，CDF最复杂</p>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-semibold text-gray-800 mb-2">Url</h4>
+              <div class="text-sm text-gray-600">
+                <p>Memetracker中的URL</p>
+                <p class="mt-1"><strong>特点：</strong>9千万个非重复字符串键，长度15-128字节</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 工作负载分析 -->
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border border-purple-200">
+          <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tasks mr-2 text-purple-500"></i>工作负载分析
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-search text-blue-500 text-xl"></i>
+              </div>
+              <div class="font-semibold text-blue-600">静态场景</div>
+              <div class="text-xs text-gray-600 mt-2">仅包含查找和范围查询操作</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-exchange-alt text-green-500 text-xl"></i>
+              </div>
+              <div class="font-semibold text-green-600">动态场景</div>
+              <div class="text-xs text-gray-600 mt-2">包含查找、范围查询和插入操作</div>
+            </div>
+            <div class="bg-white p-4 rounded border text-center">
+              <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-users text-purple-500 text-xl"></i>
+              </div>
+              <div class="font-semibold text-purple-600">并发场景</div>
+              <div class="text-xs text-gray-600 mt-2">并行查找、范围查询和插入操作</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 挑战与问题 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-purple-500"></i>
+          挑战与问题
+        </h2>
+        
+        <!-- 主要挑战 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-red-700 mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>性能挑战
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>复杂数据分布下模型拟合效果差</li>
+              <li>写密集型工作负载下性能不如传统索引</li>
+              <li>范围查询性能没有显著优势</li>
+              <li>字符串键处理效率低</li>
+              <li>并发场景下性能下降明显</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-orange-700 mb-4 flex items-center">
+              <i class="fas fa-cogs mr-2"></i>技术挑战
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>模型训练和更新开销大</li>
+              <li>结构修改导致性能波动</li>
+              <li>增量缓冲区策略增加查找复杂度</li>
+              <li>缺乏系统故障恢复和持久化支持</li>
+              <li>实际数据库集成缺乏最佳实践</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 学习索引的局限性 -->
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 p-5 rounded-lg border border-red-200">
+          <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-clipboard-list mr-2 text-red-500"></i>学习索引的局限性
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-red-600 mb-2">静态场景</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>范围查询性能与传统索引相似甚至更差</li>
+                <li>对复杂数据分布适应能力有限</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-red-600 mb-2">动态场景</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>写密集型工作负载下无法超越传统索引</li>
+                <li>结构修改开销大</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-red-600 mb-2">并发场景</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>大多数采用增量缓冲区存储插入对，减慢查找</li>
+                <li>高度倾斜插入数据下性能大幅下降</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded border">
+              <h4 class="font-semibold text-red-600 mb-2">实际部署</h4>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li>缺乏故障恢复和持久化支持</li>
+                <li>实际数据库集成缺乏指南</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 研究趋势 -->
+      <section id="trends" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-purple-500"></i>
+          研究趋势
+        </h2>
+        
+        <!-- 未来研究方向 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-flask mr-2"></i>技术改进方向
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>设计高效支持并发查找/插入的原位插入学习索引</li>
+              <li>开发更适应复杂数据分布的混合模型</li>
+              <li>优化模型训练和更新算法，减少开销</li>
+              <li>改进结构修改策略，减少性能波动</li>
+              <li>增强对字符串键和非数值数据的支持</li>
+            </ul>
+          </div>
+          
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="font-bold text-lg text-green-700 mb-4 flex items-center">
+              <i class="fas fa-cube mr-2"></i>系统集成方向
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>开发系统故障恢复和持久化支持</li>
+              <li>制定实际数据库集成的最佳实践</li>
+              <li>提供基于模型重训练问题的索引效益评估指南</li>
+              <li>开发自动化索引选择和调优工具</li>
+              <li>探索学习索引在分布式系统中的应用</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 时间线展示 -->
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-lg border border-indigo-200">
+          <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-hourglass-half mr-2 text-indigo-500"></i>学习索引发展时间线
+          </h3>
+          <div class="relative">
+            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-indigo-200"></div>
+            
+            <div class="relative pl-10 pb-8">
+              <div class="absolute left-0 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">
+                <i class="fas fa-star text-white text-sm"></i>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-indigo-700">2018年</h4>
+                <p class="text-sm text-gray-700 mt-1">RMI首次提出学习索引概念，开创了学习索引研究领域</p>
+              </div>
+            </div>
+            
+            <div class="relative pl-10 pb-8">
+              <div class="absolute left-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <i class="fas fa-leaf text-white text-sm"></i>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-green-700">2020年</h4>
+                <p class="text-sm text-gray-700 mt-1">ALEX引入可更新学习索引，PGM-index提出动态学习索引</p>
+              </div>
+            </div>
+            
+            <div class="relative pl-10 pb-8">
+              <div class="absolute left-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+                <i class="fas fa-project-diagram text-white text-sm"></i>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-purple-700">2021年</h4>
+                <p class="text-sm text-gray-700 mt-1">LIPP提出精确位置学习索引，FINEdex支持细粒度并发</p>
+              </div>
+            </div>
+            
+            <div class="relative pl-10">
+              <div class="absolute left-0 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
+                <i class="fas fa-chart-bar text-white text-sm"></i>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 class="font-semibold text-red-700">2023年</h4>
+                <p class="text-sm text-gray-700 mt-1">本综述提供系统评估和统一测试平台，推动学习索引标准化</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-purple-500"></i>
+          结论
+        </h2>
+        
+        <!-- 主要结论 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="font-bold text-xl text-gray-800 mb-4">核心发现总结</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div class="bg-green-50 p-4 rounded border border-green-200">
+                <h4 class="font-semibold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-check mr-2"></i>学习索引优势
+                </h4>
+                <ul class="text-sm text-gray-700 list-disc list-inside">
+                  <li>简单数据分布下性能优异</li>
+                  <li>读密集型工作负载效率高</li>
+                  <li>索引大小通常更小</li>
+                  <li>点查询延迟低</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                <h4 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-balance-scale mr-2"></i>选择指南
+                </h4>
+                <ul class="text-sm text-gray-700 list-disc list-inside">
+                  <li>仅插入：DPGM</li>
+                  <li>插入和查找：LIPP</li>
+                  <li>插入、查找和范围查询：ALEX</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div class="bg-red-50 p-4 rounded border border-red-200">
+                <h4 class="font-semibold text-red-700 mb-2 flex items-center">
+                  <i class="fas fa-times mr-2"></i>学习索引局限
+                </h4>
+                <ul class="text-sm text-gray-700 list-disc list-inside">
+                  <li>复杂数据分布性能差</li>
+                  <li>写密集型负载不如传统索引</li>
+                  <li>范围查询无显著优势</li>
+                  <li>字符串键处理效率低</li>
+                </ul>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded border border-purple-200">
+                <h4 class="font-semibold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-road mr-2"></i>未来展望
+                </h4>
+                <ul class="text-sm text-gray-700 list-disc list-inside">
+                  <li>需要新的索引设计解决性能问题</li>
+                  <li>增加故障恢复和持久化支持</li>
+                  <li>制定实际部署最佳实践</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 最终总结 -->
+        <div class="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-300">
+          <h3 class="font-bold text-purple-800 text-xl mb-4 text-center">学习索引评估总结</h3>
+          <p class="text-gray-700 text-center leading-relaxed">
+            本文系统回顾了现有的学习索引，并在相同的评估框架下对它们进行了评估。我们测试了三种典型场景（静态、动态、并发）并使用真实数据集。结果和发现可以指导研究人员和实践者为他们的应用选择合适的学>习索引。我们还提供了一个统一的测试平台，帮助研究人员设计新的学习索引，减少设计和实现的开销。
+          </p>
+        </div>
+      </section>
+      
+      <!-- PDF图像展示 -->
+      <section id="figures" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-images mr-3 text-purple-500"></i>
+          图表展示
+        </h2>
+        
+        <!-- PDF图像占位符示例 -->
+        <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h5 class="font-semibold text-gray-700">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              论文图 1: 通用学习索引结构
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+          </div>
+          
+          <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+            <img src="./images/fig1.png" 
+                 alt="论文图1: 通用学习索引结构" 
+                 class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            
+            <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+              <div class="flex flex-col items-center justify-center">
+                <i class="fas fa-sitemap text-3xl text-gray-400 mb-3"></i>
+                <p class="text-gray-600 font-medium mb-2">图 1: 通用学习索引结构</p>
+                <p class="text-sm text-gray-500 text-center">展示学习索引的通用层次结构，虚线矩形表示某些索引的内部节点中没有键</p>
+                <div class="mt-3 text-xs text-gray-400">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  图像路径: ./images/fig1.png
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图像技术描述 -->
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-3 rounded border">
+              <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+              </h6>
+              <p class="text-sm text-gray-600">展示学习索引的通用层次结构，包括内部节点和叶节点，以及机器学习模型在节点中的应用。</p>
+            </div>
+            <div class="bg-blue-50 p-3 rounded border">
+              <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+              </h6>
+              <ul class="text-sm text-gray-600 list-disc list-inside">
+                <li>学习索引采用层次结构</li>
+                <li>每个节点包含机器学习模型</li>
+                <li>内部节点模型预测子节点</li>
+                <li>叶节点模型预测实际键位置</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 原图图注 -->
+          <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+            <strong class="text-yellow-700 flex items-center">
+              <i class="fas fa-quote-left mr-2"></i>原图图注:
+            </strong>
+            <span class="ml-2">A General Learned Index Structure. Dotted rectangles denote some indexes have no keys in internal nodes.</span>
+          </div>
+        </div>
+        
+        <!-- 更多图像占位符... -->
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 图像交互增强
+      const images = document.querySelectorAll('.pdf-figure-container img');
+      images.forEach(img => {
+        img.addEventListener('click', function() {
+          this.classList.toggle('max-w-full');
+          this.classList.toggle('max-w-none');
+          this.classList.toggle('cursor-zoom-out');
+        });
+        
+        img.style.cursor = 'zoom-in';
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

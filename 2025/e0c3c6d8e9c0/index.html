@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>An Expressive, Efficient Attention Architecture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          An Expressive, Efficient Attention Architecture
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Kimi Team</div>
+                <div class="text-sm text-gray-600 mt-1">Moonshot AI</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv:2510.26692v1, 2025</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">资源链接</strong>
+                <div class="space-y-2">
+                  <div><a href="https://github.com/MoonshotAI/Kimi-Linear" class="text-blue-600 hover:underline">GitHub Repository</a></div>
+                  <div><a href="https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct" class="text-blue-600 hover:underline">HuggingFace Model</a></div>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">线性注意力</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">长上下文处理</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">高效推理</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">混合架构</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>Kimi Delta Attention (KDA)</strong>: 一种线性注意力机制，通过改进的循环内存管理和硬件效率来优化门控delta规则</li>
+          <li><strong>Kimi Linear架构</strong>: 采用3:1 KDA与全局注意力比例的混合设计，在减少内存占用的同时超越全注意力质量</li>
+          <li><strong>大规模公平实证验证</strong>: 通过1.4T token训练，Kimi Linear在短/长上下文和RL风格评估中均优于全注意力和其他基线</li>
+          <li><strong>开源实现</strong>: 发布KDA内核、vLLM集成和预训练检查点，促进混合架构研究</li>
+        </ul>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者提出了Kimi Linear，一种混合线性注意力架构，在公平比较下首次在各种场景中超越全注意力机制，包括短上下文、长上下文和强化学习扩展场景。</p>
+          
+          <p class="mb-4">该架构的核心是Kimi Delta Attention (KDA)，一种表达力强的线性注意力模块，通过更细粒度的门控机制扩展了Gated DeltaNet，能够更有效地利用有限的有限状态RNN内存。</p>
+          
+          <p class="mb-4">作者预训练了一个具有30亿激活参数和480亿总参数的Kimi Linear模型，基于KDA和多头潜在注意力(MLA)的分层混合。实验表明，在相同训练方案下，Kimi Linear在所有评估任务中都显著优于全MLA，同时将KV缓存使用量减少高达75%，并在100万上下文长度下实现高达6倍的解码吞吐量。</p>
+          
+          <p class="mb-4">这些结果表明，Kimi Linear可以成为全注意力架构的即插即用替代品，具有卓越的性能和效率，包括输入和输出长度更长的任务。</p>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">随着大语言模型(LLMs)演变为越来越强大的智能体，推理的计算需求——特别是在长视野和强化学习(RL)设置中——正成为核心瓶颈。这种向RL测试时扩展的转变，其中模型必须在推理时处理扩展轨迹、工具使用交互和复杂决策空间，暴露了标准注意力机制的基本低效性。</p>
+          
+          <p class="mb-4">特别是，softmax注意力的二次时间复杂性和线性增长的键值(KV)缓存引入了大量的计算和内存开销，阻碍了吞吐量、上下文长度扩展和实时交互性。</p>
+          
+          <p class="mb-4">线性注意力提供了一种减少计算复杂度的原则性方法，但由于表达能力有限，在语言建模中历史上表现不如softmax注意力——即使是短序列。最近的进展通过两个创新显著缩小了这一差距：门控或衰减机制以及delta规则。</p>
+          
+          <p class="mb-4">尽管如此，纯线性结构仍然受到有限状态容量的基本限制，使得长序列建模和上下文检索在理论上具有挑战性。因此，结合softmax和线性注意力的混合架构——使用少量全局注意力层与主要更快的线性层——已成为质量和效率之间的实际折衷方案。</p>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">当前线性注意力方法面临的主要挑战包括：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-brain mr-2"></i>表达能力限制
+              </h4>
+              <p class="text-sm text-gray-700">纯线性结构受到有限状态容量的基本限制，使得长序列建模和上下文检索在理论上具有挑战性。</p>
+            </div>
+            
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-memory mr-2"></i>内存管理问题
+              </h4>
+              <p class="text-sm text-gray-700">线性注意力缺乏有效的遗忘机制，导致内存状态无限增长，干扰长上下文建模。</p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>效率与质量平衡
+              </h4>
+              <p class="text-sm text-gray-700">现有混合模型通常在有限规模下运行或缺乏跨不同基准的综合评估。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>硬件效率
+              </h4>
+              <p class="text-sm text-gray-700">DPLR结构引入更丰富的模型交互，但计算成本高且并行性差。</p>
+            </div>
+          </div>
+          
+          <p class="mb-4">核心挑战仍然是：开发一种注意力架构，在质量上匹配或超越全注意力，同时在速度和内存上实现显著的效率提升——这是实现下一代智能、解码密集型LLMs的关键步骤。</p>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- KDA技术机制 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-project-diagram mr-2 text-blue-500"></i>
+            Kimi Delta Attention (KDA) 技术机制
+          </h3>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <p class="text-gray-700 mb-4">KDA是一种新的门控线性注意力变体，通过引入细粒度对角化门控Diag(αₜ)来改进GDN的标量衰减，实现对内存衰减和位置感知的细粒度控制。</p>
+            
+            <div class="bg-white p-4 rounded border mb-4">
+              <h5 class="font-semibold text-gray-700 mb-2">KDA核心公式</h5>
+              <div class="font-mono text-sm bg-gray-100 p-3 rounded overflow-x-auto">
+                Sₜ = (I - βₜkₜkₜᵀ) Diag(αₜ) Sₜ₋₁ + βₜkₜvₜᵀ ∈ ℝ^{dₖ×dᵥ}; oₜ = Sₜᵀqₜ ∈ ℝ^{dᵥ}
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-blue-700">参数说明:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>Sₜ: 矩阵形式的内存状态</li>
+                  <li>qₜ,kₜ,vₜ: 查询、键、值向量</li>
+                  <li>αₜ: 通道级衰减门控</li>
+                  <li>βₜ: 学习率参数</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-blue-700">技术优势:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>细粒度通道级门控</li>
+                  <li>硬件高效的分块并行算法</li>
+                  <li>改进的DPLR变体</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 模型架构图 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+            Kimi Linear 模型架构
+          </h3>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 Figure 3: Kimi Linear模型架构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="Kimi Linear模型架构图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 我们的Kimi Linear模型架构示意图，包含一系列块，每个块包含一个token混合层和一个MoE通道混合层。具体来说，我们将N个KDA层与一个MLA层交错用于token混合，在我们的实现中N设置为3。
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-purple-700 mb-3">架构组件</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>KDA层</strong>: 细粒度门控线性注意力，负责位置信息编码</li>
+                  <li><strong>MLA层</strong>: 全注意力层，采用NoPE(无位置编码)</li>
+                  <li><strong>MoE层</strong>: 混合专家通道混合层</li>
+                  <li><strong>3:1混合比例</strong>: 每3个KDA层后接1个MLA层</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-purple-700 mb-3">技术特性</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>参数化</strong>: 使用ShortConv、Swish激活和L2Norm</li>
+                  <li><strong>输出门控</strong>: 采用Sigmoid门控和RMSNorm</li>
+                  <li><strong>位置编码</strong>: MLA层使用NoPE，KDA层负责位置感知</li>
+                  <li><strong>内存效率</strong>: 固定大小状态，不随序列长度增长</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 效率分析 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-2 text-blue-500"></i>
+            效率分析
+          </h3>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-green-700 mb-3">计算复杂度</h4>
+                <div class="space-y-4">
+                  <div>
+                    <h5 class="font-semibold text-gray-700">KDA FLOPs:</h5>
+                    <div class="font-mono text-sm bg-white p-3 rounded border">
+                      FLOP<sub>KDA</sub>(T;C,d<sub>h</sub>) = 6Td<sub>h</sub><sup>2</sup> + 3TCd<sub>h</sub> + TC<sup>2</sup>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h5 class="font-semibold text-gray-700">全注意力 FLOPs:</h5>
+                    <div class="font-mono text-sm bg-white p-3 rounded border">
+                      FLOP<sub>SA</sub>(T;d<sub>h</sub>) = 2T<sup>2</sup>d<sub>h</sub>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="font-bold text-green-700 mb-3">效率优势</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>线性复杂度</strong>: 相比全注意力的二次复杂度</li>
+                  <li><strong>内存效率</strong>: KV缓存减少高达75%</li>
+                  <li><strong>解码加速</strong>: 在1M上下文长度下实现6倍吞吐量</li>
+                  <li><strong>硬件友好</strong>: 分块并行算法充分利用Tensor Cores</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 综合性能评估 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+            综合性能评估
+          </h3>
+          
+          <!-- 性能对比图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 Figure 1: 性能与加速对比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="性能与加速对比图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> (a) 性能与加速对比。在1.4T训练token的严格公平比较下，在MMLU-Pro(4k上下文长度，红星)上，Kimi Linear在相似速度下领先性能(51.0)。在RULER(128k上下文长度，蓝圈)上，它是帕累托最优的，实现了最佳性能(84.3)和3.98倍加速。(b) 每个输出token时间(TPOT)与解码长度对比。Kimi Linear(蓝线)保持低TPOT，在长序列上匹配GDN-H并优于MLA。这使得能够使用更大的批次大小，在1M token时产生比MLA快6.3倍的TPOT(1.84ms vs. 11.48ms)。
+            </div>
+          </div>
+          
+          <!-- 性能指标网格 -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-green-600 mb-2">6×</div>
+              <div class="text-lg font-semibold text-gray-700">解码吞吐量提升</div>
+              <div class="text-sm text-gray-500 mt-2">在1M上下文长度下</div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-blue-600 mb-2">75%</div>
+              <div class="text-lg font-semibold text-gray-700">KV缓存减少</div>
+              <div class="text-sm text-gray-500 mt-2">长序列生成期间</div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-purple-600 mb-2">84.3</div>
+              <div class="text-lg font-semibold text-gray-700">RULER得分</div>
+              <div class="text-sm text-gray-500 mt-2">长上下文评估最佳</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 合成任务评估 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-tasks mr-2 text-blue-500"></i>
+            合成任务评估
+          </h3>
+          
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 Figure 4: 合成任务结果
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig4.png" alt="合成任务结果图" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 合成任务结果：回文、多查询关联回忆和状态跟踪。
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="text-center">
+                <div class="bg-blue-100 p-4 rounded-full inline-block mb-3">
+                  <i class="fas fa-exchange-alt text-blue-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-700 mb-2">Palindrome</h4>
+                <p class="text-sm text-gray-600">要求模型以相反顺序再现给定的随机token序列</p>
+                <div class="mt-3 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm inline-block">KDA表现最佳</div>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-green-100 p-4 rounded-full inline-block mb-3">
+                  <i class="fas fa-search text-green-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-700 mb-2">MQAR</h4>
+                <p class="text-sm text-gray-600">评估模型检索与上下文中多个查询关联值的能力</p>
+                <div class="mt-3 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm inline-block">KDA表现最佳</div>
+              </div>
+              
+              <div class="text-center">
+                <div class="bg-purple-100 p-4 rounded-full inline-block mb-3">
+                  <i class="fas fa-layer-group text-purple-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-gray-700 mb-2">Stack</h4>
+                <p class="text-sm text-gray-600">模拟标准LIFO堆栈操作，评估状态跟踪能力</p>
+                <div class="mt-3 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm inline-block">KDA表现最佳</div>
+              </div>
+            </div>
+            
+            <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-2">关键发现</h5>
+              <p class="text-sm text-gray-700">在所有任务中，随着序列长度从256增加到2048个token，KDA始终达到最高准确率。特别是在Palindrome和回忆密集型MOAR任务上，KDA比GDN收敛速度显著更快。这证实了我们细粒度衰减的好处，使模型能够选择性地忘记不相关信息，同时更精确地保留关键记忆。</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 消融研究 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-clipboard-check mr-2 text-blue-500"></i>
+            消融研究
+          </h3>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-3 px-4 text-left text-gray-700 font-semibold">配置</th>
+                    <th class="py-3 px-4 text-center text-gray-700 font-semibold">训练PPL(↓)</th>
+                    <th class="py-3 px-4 text-center text-gray-700 font-semibold">验证PPL(↓)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-3 px-4 text-gray-700">3:1 (最佳)</td>
+                    <td class="py-3 px-4 text-center text-green-600 font-semibold">9.23</td>
+                    <td class="py-3 px-4 text-center text-green-600 font-semibold">5.65</td>
+                  </tr>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-3 px-4 text-gray-700">0:1 (全注意力)</td>
+                    <td class="py-3 px-4 text-center text-gray-600">9.45</td>
+                    <td class="py-3 px-4 text-center text-gray-600">5.77</td>
+                  </tr>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-3 px-4 text-gray-700">1:1</td>
+                    <td class="py-3 px-4 text-center text-gray-600">9.29</td>
+                    <td class="py-3 px-4 text-center text-gray-600">5.66</td>
+                  </tr>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-3 px-4 text-gray-700">7:1</td>
+                    <td class="py-3 px-4 text-center text-gray-600">9.23</td>
+                    <td class="py-3 px-4 text-center text-gray-600">5.70</td>
+                  </tr>
+                  <tr class="border-b border-gray-200">
+                    <td class="py-3 px-4 text-gray-700">15:1</td>
+                    <td class="py-3 px-4 text-center text-gray-600">9.34</td>
+                    <td class="py-3 px-4 text-center text-gray-600">5.73</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-4 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h5 class="font-semibold text-yellow-700 mb-2">研究结论</h5>
+              <p class="text-sm text-gray-700">消融研究表明，3:1的KDA与MLA混合比例在训练困惑度和验证困惑度上均达到最佳平衡。这一比例在保持线性注意力效率优势的同时，通过适量全局注意力层确保了模型的表达能力。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者提出了Kimi Linear，一种混合线性注意力架构，在公平比较下首次在各种场景中超越全注意力机制。该架构的核心是Kimi Delta Attention (KDA)，一种表达力强的线性注意力模块，通过更细粒度的门控机制扩展了Gated DeltaNet。</p>
+          
+          <p class="mb-4">作者通过大规模实证验证表明，在相同训练方案下，Kimi Linear在所有评估任务中都显著优于全MLA，同时将KV缓存使用量减少高达75%，并在100万上下文长度下实现高达6倍的解码吞吐量。</p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border-l-4 border-blue-500 mb-6">
+            <h4 class="font-bold text-blue-700 mb-3">主要贡献总结</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>KDA机制</strong>: 细粒度门控线性注意力，改进内存管理和硬件效率</li>
+              <li><strong>混合架构</strong>: 3:1 KDA与MLA比例，平衡效率与表达能力</li>
+              <li><strong>实证验证</strong>: 大规模训练验证，在短/长上下文和RL风格评估中均优于基线</li>
+              <li><strong>开源实现</strong>: 提供KDA内核、vLLM集成和预训练检查点</li>
+            </ul>
+          </div>
+          
+          <p class="mb-4">这些结果表明，Kimi Linear可以成为全注意力架构的即插即用替代品，具有卓越的性能和效率，包括输入和输出长度更长的任务。这项工作为开发更高效、更强大的语言模型提供了新的可能性，特别是在需要长上下文处理和实时交互的应用场景中。</p>
+          
+          <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-3">未来工作方向</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>将Kimi Linear扩展到更大规模模型和更多应用场景</li>
+              <li>探索KDA在其他序列建模任务中的应用</li>
+              <li>进一步优化KDA内核，提高硬件利用率和计算效率</li>
+              <li>研究更复杂的混合策略，动态调整注意力机制比例</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

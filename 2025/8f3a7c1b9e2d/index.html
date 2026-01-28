@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Don't Maintain Twice, It's Alright: Merged Metadata Management in Deduplication File System with GOGETAFS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .performance-bar {
+      transition: width 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Don't Maintain Twice, It's Alright: Merged Metadata Management in Deduplication File System with GOGETAFS
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Yanqi Pan, Wen Xia, Erci Xu, Hao Huang, Xiangyu Zou, Shiyi Li</div>
+                <div class="text-sm text-gray-600 mt-1">哈尔滨工业大学(深圳), 阿里巴巴集团</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST'25)</div>
+                <div class="text-sm text-gray-600 mt-1">2025年2月25-27日 • 美国圣克拉拉</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://www.usenix.org/conference/fast25/presentation/pan</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">去重文件系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">元数据管理</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">LFP映射</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">持久内存</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>揭示性能瓶颈</strong>：通过动机研究发现去重元数据维护在I/O路径中造成高达38%的开销</li>
+          <li><strong>提出LFP映射</strong>：创新性地将去重FP2P映射与文件系统L2P映射合并，形成逻辑-指纹-物理(LFP)映射</li>
+          <li><strong>实现GOGETAFS</strong>：基于LFP映射构建高效去重文件系统，通过单一I/O持久化去重元数据</li>
+          <li><strong>内存效率优化</strong>：针对不同内存场景设计变体，实现兼容、有效且内存高效的去重</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700 space-y-4">
+          <p>新兴存储技术（如持久内存和超低延迟SSD）使得去重文件系统能够使用非加密哈希进行快速指纹计算。然而，作者发现加速计算暴露了另一个主要性能瓶颈：看似无害的存储中去重元数据维护在I/O路径中造成高达38%的开销。</p>
+          
+          <p>根本原因是去重文件系统维护特定的<em>指纹到物理</em>映射，这会产生额外的崩溃一致性开销。作者的关键见解是去重映射可以与文件系统的<em>逻辑到物理</em>映射合并，形成<em>逻辑-指纹-物理</em>映射。因此，可以在单个I/O中将去重元数据与文件系统元数据一起持久化。</p>
+          
+          <p>作者提出GOGETAFS来实现LFP的效率。通过一系列技术在LFP之上管理数据和元数据，GOGETAFS在文件系统内实现了兼容、有效且内存高效的去重。跨多种工作负载的实验表明，GOGETAFS始终优于现有的去重文件系统，并能最小化元数据维护开销。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">去重文件系统的发展</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-blue-700 mb-3">传统去重系统</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>独立于文件系统的去重解决方案</li>
+                  <li>维护L2P和FP2P两个映射表</li>
+                  <li>存在双重元数据维护开销</li>
+                  <li>使用加密哈希(SHA-1等)，计算开销大</li>
+                </ul>
+              </div>
+              <div>
+                <h4 class="font-semibold text-green-700 mb-3">去重文件系统</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>将去重逻辑嵌入文件系统</li>
+                  <li>重用文件索引进行数据重定向</li>
+                  <li>提供透明去重服务</li>
+                  <li>使用非加密哈希(xxHash等)，计算开销小</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图1：去重系统关键映射对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - 去重系统关键存储映射对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 去重系统关键存储映射对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 去重系统关键存储映射对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 独立去重系统与去重文件系统中关键存储映射的比较。与独立去重系统相比，去重文件系统可以简化实现工作并避免双重元数据维护开销。这里，(a)中的vPBN表示PBN作为大容量文件中的"块"公开，而不是磁盘中的物理块。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>独立去重系统(图1a):</strong> 维护L2P和FP2P两个独立的映射表，存在双重元数据维护开销</li>
+                  <li><strong>去重文件系统(图1b):</strong> 合并L2P表，只维护FP2P表，简化崩溃一致性技术</li>
+                  <li><strong>映射关系:</strong> L2P: 逻辑块号→物理块号; FP2P: 指纹→物理块号+引用计数</li>
+                  <li><strong>性能影响:</strong> 独立系统需要维护两套元数据，而DedupFS通过合并减少开销</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h3 class="text-xl font-bold text-yellow-700 mb-4 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>动机发现
+            </h3>
+            <div class="space-y-4">
+              <p>尽管有硬件和软件的优化，作者发现最先进的去重文件系统仍无法提供令人满意的吞吐量。通过动机实验发现：</p>
+              
+              <!-- 图2：现有DedupFS吞吐量对比 -->
+              <details class="technical-details bg-white rounded-lg p-4">
+                <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                  <i class="fas fa-chart-line mr-2"></i>性能对比：图2 - 现有DedupFS吞吐量对比
+                </summary>
+                
+                <div class="mt-4">
+                  <!-- 性能对比模拟 -->
+                  <div class="performance-chart-placeholder">
+                    <div class="flex items-center justify-center mb-4">
+                      <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                      <h6 class="font-semibold text-gray-700">性能对比分析</h6>
+                    </div>
+                    
+                    <!-- 性能指标模拟 -->
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium w-32">Ideal-Dedup:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4">
+                          <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">100%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4">
+                          <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 80%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">80%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium w-32">NV-Dedup:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4">
+                          <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 65%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">65%</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium w-32">DeNOVA:</span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-4">
+                          <div class="bg-red-500 h-4 rounded-full performance-bar" style="width: 40%"></div>
+                        </div>
+                        <span class="text-sm font-medium w-12 ml-2">40%</span>
+                      </div>
+                    </div>
+                    
+                    <!-- 性能指标说明 -->
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
+                      <div><span class="font-medium">测试环境:</span> Intel Xeon Gold 5218 CPU, Optane DCPMM</div>
+                      <div><span class="font-medium">工作负载:</span> 4KiB顺序写入，不同重复率</div>
+                      <div><span class="font-medium">度量指标:</span> 吞吐量(MB/s)</div>
+                      <div><span class="font-medium">关键发现:</span> 即使使用非加密哈希，性能差距仍然存在</div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-4 text-sm text-gray-700">
+                    <p><strong>关键观察:</strong> 即使在0%重复率下，所有DedupFS都比Ideal-Dedup慢。随着重复率从0%增加到75%，性能差距<em>并未</em>缩小。即使将DeNOVA和NV-Dedup的加密FP替换为非加密FP，性能差距仍然存在。</p>
+                  </div>
+                </div>
+              </details>
+              
+              <p>作者进一步分析发现，去重元数据维护在I/O路径中造成18%-38%的开销，成为主要性能瓶颈。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+            <h3 class="text-xl font-bold text-red-700 mb-4">性能瓶颈分析</h3>
+            
+            <!-- 图3：去重开销分解 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-pie mr-2"></i>性能分析：图3 - 去重开销分解
+              </summary>
+              
+              <div class="mt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">开销构成</h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                      <li><strong>Dup Identify:</strong> FP计算、FP查找和内容比较时间</li>
+                      <li><strong>Dedup Metadata:</strong> 记录/更新FP2P条目的时间</li>
+                      <li><strong>Data Write:</strong> 写入数据块的时间</li>
+                      <li><strong>FS Metadata:</strong> 写入文件系统L2P条目的时间</li>
+                      <li><strong>Others:</strong> 其余文件系统时间消耗</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">关键发现</h5>
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <div class="w-4 h-4 bg-purple-500 rounded mr-2"></div>
+                        <span class="text-sm">NV-Dedup-NC: 20%-38%元数据开销</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-4 h-4 bg-blue-500 rounded mr-2"></div>
+                        <span class="text-sm">Light-Dedup: 18%-36%元数据开销</span>
+                      </div>
+                      <div class="text-xs text-gray-600 mt-2">
+                        这些开销占去重时间的50%以上
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-700">
+                  <p><strong>根本原因:</strong> DedupFS严格排序FP2P条目以确保系统故障后的存活。具体来说，为了维护FP2P条目的完整性，DedupFS通常利用软更新来跟踪L2P和FP2P条目之间的依赖关系，并强制在L2P条目持久化之前写入/更新FP2P条目。</p>
+                </div>
+              </div>
+            </details>
+            
+            <div class="mt-4 space-y-3 text-gray-700">
+              <p><strong>FP2P条目维护导致的两个主要问题：</strong></p>
+              <ul class="list-disc list-inside space-y-2">
+                <li><strong>I/O放大</strong>：由于小元数据与粗粒度存储I/O单元之间的不匹配</li>
+                <li><strong>降低I/O并行性</strong>：由于等待先前I/O的完成</li>
+              </ul>
+              
+              <p>虽然采用粗粒度元数据管理来对齐存储I/O粒度可以部分缓解问题，但性能损失仍然不可忽视。</p>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 class="text-xl font-bold text-blue-700 mb-4">LFP映射的机遇</h3>
+            
+            <!-- 图4：LFP映射 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-project-diagram mr-2"></i>解决方案：图4 - 逻辑-指纹-物理(LFP)映射
+              </summary>
+              
+              <div class="mt-4">
+                <!-- LFP架构可视化 -->
+                <div class="architecture-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-sitemap text-3xl text-blue-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">LFP映射架构</h6>
+                  </div>
+                  
+                  <!-- 架构组件可视化 -->
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded border border-blue-200 text-center">
+                      <i class="fas fa-list-ol text-blue-500 mb-2"></i>
+                      <p class="text-sm font-medium">逻辑块号(LBN)</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded border border-green-200 text-center">
+                      <i class="fas fa-fingerprint text-green-500 mb-2"></i>
+                      <p class="text-sm font-medium">指纹(FP)</p>
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                      <i class="fas fa-hdd text-purple-500 mb-2"></i>
+                      <p class="text-sm font-medium">物理块号(PBN)</p>
+                    </div>
+                  </div>
+                  
+                  <!-- 数据流向指示 -->
+                  <div class="flex justify-center items-center text-gray-500 text-sm">
+                    <span>文件索引</span>
+                    <i class="fas fa-arrow-right mx-2"></i>
+                    <span>LFP条目</span>
+                    <i class="fas fa-arrow-right mx-2"></i>
+                    <span>单一I/O持久化</span>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-700">
+                  <p><strong>LFP映射的核心思想:</strong> 将去重FP2P条目和文件系统L2P条目合并为单个LBN-FP-PBN条目，按inode索引。这样，DedupFS可以在单个I/O中将FP2P映射与文件系统L2P条目一起持久化。</p>
+                </div>
+              </div>
+            </details>
+            
+            <div class="mt-4 space-y-3 text-gray-700">
+              <p><strong>LFP映射的权衡:</strong> 在空间开销和性能之间进行经典权衡：LFP条目为相同的PBN产生冗余FP（即更多空间），但可以最小化去重元数据维护损失（即更高性能）。</p>
+              
+              <!-- 图5：LFP条目空间开销 -->
+              <details class="technical-details bg-white rounded-lg p-4 mt-4">
+                <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                  <i class="fas fa-chart-bar mr-2"></i>空间分析：图5 - LFP条目空间开销
+                </summary>
+                
+                <div class="mt-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 class="font-semibold text-gray-700 mb-3">传统DedupFS</h5>
+                      <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        <li>L2P条目: 16×N 字节</li>
+                        <li>FP2P条目: 36×N×(1-R) 字节</li>
+                        <li>总计: 52N-36NR 字节</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-700 mb-3">LFP-based DedupFS</h5>
+                      <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        <li>加密FP: 36×N 字节 (2.25×空间开销)</li>
+                        <li>非加密FP: 24×N 字节 (当R<80%时节省空间)</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-4 text-sm text-gray-700">
+                    <p><strong>机遇:</strong> 新兴快速存储设备为非加密FP带来机遇，为LFP映射带来新希望：使用典型的8字节非加密FP，LFP条目大小减少到24×N字节。这可以在重复率<80%时节省元数据空间，同时基于非加密FP的DedupFS可能加速18%-36%。</p>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- GOGETAFS概述 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">GOGETAFS系统概述</h3>
+            
+            <!-- 图6：GOGETAFS概述 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-sitemap mr-2"></i>系统架构：图6 - GOGETAFS概述
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 6: GOGETAFS概述
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig6.png" alt="论文图6: GOGETAFS概述" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> GOGETAFS概述。灰色区域是主要组件，包括LFP条目、溢出FP表、全局LFP表和一个基于非加密FP的重复标识符。
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>核心组件：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>LFP条目:</strong> 扩展文件系统L2P条目，添加固定大小FP（用于4KiB块）</li>
+                    <li><strong>溢出FP表(OFT):</strong> 在存储中保留，用于存储连续数据块的FP</li>
+                    <li><strong>全局LFP表(GLT):</strong> 聚合并将LFP条目转换为FP2P条目进行全局去重</li>
+                    <li><strong>重复标识符:</strong> 基于非加密FP的快速冗余标识</li>
+                  </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">数据管理:</strong>
+                      <p>GOGETAFS将连续块的FP存储在OFT中，利用文件系统崩溃一致性机制进行持久化，无需额外排序点。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">元数据管理:</strong>
+                      <p>GLT将LFP条目转换为FP2P条目，并在内存表中组织它们，使用FP作为键。该表可以通过LFP条目重建，实现灵活设计而无需崩溃一致性担忧。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">去重工作流:</strong>
+                      <p>对于重复块，GOGETAFS写入新的LFP条目而不分配块；对于唯一块，分配并写入数据块，并写入新的LFP条目到文件。</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 关键技术 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-4 flex items-center">
+                <i class="fas fa-database mr-2"></i>数据管理
+              </h4>
+              <div class="space-y-3 text-gray-700">
+                <p><strong>挑战:</strong> 文件系统倾向于以extent方式管理数据，而去重以块为单位管理数据。</p>
+                
+                <!-- 图7：SFP和OFT性能对比 -->
+                <details class="technical-details bg-white rounded-lg p-4 mt-4">
+                  <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                    <i class="fas fa-chart-line mr-2"></i>性能对比：图7 - SFP和OFT性能对比
+                  </summary>
+                  
+                  <div class="mt-4">
+                    <div class="performance-chart-placeholder">
+                      <div class="flex items-center justify-center mb-4">
+                        <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                        <h6 class="font-semibold text-gray-700">SFP vs OFT性能对比</h6>
+                      </div>
+                      
+                      <!-- 性能指标模拟 -->
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-24">GogetaOFT:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">95%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-24">GogetaSFP:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">75%</span>
+                        </div>
+                      </div>
+                      
+                      <!-- 性能指标说明 -->
+                      <div class="mt-4 text-xs text-gray-600">
+                        <div><span class="font-medium">测试配置:</span> 连续2MiB块I/O，不同重复率</div>
+                        <div><span class="font-medium">结果:</span> GogetaOFT始终优于GogetaSFP，归因于低OFT更新开销和高计算与I/O并行性</div>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+                
+                <p><strong>解决方案:</strong> 使用溢出FP表(OFT)存储连续块的FP，具有四个优势：</p>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <li>无锁数据结构，可以并行更新</li>
+                  <li>受益于空间局部性</li>
+                  <li>删除连续块组时无需使OFT槽无效</li>
+                  <li>利用文件系统崩溃一致性，不引入额外排序点</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-4 flex items-center">
+                <i class="fas fa-table mr-2"></i>元数据管理
+              </h4>
+              <div class="space-y-3 text-gray-700">
+                <p><strong>挑战:</strong> 文件系统按逻辑块号组织元数据以进行快速索引，而去重无法利用此功能搜索FP。</p>
+                
+                <p><strong>解决方案:</strong> 全局LFP表(GLT)聚合并将LFP条目解释为FP2P条目：</p>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <li>在动态哈希表中组织条目，使用FP作为键</li>
+                  <li>通过RCU锁保护，支持高并发、读多操作</li>
+                  <li>无崩溃一致性要求，可在文件系统恢复期间重建</li>
+                  <li>采用乐观并发控制处理并发重复I/O</li>
+                </ul>
+                
+                <p><strong>优势:</strong> 与传统FP2P表相比，GLT具有两个关键优势：无崩溃一致性要求，因此可以部署在内存中，受益于直接访问而无需额外FP索引或从存储加载数据。</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 内存效率技术 -->
+          <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-xl font-bold text-purple-700 mb-4">内存效率技术</h3>
+            
+            <!-- 图8：GOGETAFS变体设计 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-memory mr-2"></i>内存优化：图8 - GOGETAFS变体设计
+              </summary>
+              
+              <div class="mt-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h5 class="font-semibold text-blue-700 mb-2">内存充足场景</h5>
+                    <p class="text-sm text-gray-700">GLT完全在内存中，使用动态哈希表组织</p>
+                  </div>
+                  <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h5 class="font-semibold text-green-700 mb-2">内存受限场景</h5>
+                    <p class="text-sm text-gray-700">调节GLT内存使用，部分在存储中，通过虚拟内存或直接访问</p>
+                  </div>
+                  <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h5 class="font-semibold text-red-700 mb-2">内存稀缺场景</h5>
+                    <p class="text-sm text-gray-700">GLT完全在存储中，使用静态哈希表减少随机I/O</p>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-700">
+                  <p><strong>变体设计:</strong> GOGETAFS针对不同内存场景设计变体，实证考虑表条目放置、内存分配策略和数据结构：</p>
+                  <ul class="list-disc list-inside space-y-1 mt-2">
+                    <li><strong>GogetaFS (Default):</strong> GLT在内存中，使用动态哈希表</li>
+                    <li><strong>GogetaFS (Reg):</strong> 调节内存使用，部分在存储中</li>
+                    <li><strong>GogetaHYBRID:</strong> 分离键和值，仅缓存键</li>
+                    <li><strong>GogetaFS (No Mem):</strong> 所有GLT条目在存储中</li>
+                    <li><strong>GogetaSHT:</strong> 在存储中构建静态哈希表</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 崩溃一致性与恢复 -->
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h3 class="text-xl font-bold text-yellow-700 mb-4">崩溃一致性与恢复</h3>
+            <div class="space-y-4 text-gray-700">
+              <p><strong>正常恢复:</strong> 在正常关闭期间将GLT条目转储到保留文件中，在下次恢复期间并发扫描该文件以重建GLT。</p>
+              
+              <p><strong>故障恢复:</strong> 对于文件系统检测到的系统故障，许多文件系统扫描LFP条目以确保文件系统元数据一致性。在扫描期间，GOGETAFS从LFP条目或OFT（如果LFP条目有NIL FP）检索FP。FP和PBN用于生成新的GLT条目或更新现有条目的计数。</p>
+              
+              <p><strong>崩溃一致性:</strong> GOGETAFS利用文件系统崩溃一致性机制确保正确的故障恢复：</p>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>对于日志文件系统，LFP和OFT更新可以重放，因此没有部分更新的条目</li>
+                <li>对于日志结构文件系统，如果LFP条目有效，相应的OFT条目也有效，因为它们被原子提交</li>
+                <li>在条目提交前发生崩溃导致部分OFT更新的情况下，不完整的OFT条目不被任何有效LFP条目引用</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 实验设置 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置与方法论</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-blue-700 mb-3">测试平台</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>CPU:</strong> Intel Xeon Gold 5218 @2.3 GHz, 16核</li>
+                  <li><strong>持久内存:</strong> 512 GiB Intel Optane DCPMM</li>
+                  <li><strong>DRAM:</strong> 128 GiB</li>
+                  <li><strong>操作系统:</strong> CentOS stream with kernel 5.1.0</li>
+                </ul>
+              </div>
+              <div>
+                <h4 class="font-semibold text-green-700 mb-3">对比系统</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>Light-Dedup</li>
+                  <li>NV-Dedup</li>
+                  <li>DeNOVA</li>
+                  <li>NOVA (基准文件系统)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 表1：评估工作负载 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 mt-6">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-table mr-2"></i>工作负载：表1 - 评估工作负载
+              </summary>
+              
+              <div class="mt-4 overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">工作负载</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">I/O (GB)</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">重复率</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">目标内存场景</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">FIO</td>
+                      <td class="border border-gray-300 px-4 py-2">32</td>
+                      <td class="border border-gray-300 px-4 py-2">0%-100%</td>
+                      <td class="border border-gray-300 px-4 py-2">任何内存场景</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">CP</td>
+                      <td class="border border-gray-300 px-4 py-2">20.84</td>
+                      <td class="border border-gray-300 px-4 py-2">100%</td>
+                      <td class="border border-gray-300 px-4 py-2">充足/受限内存</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">OSLab</td>
+                      <td class="border border-gray-300 px-4 py-2">63.52</td>
+                      <td class="border border-gray-300 px-4 py-2">84%</td>
+                      <td class="border border-gray-300 px-4 py-2">充足内存</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">WebVMs</td>
+                      <td class="border border-gray-300 px-4 py-2">54.53</td>
+                      <td class="border border-gray-300 px-4 py-2">47%</td>
+                      <td class="border border-gray-300 px-4 py-2">充足内存</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">Mails</td>
+                      <td class="border border-gray-300 px-4 py-2">173.27</td>
+                      <td class="border border-gray-300 px-4 py-2">95%</td>
+                      <td class="border border-gray-300 px-4 py-2">充足内存</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">Homes</td>
+                      <td class="border border-gray-300 px-4 py-2">43.92</td>
+                      <td class="border border-gray-300 px-4 py-2">69.03%</td>
+                      <td class="border border-gray-300 px-4 py-2">受限内存</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">Nexus</td>
+                      <td class="border border-gray-300 px-4 py-2">20.12</td>
+                      <td class="border border-gray-300 px-4 py-2">32.40%</td>
+                      <td class="border border-gray-300 px-4 py-2">稀缺内存</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 性能评估 -->
+          <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+            <h3 class="text-xl font-bold text-green-700 mb-4">性能评估结果</h3>
+            
+            <!-- 图9：FIO写入吞吐量对比 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-bar mr-2"></i>性能对比：图9 - FIO写入吞吐量对比
+              </summary>
+              
+              <div class="mt-4">
+                <div class="performance-chart-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">FIO写入吞吐量对比</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="space-y-4">
+                    <div>
+                      <h6 class="font-semibold text-gray-700 mb-2">4KiB块I/O</h6>
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GOGETAFS:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 98%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">98%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 80%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">80%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">NV-Dedup:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 65%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">65%</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h6 class="font-semibold text-gray-700 mb-2">2MiB块I/O</h6>
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GOGETAFS:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 105%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">105%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 85%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">85%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">NOVA:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-gray-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">100%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 性能指标说明 -->
+                  <div class="mt-4 text-xs text-gray-600">
+                    <div><span class="font-medium">关键发现:</span> GOGETAFS在0%重复率下非常接近NOVA，在2MiB块I/O下甚至优于NOVA，因为FP计算与PM内部I/O重叠，通过降低I/O发出频率减少PM缓冲区争用。</div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-700">
+                  <p><strong>结果:</strong> GOGETAFS始终优于NV-Dedup和Light-Dedup，在I/O吞吐量上比最先进的DedupFS提高5.6%-35.0%。</p>
+                </div>
+              </div>
+            </details>
+            
+            <!-- 图10：真实场景I/O吞吐量对比 -->
+            <details class="technical-details bg-white rounded-lg p-4 mt-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-line mr-2"></i>真实场景：图10 - 真实场景I/O吞吐量对比
+              </summary>
+              
+              <div class="mt-4">
+                <div class="performance-chart-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">真实场景I/O吞吐量对比</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-24">CP:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 115%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">+15%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-24">OSLab:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 110%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">+10%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-24">Mails:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 125%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">+25%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-24">WebVMs:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 120%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">+20%</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 性能指标说明 -->
+                  <div class="mt-4 text-xs text-gray-600">
+                    <div><span class="font-medium">关键发现:</span> GOGETAFS在2MiB块I/O下表现出更明显的性能改进，特别是在Mails和WebVMs等工作负载中。这些工作负载具有更现实的I/O模式，包括触发块删除的覆盖写入。GOGETAFS更高效地处理删除：传统DedupFS必须使最多512个FP2P条目无效以删除2MiB块，而GOGETAFS只需要使单个LFP条目无效。</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 元数据维护开销分析 -->
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 class="text-xl font-bold text-blue-700 mb-4">元数据维护开销分析</h3>
+            
+            <!-- 图11：去重时间分解 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-pie mr-2"></i>开销分析：图11 - 去重时间分解
+              </summary>
+              
+              <div class="mt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">GOGETAFS vs Light-Dedup</h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                      <li>GOGETAFS的去重元数据开销比Light-Dedup低75.4%-92.8%</li>
+                      <li>剩余开销主要来自DRAM中GLT查找和插入</li>
+                      <li>wyHash并不总是优于xxHash</li>
+                      <li>冗余标识的主要开销来自逐字节内容比较</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-3">I/O放大比较</h5>
+                    
+                    <!-- 表2：I/O放大比较 -->
+                    <div class="overflow-x-auto">
+                      <table class="min-w-full bg-white border border-gray-300 text-xs">
+                        <thead>
+                          <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-2 py-1 font-semibold">系统</th>
+                            <th class="border border-gray-300 px-2 py-1 font-semibold">场景</th>
+                            <th class="border border-gray-300 px-2 py-1 font-semibold">RPB</th>
+                            <th class="border border-gray-300 px-2 py-1 font-semibold">WPB</th>
+                            <th class="border border-gray-300 px-2 py-1 font-semibold">BW</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="border border-gray-300 px-2 py-1" rowspan="2">Light-Dedup</td>
+                            <td class="border border-gray-300 px-2 py-1">Fresh-4K</td>
+                            <td class="border border-gray-300 px-2 py-1">132.2</td>
+                            <td class="border border-gray-300 px-2 py-1">115.6</td>
+                            <td class="border border-gray-300 px-2 py-1">1104.4</td>
+                          </tr>
+                          <tr>
+                            <td class="border border-gray-300 px-2 py-1">GOGETAFS</td>
+                            <td class="border border-gray-300 px-2 py-1">Fresh-4K</td>
+                            <td class="border border-gray-300 px-2 py-1">~0</td>
+                            <td class="border border-gray-300 px-2 py-1">~0</td>
+                            <td class="border border-gray-300 px-2 py-1">1328.6</td>
+                          </tr>
+                          <tr>
+                            <td class="border border-gray-300 px-2 py-1" rowspan="2">Light-Dedup</td>
+                            <td class="border border-gray-300 px-2 py-1">Aged-4K</td>
+                            <td class="border border-gray-300 px-2 py-1">226.3</td>
+                            <td class="border border-gray-300 px-2 py-1">158.2</td>
+                            <td class="border border-gray-300 px-2 py-1">1085.5</td>
+                          </tr>
+                          <tr>
+                            <td class="border border-gray-300 px-2 py-1">GOGETAFS</td>
+                            <td class="border border-gray-300 px-2 py-1">Aged-4K</td>
+                            <td class="border border-gray-300 px-2 py-1">~0</td>
+                            <td class="border border-gray-300 px-2 py-1">~0</td>
+                            <td class="border border-gray-300 px-2 py-1">1228.7</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div class="mt-2 text-xs text-gray-600">
+                      RPB和WPB表示每4KiB块I/O的额外读/写字节。BW是带宽(MiB/s)。
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-700">
+                  <p><strong>关键发现:</strong> GOGETAFS始终实现比Light-Dedup低得多的去重诱导I/O。通过减少元数据I/O，GOGETAFS在新鲜和老化场景中比Light-Dedup提高I/O吞吐量13%-35%。具体来说，GOGETAFS对4KiB块I/O实现几乎零去重I/O放大；因此，老化对I/O吞吐量的影响可以忽略不计。对于2MiB块I/O，OFT引入了一些I/O放大，但GOGETAFS仍然比Light-Dedup优15%-35%，归因于OFT的空间局部性。</p>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 不同场景性能 -->
+          <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-xl font-bold text-purple-700 mb-4">不同内存场景性能</h3>
+            
+            <!-- 图12：受限内存下I/O吞吐量对比 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-memory mr-2"></i>内存场景：图12 - 受限内存下I/O吞吐量对比
+              </summary>
+              
+              <div class="mt-4">
+                <div class="performance-chart-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">受限内存下I/O吞吐量对比</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="space-y-4">
+                    <div>
+                      <h6 class="font-semibold text-gray-700 mb-2">一半键内存</h6>
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GogetaHYBRID:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">95%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GogetaFS:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 85%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">85%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">75%</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h6 class="font-semibold text-gray-700 mb-2">所有条目内存</h6>
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GogetaFS:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">100%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">GogetaHYBRID:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 90%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">90%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                          <div class="flex-1 bg-gray-200 rounded-full h-4">
+                            <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 80%"></div>
+                          </div>
+                          <span class="text-sm font-medium w-12 ml-2">80%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 性能指标说明 -->
+                  <div class="mt-4 text-xs text-gray-600">
+                    <div><span class="font-medium">关键发现:</span> GOGETAFS变体始终优于Light-Dedup，因为LFP映射消除了FP2P条目的额外I/O和排序。当内存低时，GogetaHYBRID可以实现比GogetaFS更高的I/O吞吐量，因为它需要更少的存储键访问。当内存增加时，GogetaFS优于GogetaHYBRID，因为它可以在DRAM中访问许多键和值，而后者将所有值存储在PM中，从而失去在DRAM中快速值访问的机会。</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <!-- 图13：稀缺内存下I/O吞吐量对比 -->
+            <details class="technical-details bg-white rounded-lg p-4 mt-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-mobile-alt mr-2"></i>移动场景：图13 - 稀缺内存下I/O吞吐量对比
+              </summary>
+              
+              <div class="mt-4">
+                <div class="performance-chart-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">稀缺内存下I/O吞吐量对比</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">GogetaSHT:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 90%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">90%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">GogetaFS:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 85%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">85%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">DeNOVA:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 60%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">60%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">NOVA:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-gray-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">100%</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 性能指标说明 -->
+                  <div class="mt-4 text-xs text-gray-600">
+                    <div><span class="font-medium">关键发现:</span> 即使没有专用去重内存，GOGETAFS变体也优于其他DedupFS。在这些变体中，GogetaSHT由于减少指针访问和更新的随机I/O而比GogetaFS优1%-10%。然而，当重复率低于50%时，NOVA在单线程下比GogetaSHT优10%-36%。这不令人惊讶，因为PM中GLT访问仍然导致I/O放大。</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <!-- 恢复开销 -->
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h3 class="text-xl font-bold text-yellow-700 mb-4">恢复开销分析</h3>
+            
+            <!-- 表3：恢复开销 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-redo-alt mr-2"></i>恢复分析：表3 - 恢复开销
+              </summary>
+              
+              <div class="mt-4 overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">系统</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">类型</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">FIO</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">CP</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">OSLab</th>
+                      <th class="border border-gray-300 px-4 py-2 font-sem-ibold">Mails</th>
+                      <th class="border border-gray-300 px-4 py-2 font-semibold">WebVMs</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2" rowspan="3">正常关闭</td>
+                      <td class="border border-gray-300 px-4 py-2">NOVA</td>
+                      <td class="border border-gray-300 px-4 py-2">0.39</td>
+                      <td class="border border-gray-300 px-4 py-2">0.97</td>
+                      <td class="border border-gray-300 px-4 py-2">0.75</td>
+                      <td class="border border-gray-300 px-4 py-2">0.51</td>
+                      <td class="border border-gray-300 px-4 py-2">0.92</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">Light-Dedup</td>
+                      <td class="border border-gray-300 px-4 py-2">0.67</td>
+                      <td class="border border-gray-300 px-4 py-2">1.18</td>
+                      <td class="border border-gray-300 px-4 py-2">0.95</td>
+                      <td class="border border-gray-300 px-4 py-2">0.75</td>
+                      <td class="border border-gray-300 px-4 py-2">1.15</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">GOGETAFS</td>
+                      <td class="border border-gray-300 px-4 py-2">1.16</td>
+                      <td class="border border-gray-300 px-4 py-2">1.52</td>
+                      <td class="border border-gray-300 px-4 py-2">1.11</td>
+                      <td class="border border-gray-300 px-4 py-2">1.12</td>
+                      <td class="border border-gray-300 px-4 py-2">1.22</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2" rowspan="3">故障恢复</td>
+                      <td class="border border-gray-300 px-4 py-2">NOVA</td>
+                      <td class="border border-gray-300 px-4 py-2">0.47</td>
+                      <td class="border border-gray-300 px-4 py-2">0.34</td>
+                      <td class="border border-gray-300 px-4 py-2">0.78</td>
+                      <td class="border border-gray-300 px-4 py-2">0.57</td>
+                      <td class="border border-gray-300 px-4 py-2">0.89</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">Light-Dedup</td>
+                      <td class="border border-gray-300 px-4 py-2">1.88</td>
+                      <td class="border border-gray-300 px-4 py-2">1.28</td>
+                      <td class="border border-gray-300 px-4 py-2">2.37</td>
+                      <td class="border border-gray-300 px-4 py-2">2.00</td>
+                      <td class="border border-gray-300 px-4 py-2">2.90</td>
+                    </tr>
+                    <tr>
+                      <td class="border border-gray-300 px-4 py-2">GOGETAFS</td>
+                      <td class="border border-gray-300 px-4 py-2">1.70</td>
+                      <td class="border border-gray-300 px-4 py-2">1.01</td>
+                      <td class="border border-gray-300 px-4 py-2">1.64</td>
+                      <td class="border border-gray-300 px-4 py-2">1.68</td>
+                      <td class="border border-gray-300 px-4 py-2">2.09</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="mt-4 text-sm text-gray-700">
+                <p><strong>分析:</strong> GOGETAFS在正常关闭和恢复上花费更多时间，因为它需要将GLT的键和值从GLT转储到PM并在恢复期间恢复它们。然而，GOGETAFS显示比Light-Dedup快约9.5%-30.8%的故障恢复，因为它可以与文件系统恢复一起恢复，而无需额外检查去重元数据（即FP2P表）。注意NOVA优于Light-Dedup和GOGETAFS，因为它不需要重建FP索引或GLT。</p>
+              </div>
+            </details>
+          </div>
+          
+          <!-- Z-SSD性能 -->
+          <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
+            <h3 class="text-xl font-bold text-indigo-700 mb-4">Z-SSD性能评估</h3>
+            
+            <!-- 图14：Z-SSD下单线程吞吐量对比 -->
+            <details class="technical-details bg-white rounded-lg p-4">
+              <summary class="cursor-pointer font-semibold text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-hdd mr-2"></i>SSD性能：图14 - Z-SSD下单线程吞吐量对比
+              </summary>
+              
+              <div class="mt-4">
+                <div class="performance-chart-placeholder">
+                  <div class="flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-line text-3xl text-green-500 mr-3"></i>
+                    <h6 class="font-semibold text-gray-700">Z-SSD下单线程吞吐量对比</h6>
+                  </div>
+                  
+                  <!-- 性能指标模拟 -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">GOGETAFS:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 95%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">95%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">Light-Dedup:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">75%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">HFDedup:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-purple-500 h-4 rounded-full performance-bar" style="width: 65%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">65%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium w-32">SmartDedup:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-red-500 h-4 rounded-full performance-bar" style="width: 40%"></div>
+                      </div>
+                      <span class="text-sm font-medium w-12 ml-2">40%</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 性能指标说明 -->
+                  <div class="mt-4 text-xs text-gray-600">
+                    <div><span class="font-medium">关键发现:</span> GOGETAFS（基于F2FS）在单线程FIO和真实跟踪下显著优于竞争对手。Light-Dedup在重复率增加时显示一些改进，但元数据维护开销成为瓶颈。SmartDedup表现最差，因为它必须为每个块计算加密哈希。值得注意的是，与PM相比，SSD显示出相对较小的读写不对称性（对于去重优化）；因此，GOGETAFS仅实现F2FS性能的79%-99.6%。然而，GOGETAFS比现有的基于SSD的DedupFS快得多，归因于其合并的LFP条目最小化元数据开销。</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+            <h3 class="text-xl font-bold text-green-700 mb-4">主要贡献总结</h3>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>性能瓶颈揭示</strong>：通过动机研究发现去重元数据维护在I/O路径中造成高达38%的开销，由于额外的I/O和排序</li>
+              <li><strong>LFP映射创新</strong>：提出将FP2P和LFP条目合并的LFP映射，通过将去重元数据与文件系统元数据一起持久化而无需两次维护来最小化去重元数据维护损失</li>
+              <li><strong>GOGETAFS实现</strong>：基于LFP映射构建GOGETAFS，通过一系列技术在LFP之上管理数据和元数据，在文件系统内实现兼容、有效且内存高效的去重</li>
+              <li><strong>全面评估验证</strong>：在合成和真实工作负载上的评估证明GOGETAFS优于现有DedupFS并最小化元数据维护损失</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h3 class="text-xl font-bold text-yellow-700 mb-4">局限性与未来工作</h3>
+            <div class="space-y-4 text-gray-700">
+              <div>
+                <h4 class="font-semibold text-yellow-700 mb-2">可移植性</h4>
+                <p>GOGETAFS侵入性地修改文件系统，可能增加开发复杂性。幸运的是，作者展示了如何将GOGETAFS扩展到其他文件系统（如F2FS、EXT4和BtrFS）。</p>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-yellow-700 mb-2">随机数据读取影响</h4>
+                <p>与其他现有DedupFS类似，GOGETAFS需要CoW风格的数据更新以避免损坏的LFP条目（即存储的FP与修改的数据内容不匹配），这会破坏文件局部性并导致随机块I/O。然而，现代存储设备具有高I/O并行性，可以隐藏随机块I/O开销。</p>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-yellow-700 mb-2">OFT空间开销</h4>
+                <p>GOGETAFS保留OFT来存储块范围的FP。但是，如果没有连续数据块，空间可能永远不会被使用。动态分配OFT空间是可能的，但需要额外的元数据管理并可能增加定位开销。考虑到空间开销有限（对于8字节FP，空间开销约为0.2%），作者认为为性能保留OFT空间是可行的。</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 class="text-xl font-bold text-blue-700 mb-4">实际意义</h3>
+            <div class="space-y-3 text-gray-700">
+              <p>GOGETAFS提出了一种新颖的去重文件系统，利用文件系统成熟的I/O路径和崩溃一致性机制来提高去重吞吐量。关键见解是使用<em>逻辑-指纹-物理</em>映射构建DedupFS，这是一种将去重FP2P条目与文件系统L2P条目合并的新颖映射技术。</p>
+              
+              <p>作者在PM和（模拟的）ULL SSD平台中实现和评估GOGETAFS。结果表明GOGETAFS优于现有DedupFS，有时提高一个数量级（例如在SSD平台中），并实现最小化的去重元数据维护开销。</p>
+              
+              <p>这项工作为现代存储设备上的高效去重文件系统设计提供了新的方向，特别是在快速存储技术（如持久内存和超低延迟SSD）日益普及的背景下。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 性能条动画
+      setTimeout(() => {
+        document.querySelectorAll('.performance-bar').forEach(bar => {
+          bar.style.width = bar.style.width;
+        });
+      }, 500);
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

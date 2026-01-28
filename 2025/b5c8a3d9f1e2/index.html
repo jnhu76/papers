@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlacIO: Flat and Collective I/O for Container Image Service</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          FlacIO: Flat and Collective I/O for Container Image Service
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Yubo Liu, Hongbo Li, Mingrui Liu, Rui Jing, Jian Guo, Bo Zhang, Hanjun Guo, Yuxin Ren, and Ning Jia</div>
+                <div class="text-sm text-gray-600 mt-1">Huawei Technologies Co., Ltd.</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST '25)</div>
+                <div class="text-sm text-gray-600 mt-1">February 25–27, 2025 • Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">ISBN 978-1-939133-45-8</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">容器镜像服务</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">冷启动优化</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">运行时镜像</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">I/O加速</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8 md:mb-12">
+        <h4 class="font-bold text-green-700 mb-3 flex items-center text-lg md:text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li>提出了一种新的<strong>内存导向和服务导向</strong>的容器镜像抽象——运行时镜像(Runtime Image)</li>
+          <li>设计了<strong>FlacIO系统</strong>，包含运行时镜像结构和运行时页缓存(RTPC)</li>
+          <li>实现了<strong>扁平化和集体I/O</strong>，显著减少网络开销和I/O放大</li>
+          <li>在主流容器平台(CRFS和Nydus)上验证了性能提升</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 mb-4">
+            本文研究了容器镜像服务中的I/O瓶颈问题。通过对现有解决方案的全面分析，作者发现它们存在高I/O放大和过多网络流量的问题。进一步分析表明，这些问题的根本原因在于<strong>存储导向和全局导向</strong>的容器镜像抽象。
+          </p>
+          
+          <p class="text-gray-700 mb-4">
+            作者提出了一种<strong>内存导向和服务导向</strong>的镜像抽象，称为<strong>运行时镜像</strong>，它表示容器服务的根文件系统的内存状态。运行时镜像能够实现高效的网络传输和快速的根文件系统构建。
+          </p>
+          
+          <p class="text-gray-700">
+            作者设计并实现了<strong>FlacIO</strong>，一个基于运行时镜像的容器镜像服务I/O加速器。评估结果显示，与现有的完整镜像和延迟加载解决方案相比，FlacIO将容器冷启动延迟分别降低了高达23倍和4.6倍。在实际应用中，FlacIO在对象存储和机器学习训练场景中分别比其他系统实现了高达2.25倍和1.7倍的性能加速。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-cube mr-2 text-blue-500"></i>
+              容器镜像服务现状
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-snowflake mr-2"></i>冷启动问题
+                </h4>
+                <p class="text-sm text-gray-700">
+                  容器冷启动是从注册表节点加载镜像到主机节点并启动服务的过程。传统的完整镜像加载会导致不可接受的延迟，特别是对于大型容器镜像。
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-tachometer-alt mr-2"></i>I/O放大问题
+                </h4>
+                <p class="text-sm text-gray-700">
+                  完整镜像加载存在严重的I/O放大问题，根据实验和相关工作，I/O放大可达容器启动所需数据的数十倍。
+                </p>
+              </div>
+            </div>
+            
+            <h4 class="font-bold text-gray-700 mb-3">现有解决方案</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-purple-50 p-3 rounded border border-purple-200 text-center">
+                <i class="fas fa-clock text-purple-500 mb-2 text-xl"></i>
+                <p class="text-sm font-medium">延迟加载</p>
+                <p class="text-xs text-gray-600 mt-1">CRFS, Nydus, DADI</p>
+              </div>
+              <div class="bg-yellow-50 p-3 rounded border border-yellow-200 text-center">
+                <i class="fas fa-share-alt text-yellow-500 mb-2 text-xl"></i>
+                <p class="text-sm font-medium">缓存/共享</p>
+                <p class="text-xs text-gray-600 mt-1">FaaSCache, SEUSS, SOCK</p>
+              </div>
+              <div class="bg-red-50 p-3 rounded border border-red-200 text-center">
+                <i class="fas fa-code-branch text-red-500 mb-2 text-xl"></i>
+                <p class="text-sm font-medium">Fork机制</p>
+                <p class="text-xs text-gray-600 mt-1">Catalyzer, Mitosis</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-bullseye mr-2 text-blue-500"></i>
+              问题识别
+            </h3>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>现有延迟加载方案的局限性
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li>按需加载阶段产生高网络开销（占总开销的90%）</li>
+                <li>访问粒度与按需加载粒度不匹配导致高I/O放大（高达3.1倍）</li>
+                <li>镜像数据的随机访问行为导致大量网络流量（数十万个数据包）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>根本原因分析
+              </h4>
+              <p class="text-gray-700">
+                传统镜像抽象基于<strong>存储导向</strong>（记录磁盘状态）和<strong>全局导向</strong>（一个镜像用于多个服务），这使得镜像数据加载的I/O难以优化。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+              性能瓶颈分析
+            </h3>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-3 px-4 border-b text-left font-semibold text-gray-700">解决方案</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">部署阶段</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">运行阶段</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">就绪阶段</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">总延迟</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">I/O放大</th>
+                    <th class="py-3 px-4 border-b text-center font-semibold text-gray-700">网络包数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b font-medium">完整镜像</td>
+                    <td class="py-3 px-4 border-b text-center">124.6s</td>
+                    <td class="py-3 px-4 border-b text-center">1.6s</td>
+                    <td class="py-3 px-4 border-b text-center">1.7s</td>
+                    <td class="py-3 px-4 border-b text-center font-bold">127.9s</td>
+                    <td class="py-3 px-4 border-b text-center">47.5X</td>
+                    <td class="py-3 px-4 border-b text-center">573K</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b font-medium">CRFS</td>
+                    <td class="py-3 px-4 border-b text-center">1.8s</td>
+                    <td class="py-3 px-4 border-b text-center">1.2s</td>
+                    <td class="py-3 px-4 border-b text-center">24.1s</td>
+                    <td class="py-3 px-4 border-b text-center">27.1s</td>
+                    <td class="py-3 px-4 border-b text-center">1.8X</td>
+                    <td class="py-3 px-4 border-b text-center">99K</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b font-medium">Nydus</td>
+                    <td class="py-3 px-4 border-b text-center">0.8s</td>
+                    <td class="py-3 px-4 border-b text-center">2.9s</td>
+                    <td class="py-3 px-4 border-b text-center">21.4s</td>
+                    <td class="py-3 px-4 border-b text-center">25.1s</td>
+                    <td class="py-3 px-4 border-b text-center">1.6X</td>
+                    <td class="py-3 px-4 border-b text-center">90K</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 border-b font-medium">DADI</td>
+                    <td class="py-3 px-4 border-b text-center">0.6s</td>
+                    <td class="py-3 px-4 border-b text-center">2.6s</td>
+                    <td class="py-3 px-4 border-b text-center">17.0s</td>
+                    <td class="py-3 px-4 border-b text-center">20.2s</td>
+                    <td class="py-3 px-4 border-b text-center">3.1X</td>
+                    <td class="py-3 px-4 border-b text-center">171K</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50 bg-green-50">
+                    <td class="py-3 px-4 border-b font-bold text-green-700">FlacIO</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">~1.0s</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">~2.0s</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">~5.0s</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">~8.0s</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">1.1X</td>
+                    <td class="py-3 px-4 border-b text-center font-bold text-green-700">22K</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                  <i class="fas fa-chart-line mr-2"></i>观察1：延迟分布问题
+                </h4>
+                <p class="text-sm text-gray-700">
+                  现有延迟加载解决方案减少了"部署"阶段的延迟，但在"就绪"阶段产生高开销。延迟加载将繁重的I/O卸载到容器执行其入口点时。
+                </p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-network-wired mr-2"></i>观察2：I/O放大和网络效率
+                </h4>
+                <p class="text-sm text-gray-700">
+                  严重的I/O放大和低效的网络访问是容器冷启动的主要性能瓶颈。现有延迟加载解决方案在页面级别仍有1.6到3.1倍的I/O放大。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-puzzle-piece mr-2 text-blue-500"></i>
+              核心挑战
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                  <i class="fas fa-cubes mr-2"></i>挑战1：运行时镜像组织
+                </h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>如何准确记录冷启动所需的最小元数据和数据集</li>
+                  <li>如何保持紧凑性，不给后端镜像存储带来沉重负担</li>
+                  <li>如何平滑嵌入主流容器运行时并保持对上层系统和用户的透明性</li>
+                </ul>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-layer-group mr-2"></i>挑战2：轻量级I/O栈
+                </h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>当前内核不支持直接为容器的根文件系统加载确定的内存状态</li>
+                  <li>需要新的OS原语和缓存机制</li>
+                  <li>运行时镜像基于延迟加载机制，新I/O栈需要与传统的按需加载I/O栈兼容</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- FlacIO架构 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+              FlacIO系统架构
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: FlacIO架构图
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: FlacIO系统架构图" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> FlacIO系统架构，包含四个主要组件：FlacIO驱动、I/O跟踪器、运行时页缓存(RTPC)和运行时镜像服务。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+                <i class="fas fa-microchip text-blue-500 text-2xl mb-2"></i>
+                <h4 class="font-bold text-blue-700 mb-2">FlacIO驱动</h4>
+                <p class="text-sm text-gray-700">运行在容器运行时中，作为控制平面</p>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                <i class="fas fa-search text-green-500 text-2xl mb-2"></i>
+                <h4 class="font-bold text-green-700 mb-2">I/O跟踪器</h4>
+                <p class="text-sm text-gray-700">在VFS中工作，收集容器运行时的I/O行为</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+                <i class="fas fa-memory text-purple-500 text-2xl mb-2"></i>
+                <h4 class="font-bold text-purple-700 mb-2">运行时页缓存</h4>
+                <p class="text-sm text-gray-700">在OverlayFS中实现，提供新的OS原语</p>
+              </div>
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-center">
+                <i class="fas fa-server text-yellow-500 text-2xl mb-2"></i>
+                <h4 class="font-bold text-yellow-700 mb-2">运行时镜像服务</h4>
+                <p class="text-sm text-gray-700">部署在镜像注册表中，管理运行时镜像</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 运行时镜像 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-database mr-2 text-blue-500"></i>
+              运行时镜像设计
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: 运行时镜像布局
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 运行时镜像布局" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 运行时镜像布局。基于相同基础镜像的服务形成一个组，每个组具有全局元数据和共享的组数据区域。每个服务都有独立的元数据用于索引组数据区域中的数据。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-list mr-2"></i>组元数据
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>运行时列表：通过服务ID索引运行时镜像</li>
+                  <li>指纹索引：存储组中每个页面的SHA256值</li>
+                  <li>分配器：管理组数据区域空间</li>
+                </ul>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-cube mr-2"></i>服务元数据
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>文件索引：描述根文件系统的命名空间</li>
+                  <li>页表：索引组数据区域中的页面</li>
+                  <li>位图：记录运行时镜像页面在组数据区域中的分布</li>
+                </ul>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-hdd mr-2"></i>组数据区域
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>连续存储空间</li>
+                  <li>存储组的运行时镜像数据</li>
+                  <li>组内页面去重</li>
+                  <li>动态调整大小</li>
+                </ul>
+              </div>
+            </div>
+            
+            <h4 class="font-bold text-gray-700 mb-3">基于探针的容器I/O跟踪</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h5 class="font-bold text-orange-700 mb-2 flex items-center">
+                  <i class="fas fa-eye mr-2"></i>容器探针
+                </h5>
+                <p class="text-sm text-gray-700">
+                  使用基于探针的方法使底层I/O跟踪器能够检测容器中的I/O行为。核心原则是当探针捕获相应事件时停止I/O跟踪。
+                </p>
+                <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                  <li><strong>外部探针</strong>：在容器外部检测容器状态</li>
+                  <li><strong>内部探针</strong>：在容器内部运行，是一个入口点</li>
+                </ul>
+              </div>
+              <div class="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                <h5 class="font-bold text-teal-700 mb-2 flex items-center">
+                  <i class="fas fa-file-alt mr-2"></i>文件I/O跟踪器
+                </h5>
+                <p class="text-sm text-gray-700">
+                  在文件级别而不是块级别跟踪I/O，原因包括：
+                </p>
+                <ul class="list-disc list-inside text-sm text-gray-700 mt-2">
+                  <li>兼容不同的容器平台</li>
+                  <li>文件级I/O跟踪更准确</li>
+                  <li>基于eBPF实现</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 运行时页缓存 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-memory mr-2 text-blue-500"></i>
+              运行时页缓存(RTPC)
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 4: 运行时页缓存
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig4.png" alt="论文图4: 运行时页缓存(RTPC)" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 运行时页缓存(RTPC)。它构建在OverlayFS中，并堆叠在VFS页缓存之上。属于同一组的运行时镜像共享一个RTPC。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-code mr-2"></i>OS原语
+                </h4>
+                
+                <div class="space-y-4">
+                  <div class="bg-white p-3 rounded border">
+                    <h5 class="font-bold text-gray-700 mb-1">rt_diff</h5>
+                    <p class="text-sm text-gray-600">比较位图并返回缺失页面的差异位图，用于增量加载</p>
+                    <div class="mt-2 text-xs bg-gray-100 p-2 rounded font-mono">
+                      rt_diff(service_id, dzone_bitmap) → diff_bitmap
+                    </div>
+                  </div>
+                  
+                  <div class="bg-white p-3 rounded border">
+                    <h5 class="font-bold text-gray-700 mb-1">rt_inject</h5>
+                    <p class="text-sm text-gray-600">将运行时镜像的元数据和数据注入目标运行时页缓存</p>
+                    <div class="mt-2 text-xs bg-gray-100 p-2 rounded font-mono">
+                      rt_inject(service_id, diff_bitmap, rt_metadata, rt_data)
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-cogs mr-2"></i>文件操作
+                </h4>
+                
+                <div class="space-y-3">
+                  <div class="flex items-start">
+                    <i class="fas fa-folder-open text-green-500 mt-1 mr-2"></i>
+                    <div>
+                      <h5 class="font-bold text-gray-700">挂载和卸载</h5>
+                      <p class="text-sm text-gray-600">使用-rt标志挂载根文件系统，关联运行时镜像到超级块</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start">
+                    <i class="fas fa-file text-green-500 mt-1 mr-2"></i>
+                    <div>
+                      <h5 class="font-bold text-gray-700">文件打开</h5>
+                      <p class="text-sm text-gray-600">在文件索引中搜索文件，将inode中的i_private指向相应页表</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start">
+                    <i class="fas fa-book-open text-green-500 mt-1 mr-2"></i>
+                    <div>
+                      <h5 class="font-bold text-gray-700">页面读取</h5>
+                      <p class="text-sm text-gray-600">通过页表索引找到页面位置，直接从组数据区域读取</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 工作流程 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-project-diagram mr-2 text-blue-500"></i>
+              端到端工作流程
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 5: 容器服务启动工作流程
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig5.png" alt="论文图5: 容器服务启动工作流程" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 容器服务启动工作流程。FlacIO与主流容器生态系统兼容。运行时镜像加载过程可以与大多数其他容器启动过程并发执行。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-cloud-download-alt mr-2"></i>部署阶段
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>从注册表加载目标基础镜像的清单和配置</li>
+                  <li>解析清单后加载目标运行时镜像的元数据</li>
+                  <li>运行时镜像元数据大小小，加载开销可与其他操作重叠</li>
+                </ul>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-play-circle mr-2"></i>运行阶段
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>获取运行时镜像元数据后开始拉取镜像数据</li>
+                  <li>镜像拉取过程可与容器环境准备重叠</li>
+                  <li>运行时镜像数据加载后注入RTPC</li>
+                </ul>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-check-circle mr-2"></i>就绪阶段
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                  <li>容器中的服务开始初始化</li>
+                  <li>传统延迟加载系统触发大量I/O</li>
+                  <li>FlacIO无需额外操作，所需数据已包含在运行时镜像中</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <!-- 容器启动性能 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-rocket mr-2 text-blue-500"></i>
+              容器启动性能
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 6: 冷启动和热启动延迟
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig6.png" alt="论文图6: 冷启动和热启动延迟" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 冷启动和热启动延迟对比。FlacIO在冷启动中比延迟加载解决方案实现了高达4.5倍的延迟降低，与完整镜像加载解决方案相比实现了高达23倍的延迟降低。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-snowflake mr-2"></i>冷启动性能
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                  <li>FlacIO在冷启动中比延迟加载解决方案实现了高达4.5倍的延迟降低</li>
+                  <li>与完整镜像加载解决方案相比实现了高达23倍的延迟降低</li>
+                  <li>在包含大量文件的镜像中优势更明显（如Pytorch和Tensorflow）</li>
+                  <li>与DADI-Trace相比，CRFS+FlacIO在Pytorch上性能提升2.7倍</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-fire mr-2"></i>热启动性能
+                </h4>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                  <li>所有系统的热启动延迟相似</li>
+                  <li>延迟加载系统不会触发昂贵的按需加载</li>
+                  <li>FlacIO不会增加热启动延迟</li>
+                  <li>完整镜像加载性能最佳，但差异仅为毫秒级</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 设计分析 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-microscope mr-2 text-blue-500"></i>
+              设计分析
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 性能分解
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 性能分解" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 图注 -->
+                <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
+                  <strong>原图图注:</strong> 性能分解分析。FlacIO将Postgres和Pytorch镜像数据加载开销分别降低了高达49%和85%。
+                </div>
+              </div>
+              
+              <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 因素分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 因素分析" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 图注 -->
+                <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
+                  <strong>原图图注:</strong> 因素分析。在Postgres/Pytorch中，基于探针的跟踪和RTPC分别将延迟降低了超过8.6%/22.8%和24.2%/50.0%。
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-network-wired mr-2"></i>网络开销
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  现有延迟加载解决方案相比完整镜像加载解决方案减少了29倍的数据量和6.3倍的数据包数量，但仍然至少是FlacIO的1.6倍和4.4倍。
+                </p>
+                
+                <div class="original-figure-container bg-white p-3 rounded border mt-3">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1">
+                    <h6 class="font-semibold text-gray-700 text-sm">
+                      <i class="fas fa-image mr-1 text-blue-500"></i>
+                      原图 9: 网络开销
+                    </h6>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-2 rounded text-center border border-dashed border-gray-300">
+                    <img src="./images/fig9.png" alt="论文图9: 网络开销" class="max-w-full h-auto rounded">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                  <i class="fas fa-hdd mr-2"></i>存储空间开销
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">
+                  运行时镜像在CRFS和Nydus中分别占基础镜像总大小（压缩后）的6%和4.7%。作者认为为主机侧计算资源支付约5%的存储开销以获得高达2.4倍的启动延迟降低是成本有效的。
+                </p>
+                
+                <div class="bg-white p-3 rounded border mt-3">
+                  <h6 class="font-semibold text-gray-700 text-sm mb-2">代表性容器服务的空间开销</h6>
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full text-xs">
+                      <thead>
+                        <tr class="bg-gray-100">
+                          <th class="py-1 px-2 border text-left">服务</th>
+                          <th class="py-1 px-2 border text-center">CRFS镜像</th>
+                          <th class="py-1 px-2 border text-center">Nydus镜像</th>
+                          <th class="py-1 px-2 border text-center">运行时镜像</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="py-1 px-2 border">Nginx</td>
+                          <td class="py-1 px-2 border text-center">69.7MB</td>
+                          <td class="py-1 px-2 border text-center">94.5MB</td>
+                          <td class="py-1 px-2 border text-center">4.3MB</td>
+                        </tr>
+                        <tr>
+                          <td class="py-1 px-2 border">Pytorch</td>
+                          <td class="py-1 px-2 border text-center">3348.5MB</td>
+                          <td class="py-1 px-2 border text-center">4229.1MB</td>
+                          <td class="py-1 px-2 border text-center">146.5MB</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 实际应用场景 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-laptop-code mr-2 text-blue-500"></i>
+              实际应用场景
+            </h3>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 12: 实际应用性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig12.png" alt="论文图12: 实际应用性能" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 实际应用场景性能。FlacIO在对象存储、机器学习训练和自动扩展场景中均表现出优越性能。
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-database mr-2"></i>对象存储
+                </h4>
+                <p class="text-sm text-gray-700">
+                  CRFS+FlacIO和Nydus+FlacIO的吞吐量比其他系统高达2.2倍和1.9倍。现有延迟加载系统在插入对象时触发按需镜像加载，影响端到端吞吐量。
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-brain mr-2"></i>机器学习训练
+                </h4>
+                <p class="text-sm text-gray-700">
+                  在FlacIO-based系统上的训练比完整镜像加载、CRFS、Nydus和DADI分别快70.1%、52.1%、53.5%和32%。运行时镜像已包含训练所需的大部分镜像数据。
+                </p>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-expand-arrows-alt mr-2"></i>自动扩展
+                </h4>
+                <p class="text-sm text-gray-700">
+                  在集群范围的扩展场景中，CRFS有明显的长尾，而FlacIO-based系统具有更好的尾延迟。CRFS+FlacIO比CRFS快55.1%，Nydus+FlacIO比Nydus快22.5%。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="space-y-4">
+            <p class="text-gray-700">
+              容器镜像服务是云计算系统中的重要组成部分。作者分析了现有解决方案的缺点，并得出结论：现有的镜像抽象是容器冷启动高网络开销和高I/O放大的根本原因。
+            </p>
+            
+            <p class="text-gray-700">
+              基于此，作者提出了一种新的镜像抽象——<strong>运行时镜像</strong>，它具有高效网络传输和快速根文件系统构建的优势。进一步地，作者设计了<strong>FlacIO</strong>，一个扁平化和集体I/O加速器，包含高效的运行时镜像结构和轻量级I/O栈，以优化容器镜像服务。
+            </p>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>主要成果
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>与完整镜像和延迟加载解决方案相比，将容器冷启动延迟分别降低了高达23倍和4.6倍</li>
+                <li>在对象存储和机器学习训练场景中，分别比其他系统实现了高达2.25倍和1.7倍的性能加速</li>
+                <li>在集群范围的容器自动扩展场景中，比现有解决方案快高达55%</li>
+                <li>运行时镜像存储开销仅为总镜像大小的约5%</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>论文局限性
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>运行时镜像的权衡</strong>：后端存储空间开销和通用性之间存在权衡。对于频繁更新的服务，FlacIO可以退化为传统的延迟加载机制</li>
+                <li><strong>用户依赖</strong>：用户需要在rt_create中定义探针，虽然FlacIO提供了默认探针，但对于框架服务，用户可能需要整合必要的库作为探针</li>
+                <li><strong>服务更新</strong>：维护每个服务的运行时镜像在一定程度上给服务更新带来了负担</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

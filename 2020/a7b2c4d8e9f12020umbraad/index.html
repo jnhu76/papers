@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Umbra: A Disk-Based System with In-Memory Performance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .code-block {
+      font-family: 'Courier New', monospace;
+      background-color: #1a202c;
+      color: #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .comparison-badge {
+      @apply px-3 py-1 rounded-full text-sm font-medium;
+    }
+    .comparison-badge.better {
+      @apply bg-green-100 text-green-800;
+    }
+    .comparison-badge.worse {
+      @apply bg-red-100 text-red-800;
+    }
+    .comparison-badge.same {
+      @apply bg-gray-100 text-gray-800;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap"><i class="fas fa-file-alt mr-2"></i>摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap"><i class="fas fa-layer-group mr-2"></i>背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap"><i class="fas fa-exclamation-triangle mr-2"></i>问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap"><i class="fas fa-cogs mr-2"></i>设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap"><i class="fas fa-chart-line mr-2"></i>测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap"><i class="fas fa-flag-checkered mr-2"></i>结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Umbra: A Disk-Based System with In-Memory Performance
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">作者信息</strong>
+                <div class="text-xl font-semibold">Thomas Neumann, Michael Freitag</div>
+                <div class="text-gray-600 mt-1">Technische Universität München</div>
+                <div class="text-sm text-gray-500 mt-1">{neumann,freitagm}@in.tum.de</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">发表信息</strong>
+                <div class="font-medium">CIDR 2020</div>
+                <div class="text-gray-600">Conference on Innovative Data Systems Research</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-2">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">数据库系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">缓冲管理器</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">可变大小页</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">SSD存储</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">内存性能</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2 text-lg">相关系统</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded text-sm">HyPer (前身)</span>
+                  <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded text-sm">LeanStore</span>
+                  <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded text-sm">MonetDB (对比系统)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献突出显示 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg">
+          <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+            <i class="fas fa-trophy mr-3"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-3 text-gray-700 text-lg">
+            <li><strong>可变大小页缓冲管理器</strong>：支持指数增长的大小类，消除外部碎片，降低系统复杂度</li>
+            <li><strong>混合存储架构</strong>：结合大内存缓冲区与快速SSD，实现内存级性能与磁盘级扩展性</li>
+            <li><strong>近乎零开销设计</strong>：指针混淆、版本化锁等机制确保缓存命中时接近纯内存系统性能</li>
+            <li><strong>自适应编译策略</strong>：避免廉价查询的昂贵编译开销，优化编译与执行时间权衡</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div class="space-y-4 text-gray-700 text-lg">
+            <p><strong>论文要解决什么问题？</strong> 随着主存成本高昂且增长放缓，纯内存数据库系统在经济性和扩展性上面临挑战。作者提出需要一种既能提供内存级性能，又能利用低成本SSD扩展数据规模的新型数据库系统。</p>
+            
+            <p><strong>作者的主要解决方案是什么？</strong> 作者开发了<strong>Umbra系统</strong>，这是纯内存系统HyPer的演进版本，通过引入创新的<strong>可变大小页缓冲管理器</strong>，实现了缓存工作集的内存级性能，同时优雅处理未缓存数据的访问。</p>
+            
+            <p><strong>关键创新点：</strong></p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li>可变大小页设计，避免了大对象跨页存储的复杂性</li>
+              <li>利用操作系统虚拟内存管理消除外部碎片</li>
+              <li>指针混淆技术降低地址转换开销</li>
+              <li>版本化锁支持乐观并发控制</li>
+            </ul>
+            
+            <p><strong>实验结果：</strong> Umbra在缓存命中时性能与纯内存系统相当（JOB基准测试中执行时间波动约30%），同时能够有效利用SSD带宽（读取吞吐量达1.13GiB/s）。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 tech-card">
+            <h4 class="font-bold text-blue-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-memory mr-3"></i>硬件趋势变化
+            </h4>
+            <ul class="space-y-3 text-gray-700">
+              <li><strong>DRAM内存：</strong> 价格昂贵，增长放缓。2TB服务器DRAM约$20,000</li>
+              <li><strong>SSD存储：</strong> 价格大幅下降，性能提升。2TB M.2 SSD约$500，读取带宽3.5GB/s</li>
+              <li><strong>成本对比：</strong> DRAM成本是SSD的40倍</li>
+            </ul>
+          </div>
+          
+          <div class="bg-purple-50 p-6 rounded-lg border border-purple-200 tech-card">
+            <h4 class="font-bold text-purple-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-database mr-3"></i>系统演进需求
+            </h4>
+            <ul class="space-y-3 text-gray-700">
+              <li><strong>纯内存系统局限性：</strong> 数据超出内存时性能急剧下降或失败</li>
+              <li><strong>传统磁盘系统问题：</strong> 固定大小页导致大对象处理复杂</li>
+              <li><strong>经济性考量：</strong> Lomet指出纯内存DBMS不经济，缺乏扩展性</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-blue-100 to-purple-100 p-6 rounded-lg border-l-4 border-blue-400">
+          <h5 class="font-bold text-gray-800 text-lg mb-4">核心洞察：</h5>
+          <p class="text-gray-700 text-lg">
+            <strong>"结合大内存缓冲区与快速SSD"</strong> 是最佳折衷方案：成本远低于纯DRAM解决方案，性能接近内存系统，同时具备磁盘系统的扩展性。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-bolt mr-3"></i>传统缓冲管理器的瓶颈
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-bold text-gray-800 mb-3">固定大小页问题：</h5>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>大字符串或字典压缩查找表无法存储在单页中</li>
+                  <li>需要复杂机制处理跨页对象</li>
+                  <li>字典解压缩需要重新组装（内存拷贝）</li>
+                  <li>系统整体复杂度高</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-bold text-gray-800 mb-3">性能瓶颈：</h5>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>全局哈希表映射PID到内存地址在多核系统成为瓶颈</li>
+                  <li>频繁锁获取导致线程争用</li>
+                  <li>缓冲管理器本身成为系统性能瓶颈</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-cogs mr-3"></i>内存到磁盘系统的迁移挑战
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">字符串处理</h6>
+                <p class="text-sm text-gray-700">页面可能在查询执行期间被换出，字符串指针/偏移可能失效</p>
+              </div>
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">统计信息维护</h6>
+                <p class="text-sm text-gray-700">磁盘系统无法高效进行随机采样，统计信息容易过时</p>
+              </div>
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">查询编译</h6>
+                <p class="text-sm text-gray-700">纯编译执行策略对廉价查询产生过高编译开销</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 技术细节卡片：问题可视化 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：传统缓冲管理器问题深度分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>固定大小页的实际问题示例：
+                </h5>
+                <div class="code-block">
+// 传统固定大小页系统中的字典处理<br>
+// 假设字典大小 = 200KB，页大小 = 64KB<br>
+// 需要跨3页存储<br><br>
+// 1. 存储时分割字典到多个页<br>
+page1 = store(dict_part1, 0, 64KB);<br>
+page2 = store(dict_part2, 64KB, 64KB);<br>
+page3 = store(dict_part3, 128KB, 72KB);<br><br>
+// 2. 使用时需要重新组装<br>
+dict_buffer = malloc(200KB);<br>
+memcpy(dict_buffer, page1.data, 64KB);<br>
+memcpy(dict_buffer+64KB, page2.data, 64KB);<br>
+memcpy(dict_buffer+128KB, page3.data, 72KB);<br><br>
+// 3. 解压缩操作<br>
+result = decompress(dict_buffer); // 需要额外200KB内存和拷贝开销
+                </div>
+              </div>
+              
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-lightbulb mr-2"></i>Umbra的可变大小页解决方案：
+                </h5>
+                <div class="code-block">
+// Umbra可变大小页系统中的字典处理<br>
+// 直接分配256KB页（下一个2的幂次）<br><br>
+// 1. 存储时直接分配适当大小的页<br>
+page = allocate_page(256KB); // 大小类3 (64KB→128KB→256KB)<br>
+store(dict, page, 200KB); // 连续存储<br><br>
+// 2. 使用时直接访问<br>
+result = decompress(page.data); // 无额外内存分配，无拷贝
+                </div>
+                <p class="mt-3 text-sm text-gray-700">优势：内存连续，无碎片，无额外拷贝，解压缩简单快速。</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 核心组件概览 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-sitemap mr-3 text-green-500"></i>系统核心组件
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+              <i class="fas fa-boxes text-3xl text-blue-500 mb-3"></i>
+              <p class="font-bold text-blue-700">缓冲管理器</p>
+              <p class="text-sm text-gray-700 mt-2">可变大小页，零碎片，低开销</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+              <i class="fas fa-exchange-alt text-3xl text-green-500 mb-3"></i>
+              <p class="font-bold text-green-700">指针混淆</p>
+              <p class="text-sm text-gray-700 mt-2">分散式地址转换，无全局哈希表</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+              <i class="fas fa-lock text-3xl text-purple-500 mb-3"></i>
+              <p class="font-bold text-purple-700">版本化锁</p>
+              <p class="text-sm text-gray-700 mt-2">乐观锁，减少线程争用</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
+              <i class="fas fa-code text-3xl text-red-500 mb-3"></i>
+              <p class="font-bold text-red-700">自适应编译</p>
+              <p class="text-sm text-gray-700 mt-2">字节码+JIT，优化编译开销</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 缓冲管理器详细设计 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-database mr-3 text-blue-500"></i>缓冲管理器设计
+          </h3>
+          
+          <!-- 原图展示：缓冲管理器示意图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: 缓冲管理器示意图
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig1.png" alt="论文图1: 缓冲管理器示意图，展示512KB缓冲池和64KB最小页大小，大小类按指数增长组织" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 缓冲管理器示意图，假设缓冲池大小为512KB，最小页大小为64KB。缓冲管理器支持按指数增长的页大小，这些页被组织到不同的大小类中。每个大小类预留了与整个缓冲池大小相同的虚拟内存区域，缓冲帧对应此内存区域内的固定地址。
+            </div>
+          </div>
+          
+          <!-- 技术解释 -->
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-info-circle mr-2"></i>关键技术机制：
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h6 class="font-bold text-gray-800 mb-2">大小类设计：</h6>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>大小类0：64KB（最小页大小）</li>
+                  <li>大小类i+1：大小类i的两倍</li>
+                  <li>指数增长：64KB→128KB→256KB→512KB→...</li>
+                  <li>理论最大页大小=缓冲池大小</li>
+                </ul>
+              </div>
+              <div>
+                <h6 class="font-bold text-gray-800 mb-2">虚拟内存利用：</h6>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>每个大小类分配独立的虚拟地址范围</li>
+                  <li>使用mmap预留地址空间，不立即分配物理内存</li>
+                  <li>避免虚拟地址空间碎片</li>
+                  <li>物理内存按需分配（通过pread加载数据时）</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 指针混淆技术 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-project-diagram mr-3 text-green-500"></i>指针混淆（Pointer Swizzling）
+          </h3>
+          
+          <!-- 原图展示：混淆与未混淆的SWIP -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 2: 混淆与未混淆的SWIP
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: 混淆的SWIP存储指向内存驻留页的指针，最低位为0；未混淆的SWIP存储页面标识符和大小类，最低位为1" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 混淆的（顶部）和未混淆的（底部）SWIP示意图。混淆的SWIP存储指向内存驻留页的指针，由于指针的强制8字节对齐，其最低位为零。在未混淆的SWIP中，该位固定为一，而剩余位存储磁盘上页的页面标识符和大小类。
+            </div>
+          </div>
+          
+          <!-- 技术解释 -->
+          <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+            <h5 class="font-semibold text-green-700 mb-4 flex items-center text-lg">
+              <i class="fas fa-cogs mr-2"></i>设计实现细节：
+            </h5>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-green-700">SWIP编码格式：</strong>
+                <div class="code-block mt-2">
+// 混淆的SWIP（内存驻留）<br>
+// 64位指针，最低位=0（8字节对齐保证）<br>
+// 示例: 0x00007F8A5B3D2000<br><br>
+// 未混淆的SWIP（磁盘驻留）<br>
+// 结构: [1位标记=1][6位大小类][57位页面ID]<br>
+// 示例: 0x8000000000001234 (标记=1, 大小类=0, 页面ID=0x1234)
+                </div>
+              </div>
+              
+              <div>
+                <strong class="text-green-700">访问逻辑：</strong>
+                <div class="code-block mt-2">
+Page* access_page(SWIP swip) {<br>
+&nbsp;&nbsp;if (swip & 0x1 == 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// 混淆状态：直接解引用指针<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return (Page*)swip;<br>
+&nbsp;&nbsp;} else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// 未混淆状态：从磁盘加载<br>
+&nbsp;&nbsp;&nbsp;&nbsp;size_class = (swip >> 57) & 0x3F;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;page_id = swip & 0x01FFFFFFFFFFFFFF;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return buffer_manager.load_page(page_id, size_class);<br>
+&nbsp;&nbsp;}<br>
+}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 版本化锁 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-lock mr-3 text-purple-500"></i>版本化锁（Versioned Latches）
+          </h3>
+          
+          <!-- 原图展示：版本化锁结构 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 3: 版本化锁结构
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig3.png" alt="论文图3: 存储在缓冲帧中用于同步页面访问的版本化锁结构。版本计数器在每次页面修改后增加，允许验证乐观访问。状态位编码锁是否被锁定以及锁定模式" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 存储在缓冲帧中用于同步页面访问的版本化锁结构。版本计数器在每次页面修改后增加，允许验证乐观访问。状态位编码锁是否被锁定以及锁定模式。
+            </div>
+          </div>
+          
+          <!-- 锁模式对比 -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h6 class="font-bold text-red-700 mb-3 text-center">独占模式</h6>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><i class="fas fa-user-lock text-red-500 mr-2"></i>单个线程持有</li>
+                <li><i class="fas fa-edit text-red-500 mr-2"></i>允许修改页面</li>
+                <li><i class="fas fa-ban text-red-500 mr-2"></i>其他线程阻塞</li>
+                <li class="mt-2"><strong>使用场景：</strong>插入数据、分裂节点</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h6 class="font-bold text-blue-700 mb-3 text-center">共享模式</h6>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><i class="fas fa-users text-blue-500 mr-2"></i>多个线程持有</li>
+                <li><i class="fas fa-eye text-blue-500 mr-2"></i>只读访问</li>
+                <li><i class="fas fa-thumbtack text-blue-500 mr-2"></i>固定页面在内存</li>
+                <li class="mt-2"><strong>使用场景：</strong>扫描叶页、加载子页</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h6 class="font-bold text-green-700 mb-3 text-center">乐观模式</h6>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li><i class="fas fa-bolt text-green-500 mr-2"></i>无锁获取</li>
+                <li><i class="fas fa-clock text-green-500 mr-2"></i>事后验证</li>
+                <li><i class="fas fa-retweet text-green-500 mr-2"></i>失败时重试</li>
+                <li class="mt-2"><strong>使用场景：</strong>非修改遍历、只读查询</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 其他关键设计 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-font mr-3"></i>字符串处理
+            </h4>
+            <ul class="space-y-3 text-gray-700">
+              <li><strong>16字节头部：</strong> 4字节长度 + 12字节数据或指针</li>
+              <li><strong>短字符串（≤12字符）：</strong> 直接存储在头部</li>
+              <li><strong>长字符串：</strong> 外联存储，头部包含指针/偏移</li>
+              <li><strong>存储类别：</strong>
+                <ul class="list-disc list-inside ml-4 mt-2">
+                  <li><strong>持久：</strong> 查询常量，数据库运行期间有效</li>
+                  <li><strong>临时：</strong> 查询执行期间创建，需要垃圾回收</li>
+                  <li><strong>瞬态：</strong> 来自关系的数据，工作单元处理期间有效</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
+            <h4 class="font-bold text-indigo-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-chart-bar mr-3"></i>统计信息维护
+            </h4>
+            <ul class="space-y-3 text-gray-700">
+              <li><strong>可扩展在线水库采样：</strong> 持续更新随机样本</li>
+              <li><strong>可更新HyperLogLog草图：</strong> 提供精确基数估计</li>
+              <li><strong>多列估计：</strong> 结合草图与采样进行估计</li>
+              <li><strong>优势：</strong> 统计信息保持最新，开销最小</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 实验设置 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">实验设置</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-50 p-4 rounded-lg border">
+              <h6 class="font-bold text-gray-800 mb-2">硬件配置</h6>
+              <ul class="text-sm text-gray-700">
+                <li><strong>CPU：</strong> Intel Core i7-7820X</li>
+                <li><strong>核心：</strong> 8物理核心，16逻辑核心</li>
+                <li><strong>频率：</strong> 3.6 GHz</li>
+                <li><strong>内存：</strong> 64 GiB</li>
+                <li><strong>存储：</strong> Samsung 960 EVO SSD (500GB)</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border">
+              <h6 class="font-bold text-gray-800 mb-2">对比系统</h6>
+              <ul class="text-sm text-gray-700">
+                <li><strong>HyPer：</strong> v0.6-165（纯内存前身）</li>
+                <li><strong>MonetDB：</strong> v11.33.3（知名列存储）</li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border">
+              <h6 class="font-bold text-gray-800 mb-2">基准测试</h6>
+              <ul class="text-sm text-gray-700">
+                <li><strong>JOB：</strong> Join Order Benchmark</li>
+                <li><strong>TPC-H：</strong> 比例因子10</li>
+                <li><strong>每次查询重复5次，报告最快结果</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 性能对比结果 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">性能对比结果</h3>
+          
+          <!-- 原图展示：性能对比 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 6: Umbra相对于HyPer和MonetDB的性能加速比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig6.png" alt="论文图6: Umbra相对于HyPer和MonetDB在JOB和TPC-H基准测试上的相对加速比箱线图，显示第25和75百分位数（左侧），以及第5、50和95百分位数（右侧）" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Umbra相对于HyPer和MonetDB在JOB和TPC-H上的相对加速比。箱线图显示第25和75百分位数（左侧），以及第5、50和95百分位数（右侧）。
+            </div>
+          </div>
+          
+          <!-- 性能数据汇总 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-blue-700 text-lg mb-4 text-center">与HyPer对比</h5>
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span>JOB几何平均加速比</span>
+                  <span class="comparison-badge better">3.0×</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>TPC-H几何平均加速比</span>
+                  <span class="comparison-badge better">1.8×</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>JOB执行时间波动</span>
+                  <span class="comparison-badge same">~30%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>TPC-H执行时间波动</span>
+                  <span class="comparison-badge same">~10%</span>
+                </div>
+              </div>
+              <div class="mt-4 p-3 bg-blue-50 rounded text-sm text-gray-700">
+                <strong>关键洞察：</strong> 性能提升主要来自自适应编译策略。HyPer在某些查询上花费的编译时间比执行时间多29倍。
+              </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-green-700 text-lg mb-4 text-center">与MonetDB对比</h5>
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span>JOB几何平均加速比</span>
+                  <span class="comparison-badge better">4.6×</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>TPC-H几何平均加速比</span>
+                  <span class="comparison-badge better">2.3×</span>
+                </div>
+              </div>
+              <div class="mt-4 p-3 bg-green-50 rounded text-sm text-gray-700">
+                <strong>关键洞察：</strong> MonetDB在复杂查询上花费大量时间在查询优化和代码生成上，且偶尔选择极差的查询计划。
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 微基准测试 -->
+        <div class="mb-10">
+          <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-6">微基准测试</h3>
+          
+          <div class="space-y-6">
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-800 text-lg mb-4">缓冲管理器开销分析</h5>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center p-4 border rounded">
+                  <div class="text-2xl font-bold text-blue-600 mb-2">~2%</div>
+                  <div class="text-sm text-gray-700">避免字符串物化的性能波动</div>
+                </div>
+                <div class="text-center p-4 border rounded">
+                  <div class="text-2xl font-bold text-green-600 mb-2">~6%</div>
+                  <div class="text-sm text-gray-700">绕过缓冲管理器的性能波动</div>
+                </div>
+                <div class="text-center p-4 border rounded">
+                  <div class="text-2xl font-bold text-red-600 mb-2">≤30%</div>
+                  <div class="text-sm text-gray-700">最极端的性能变化</div>
+                </div>
+              </div>
+              <p class="mt-4 text-gray-700"><strong>结论：</strong> 缓冲管理器在Umbra中引入的开销可以忽略不计。</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-800 text-lg mb-4">I/O性能测试</h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h6 class="font-bold text-gray-700 mb-3">测试场景：</h6>
+                  <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li>关系：2.5亿个8字节随机浮点值</li>
+                    <li>操作：计算总和</li>
+                    <li>缓存状态：冷数据库和操作系统缓存</li>
+                  </ul>
+                </div>
+                <div>
+                  <h6 class="font-bold text-gray-700 mb-3">吞吐量结果：</h6>
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                      <span>绕过缓冲管理器（内存映射文件）</span>
+                      <span class="font-bold text-green-600">1.15 GiB/s</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span>使用缓冲管理器</span>
+                      <span class="font-bold text-green-600">1.13 GiB/s</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="mt-4 text-gray-700"><strong>结论：</strong> Umbra的缓冲管理器能够充分利用可用的I/O带宽，接近SSD的随机访问最大带宽。</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 技术细节：性能分析 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：性能差异深度分析
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>为什么Umbra在某些查询上比HyPer慢？
+              </h5>
+              <div class="space-y-3 text-gray-700">
+                <p>尽管Umbra有更好的基数估计，但查询优化器有时会选择更差的逻辑计划：</p>
+                <div class="code-block">
+// 示例：查询优化器决策差异<br>
+// HyPer优化器：幸运地犯了两个错误，相互抵消<br>
+// Umbra优化器：选择了技术上正确但实际更差的计划<br><br>
+// 查询执行时间对比：<br>
+// HyPer: 100ms (错误A -20ms, 错误B +20ms)<br>
+// Umbra: 120ms (正确决策，但不如幸运的HyPer)
+                </div>
+                <p class="mt-2"><strong>关键点：</strong> 执行时间差异主要来自查询计划选择，而非Umbra系统本身的开销。</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>自适应编译策略的优势
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h6 class="font-bold text-gray-800 mb-2">HyPer（始终编译）：</h6>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                    <li>所有查询都编译为优化机器码</li>
+                    <li>编译开销可能很高</li>
+                    <li>廉价查询：编译时间 >> 执行时间</li>
+                    <li>极端情况：编译时间比执行时间多29倍</li>
+                  </ul>
+                </div>
+                <div>
+                  <h6 class="font-bold text-gray-800 mb-2">Umbra（自适应编译）：</h6>
+                  <ul class="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                    <li>初始：字节码 + 解释执行</li>
+                    <li>跟踪进度信息</li>
+                    <li>仅对受益查询进行JIT编译</li>
+                    <li>优化编译/执行时间权衡</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border-l-4 border-green-500">
+            <h4 class="font-bold text-green-700 text-xl mb-4">主要贡献总结</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-bold text-gray-800 mb-3">技术贡献</h5>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>可变大小页缓冲管理器：</strong> 支持指数增长大小类，消除外部碎片</li>
+                  <li><strong>低开销设计：</strong> 指针混淆、版本化锁、自适应编译</li>
+                  <li><strong>混合存储架构：</strong> 内存性能 + SSD扩展性 + 经济性</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-bold text-gray-800 mb-3">实践贡献</h5>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>完整系统实现：</strong> Umbra是完全可用的通用DBMS</li>
+                  <li><strong>性能验证：</strong> 缓存命中时接近内存性能，缓存未命中时充分利用I/O带宽</li>
+                  <li><strong>设计指南：</strong> 为高性能数据缓存系统提供设计参考</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-xl mb-4">论文局限性</h4>
+            <div class="space-y-4 text-gray-700">
+              <div>
+                <h5 class="font-bold text-gray-800 mb-2">技术限制</h5>
+                <ul class="list-disc list-inside space-y-2 ml-4">
+                  <li><strong>恢复机制限制：</strong> 只能重用相同大小的磁盘空间，可能导致空间浪费</li>
+                  <li><strong>存储布局：</strong> 当前使用PAX布局，对磁盘驻留数据不是最优</li>
+                  <li><strong>硬件抽象：</strong> 依赖块设备抽象，未利用开放通道SSD等新技术</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h5 class="font-bold text-gray-800 mb-2">评估限制</h5>
+                <ul class="list-disc list-inside space-y-2 ml-4">
+                  <li><strong>工作负载范围：</strong> 主要关注分析型查询（JOB, TPC-H），OLTP工作负载覆盖有限</li>
+                  <li><strong>系统对比：</strong> 仅与HyPer和MonetDB对比，缺少与其他现代磁盘优化系统的比较</li>
+                  <li><strong>扩展性测试：</strong> 未展示大规模多节点或分布式场景下的性能</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-xl mb-4">未来方向</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">存储优化</h6>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>集成DataBlocks等替代存储布局</li>
+                  <li>支持开放通道SSD直接访问</li>
+                  <li>更智能的数据冷热分离</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">查询优化</h6>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>改进查询优化器计划选择</li>
+                  <li>增强自适应编译策略</li>
+                  <li>支持更复杂的查询工作负载</li>
+                </ul>
+              </div>
+              
+              <div class="bg-white p-4 rounded border">
+                <h6 class="font-bold text-gray-800 mb-2">系统扩展</h6>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>多SSD并行I/O支持</li>
+                  <li>分布式部署能力</li>
+                  <li>云原生架构适配</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-500">
+            <h4 class="font-bold text-purple-700 text-xl mb-4">对博士生的核心启示</h4>
+            <div class="space-y-4 text-gray-700 text-lg">
+              <p><strong>问题识别：</strong> 纯内存系统在经济性和扩展性上面临根本挑战，需要新架构平衡性能与成本。</p>
+              
+              <p><strong>解决方案核心：</strong> 通过<strong>可变大小页缓冲管理器</strong>等创新，可以消除传统磁盘系统的主要开销，实现接近内存的性能。</p>
+              
+              <p><strong>系统设计哲学：</strong> 优秀系统设计需要在<strong>性能、成本、复杂度</strong>之间找到平衡点。Umbra展示了如何通过智能设计在多个维度取得良好折衷。</p>
+              
+              <p><strong>实际应用价值：</strong> 这种混合架构为大数据应用提供了经济高效的解决方案，特别是当数据规模超过内存容量时。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始高亮
+      highlightNav();
+      
+      // 技术卡片悬停效果
+      const techCards = document.querySelectorAll('.tech-card');
+      techCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-4px)';
+          this.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

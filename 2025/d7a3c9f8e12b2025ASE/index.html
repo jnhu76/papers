@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A.S.E: A Repository-Level Benchmark for Evaluating Security in AI-Generated Code</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          A.S.E: A Repository-Level Benchmark for Evaluating Security in AI-Generated Code
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Keke Lian, Bing Wang, Lei Zhang, Libo Chen, Junjie Wang, Ziming Zhao, Yujiu Yang, Miaoqian Lin, Haotong Duan, Haoran Zhao, Shuang Liao, Mingda Guo, Jiazheng Quan, Yilu Zhong, Chenhao He, Zichuan Chen, Jie Wu, Haoling Li, Zhaoxuan Li, Jiongchi Yu, Hui Li, Dong Zhang</div>
+                <div class="text-sm text-gray-600 mt-1">Tencent, Peking University, Fudan University, Shanghai Jiao Tong University, Tsinghua University, Zhejiang University, Chinese Academy of Sciences, Singapore Management University</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">通讯作者</strong>
+                <div>Hui Li (lih64@pkuzz.edu.cn), Dong Zhang (zalezhang@tencent.com)</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">项目资源</strong>
+                <div class="space-y-2">
+                  <div class="font-mono text-sm bg-white px-3 py-2 rounded border">代码: https://github.com/Tencent/AICGSecEval</div>
+                  <div class="font-mono text-sm bg-white px-3 py-2 rounded border">网站: https://aicgseceval.tencent.com/home</div>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">研究领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">AI代码生成</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">安全评估</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">仓库级基准</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">CVE漏洞</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献高亮框 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-8">
+        <h4 class="font-bold text-green-700 mb-2 flex items-center">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-1 text-gray-700">
+          <li><strong>首个仓库级安全评估基准</strong>：从真实CVE漏洞构建，涵盖跨文件依赖的代码生成任务</li>
+          <li><strong>自动化和可重现的评估框架</strong>：集成定制化的静态漏洞检测规则，支持准确的安全评估</li>
+          <li><strong>全面的模型评估</strong>：对26个主流商业和开源LLM进行系统评估，揭示安全代码生成的关键发现</li>
+          <li><strong>多维度的评估指标</strong>：综合考虑安全性、代码质量和生成稳定性，提供全面的模型能力评估</li>
+        </ul>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            这篇论文解决了<strong>AI生成代码的安全评估</strong>问题。随着大型语言模型在软件工程中的广泛应用，评估其生成代码的安全性变得至关重要。然而，现有基准测试往往<strong>缺乏与现实世界AI辅助编程场景的相关性</strong>，难以评估生产环境中AI生成代码的实际安全风险。
+          </p>
+          <p class="mb-4">
+            为解决这一问题，作者提出了<strong>A.S.E（AI代码生成安全评估）</strong>，这是一个仓库级评估基准，旨在密切模拟现实世界的AI编程任务。A.S.E具有以下关键特点：
+          </p>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li>使用<strong>真实世界的GitHub开源仓库</strong>作为数据源，这些仓库包含已记录的CVE漏洞</li>
+            <li><strong>模拟真实AI编程工作流程</strong>，提取代码上下文（包括文件内和跨文件）供LLM生成代码</li>
+            <li>采用<strong>高精度和可重现的代码评估方法</strong>，为每个测试用例设计定制的静态漏洞检测规则</li>
+          </ul>
+          <p class="mb-4">
+            通过对26个主流LLM的评估，作者发现：
+          </p>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li>当前LLM在安全编码方面仍然面临重大挑战</li>
+            <li>仓库级场景的复杂性对通常擅长片段级任务的LLM提出了挑战</li>
+            <li>更大的推理预算并不一定能带来更好的代码生成</li>
+          </ul>
+          <p>
+            这些观察结果为AI代码生成的现状提供了有价值的见解，帮助开发者为实际任务选择最合适的模型，并为改进LLM以生成安全高效的代码奠定了基础。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+          <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+            <i class="fas fa-info-circle mr-2"></i>研究背景
+          </h5>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li>大型语言模型（LLMs）的快速发展极大地推动了AI编程生态系统的发展</li>
+            <li>工具如Cursor和Claude Code使开发者能够选择最适合其任务的模型</li>
+            <li>AI助手显著提高了编程效率，导致生产环境中AI生成代码的激增</li>
+            <li>研究表明，此类代码可能包含安全漏洞，带来严重风险</li>
+          </ul>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-lg mb-2">
+              <i class="fa-solid fa-arrow-up mr-2"></i>AI代码生成快速增长
+            </h4>
+            <p class="text-sm text-gray-700">AI编程助手显著提高开发效率，AI生成代码在生产环境中大量使用</p>
+          </div>
+          <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-lg mb-2">
+              <i class="fa-solid fa-shield-alt mr-2"></i>安全风险日益突出
+            </h4>
+            <p class="text-sm text-gray-700">研究发现AI生成的代码可能包含安全漏洞，导致数据泄露或系统故障</p>
+          </div>
+        </div>
+
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有基准测试的局限性</h3>
+          <p class="mb-4">
+            尽管学术界和工业界开发了许多基准测试来评估AI生成的代码，但大多数基准测试存在以下问题：
+          </p>
+          <ol class="list-decimal pl-6 mb-4 space-y-2">
+            <li><strong>与现实世界数据的相关性有限</strong>：数据集通常来源于人工策划的合成代码片段，与现实项目的功能和安全性场景相关性有限</li>
+            <li><strong>代码生成任务脱离现实AI编程</strong>：任务通常局限于孤立的代码片段，仅关注功能描述，不考虑文件或项目中的上下文</li>
+            <li><strong>不可靠的代码评估方法</strong>：生成代码的安全评估通常依赖于人工或基于LLM的判断，不可靠且难以自动化或一致地重现</li>
+          </ol>
+          <p>
+            这些限制使得现有基准测试难以评估AI生成代码在实际生产环境中的安全风险，从而为开发者和组织安全地集成AI生成代码带来了重大挑战。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+
+        <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-6">
+          <h5 class="font-semibold text-red-700 mb-3 flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>核心研究问题
+          </h5>
+          <p class="text-gray-700">
+            如何构建一个能够<strong>准确评估AI生成代码在实际生产环境中安全风险</strong>的评估基准？该基准需要能够模拟真实世界的AI编程场景，提供可靠的安全评估结果。
+          </p>
+        </div>
+
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术挑战</h3>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>数据源的真实性问题</strong>：如何获取既反映真实软件开发场景又包含安全漏洞的代码数据？</li>
+            <li><strong>任务设计的仿真问题</strong>：如何设计代码生成任务以模拟真实AI编程助手（如Cursor）的工作流程？</li>
+            <li><strong>评估方法的准确性问题</strong>：如何设计既自动化又准确的安全评估方法，避免人工评估的主观性和不可重现性？</li>
+            <li><strong>数据泄露风险</strong>：如何确保评估数据不会出现在LLM的训练数据中，避免模型通过记忆而非推理来解决问题？</li>
+            <li><strong>评估的全面性问题</strong>：如何综合考虑代码的安全性、质量、稳定性等多个维度？</li>
+          </ul>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有基准测试的不足</h3>
+          <!-- 表1：安全导向的代码生成评估数据集比较 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>表1：安全导向的代码生成评估数据集比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    表1: 安全导向的代码生成评估数据集比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 表格内容 -->
+                <div class="overflow-x-auto">
+                  <table class="min-w-full bg-white border border-gray-300">
+                    <thead>
+                      <tr class="bg-gray-100">
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">数据集</th>
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">CWE标签</th>
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">粒度</th>
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">数据来源</th>
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">领域</th>
+                        <th class="py-2 px-4 border-b text-left font-medium text-gray-700">安全评估方法</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="py-2 px-4 border-b font-medium text-blue-700">A.S.E (本文)</td>
+                        <td class="py-2 px-4 border-b">✓</td>
+                        <td class="py-2 px-4 border-b font-medium text-green-700">仓库级</td>
+                        <td class="py-2 px-4 border-b">真实世界仓库</td>
+                        <td class="py-2 px-4 border-b">真实完整Web项目</td>
+                        <td class="py-2 px-4 border-b">SAST</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">SafeGenBench</td>
+                        <td class="py-2 px-4 border-b">✓</td>
+                        <td class="py-2 px-4 border-b">片段级</td>
+                        <td class="py-2 px-4 border-b">人工合成</td>
+                        <td class="py-2 px-4 border-b">简化编程任务</td>
+                        <td class="py-2 px-4 border-b">SAST + LLM</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">BaxBench</td>
+                        <td class="py-2 px-4 border-b">✗</td>
+                        <td class="py-2 px-4 border-b">片段级</td>
+                        <td class="py-2 px-4 border-b">人工合成</td>
+                        <td class="py-2 px-4 border-b">后端编程任务</td>
+                        <td class="py-2 px-4 border-b">测试用例</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">CWEval</td>
+                        <td class="py-2 px-4 border-b">✓</td>
+                        <td class="py-2 px-4 border-b">片段级</td>
+                        <td class="py-2 px-4 border-b">人工合成</td>
+                        <td class="py-2 px-4 border-b">简化编程任务</td>
+                        <td class="py-2 px-4 border-b">测试用例</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">CodeLMSec</td>
+                        <td class="py-2 px-4 border-b">✓</td>
+                        <td class="py-2 px-4 border-b">片段级</td>
+                        <td class="py-2 px-4 border-b">人工合成</td>
+                        <td class="py-2 px-4 border-b">简化编程任务</td>
+                        <td class="py-2 px-4 border-b">SAST</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <!-- 表注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>表注:</strong> A.S.E与其他安全导向的代码生成评估数据集比较。A.S.E是唯一使用真实世界仓库级数据的基准测试。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>粒度差异:</strong> A.S.E采用<strong>仓库级</strong>评估，而其他基准测试多为<strong>片段级</strong>评估</li>
+                  <li><strong>数据来源差异:</strong> A.S.E使用<strong>真实世界仓库</strong>，其他基准测试多使用<strong>人工合成</strong>数据</li>
+                  <li><strong>领域差异:</strong> A.S.E专注于<strong>真实完整Web项目</strong>，其他基准测试多使用<strong>简化编程任务</strong></li>
+                  <li><strong>评估方法差异:</strong> A.S.E使用定制化的<strong>SAST规则</strong>，其他基准测试使用多种方法如测试用例、LLM评估等</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+
+        <div class="prose max-w-none text-gray-700 mb-6">
+          <p>
+            A.S.E基准测试框架包括三个核心组件：基准构建、代码生成任务设置和代码评估。作者遵循以下设计原则：
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-database mr-2"></i>真实数据源
+            </h4>
+            <p class="text-sm text-gray-700">从高质量GitHub开源仓库构建，包含已记录的CVE漏洞，确保数据反映真实且安全敏感的场景</p>
+          </div>
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-code mr-2"></i>实践任务模拟
+            </h4>
+            <p class="text-sm text-gray-700">模拟AI编程助手工作流程，提取仓库中的代码上下文（文件内和跨文件）供LLM生成代码</p>
+          </div>
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-chart-line mr-2"></i>高精度评估
+            </h4>
+            <p class="text-sm text-gray-700">为每个测试用例设计定制的静态漏洞检测规则，确保准确评估重新生成项目的安全性</p>
+          </div>
+        </div>
+
+        <!-- 图1：A.S.E整体工作流程 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>图1：A.S.E整体工作流程
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  图1: A.S.E整体工作流程
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 架构图占位符 -->
+              <div class="architecture-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <div class="flex items-center justify-center mb-4">
+                  <i class="fas fa-sitemap text-5xl text-blue-500 mr-3"></i>
+                  <h6 class="font-semibold text-gray-700 text-xl">A.S.E 整体工作流程</h6>
+                </div>
+                
+                <!-- 架构组件可视化 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div class="bg-blue-50 p-5 rounded-lg border-2 border-blue-300 text-center shadow-sm">
+                    <i class="fas fa-seedling text-3xl text-blue-500 mb-3"></i>
+                    <p class="text-lg font-bold text-blue-700 mb-2">(a) 基准构建</p>
+                    <p class="text-sm text-gray-600">从高质量GitHub种子数据集构建，通过双重变异、CVE补丁和定制SAST工具</p>
+                  </div>
+                  <div class="bg-green-50 p-5 rounded-lg border-2 border-green-300 text-center shadow-sm">
+                    <i class="fas fa-robot text-3xl text-green-500 mb-3"></i>
+                    <p class="text-lg font-bold text-green-700 mb-2">(b) 模型代码生成</p>
+                    <p class="text-sm text-gray-600">给定不完整的仓库，漏洞描述和上下文指导LLM完成仓库</p>
+                  </div>
+                  <div class="bg-purple-50 p-5 rounded-lg border-2 border-purple-300 text-center shadow-sm">
+                    <i class="fas fa-chart-bar text-3xl text-purple-500 mb-3"></i>
+                    <p class="text-lg font-bold text-purple-700 mb-2">(c) 安全评估</p>
+                    <p class="text-sm text-gray-600">使用安全性、质量和稳定性指标进行综合评估</p>
+                  </div>
+                </div>
+                
+                <!-- 数据流向指示 -->
+                <div class="flex flex-col md:flex-row justify-center items-center text-gray-700 text-lg font-medium">
+                  <div class="flex items-center mb-4 md:mb-0">
+                    <span class="bg-blue-100 px-4 py-2 rounded-lg">数据收集</span>
+                    <i class="fas fa-arrow-right mx-4 text-xl text-blue-500"></i>
+                  </div>
+                  <div class="flex items-center mb-4 md:mb-0">
+                    <span class="bg-green-100 px-4 py-2 rounded-lg">代码生成</span>
+                    <i class="fas fa-arrow-right mx-4 text-xl text-green-500"></i>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="bg-purple-100 px-4 py-2 rounded-lg">安全评估</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> A.S.E整体工作流程。(a) A.S.E基准构建：从高质量GitHub种子数据集构建，通过双重变异（结构/语义）、CVE补丁和定制SAST工具，随后进行专家筛选。(b) 模型代码生成：给定一个不完整的仓库，漏洞描述和上下文指导LLM完成仓库。(c) 安全评估：使用安全性、质量和稳定性指标进行综合评估。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>工作流程三个阶段:</strong> A.S.E基准测试遵循从数据收集到代码生成再到安全评估的完整流程</li>
+                <li><strong>基准构建的关键步骤:</strong> 从真实GitHub仓库开始，通过变异技术生成变体，确保数据多样性</li>
+                <li><strong>代码生成的上下文提取:</strong> 使用BM25算法自动提取相关代码上下文，模拟真实AI编程助手工作流程</li>
+                <li><strong>多维评估指标:</strong> 同时考虑安全性、代码质量和生成稳定性，提供全面的模型能力评估</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">A.S.E基准构建过程</h3>
+          <p class="mb-4">
+            A.S.E基准的构建过程分为四个阶段：
+          </p>
+          <ol class="list-decimal pl-6 mb-4 space-y-3">
+            <li><strong>确定数据源</strong>：从公共漏洞数据库和企业内部仓库收集CVE记录和对应的仓库信息，获得超过100,000个原始CVE条目</li>
+            <li><strong>筛选候选仓库</strong>：通过严格筛选过程确保项目质量和漏洞完整性，最终得到199个高置信度候选</li>
+            <li><strong>专家引导的细化和质量控制</strong>：安全专家进行手动审查，精确标注易受攻击的代码区域，设计定制的CodeQL/Joern查询验证污点传播路径</li>
+            <li><strong>数据集扩展</strong>：通过语义和结构变异技术生成80个变体，从40个种子仓库扩展到总共120个基准实例</li>
+          </ol>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">代码生成任务设置</h3>
+          <p class="mb-4">
+            代码生成任务的设计目标是评估模型在真实仓库上下文中生成代码的能力：
+          </p>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li>从每个仓库中移除标注的易受攻击代码，创建"填空"环境</li>
+            <li>将漏洞的功能描述与提取的上下文结合，生成结构化的代码完成提示</li>
+            <li>使用BM25算法自动提取仓库级别的相关上下文</li>
+            <li>要求模型以补丁格式（统一差异格式）输出代码，便于自动集成到仓库中</li>
+          </ul>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">代码评估方法</h3>
+          <p class="mb-4">
+            A.S.E采用多维度的评估指标：
+          </p>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>质量</strong>：评估生成的代码是否成功集成到仓库并通过基本静态检查</li>
+            <li><strong>安全性</strong>：测量集成代码是否减少了检测到的漏洞数量</li>
+            <li><strong>稳定性</strong>：评估模型对同一基准实例多次运行的输出一致性</li>
+          </ul>
+          <p class="mb-4">
+            综合得分计算公式为：
+          </p>
+          <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm mb-4">
+            综合得分 = 0.6 × 安全性得分 + 0.3 × 质量得分 + 0.1 × 稳定性得分
+          </div>
+          <p>
+            权重设计反映了实际优先级：安全性是主要关注点（0.6），质量确保功能可行性（0.3），稳定性捕获一致性而不掩盖核心维度（0.1）。
+          </p>
+        </div>
+
+        <!-- 图4：A.S.E基准统计 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-pie mr-2"></i>图4：A.S.E基准统计
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  图4: A.S.E基准统计
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 统计图占位符 -->
+              <div class="statistics-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <!-- CWE类别分布 -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4">CWE类别分布</h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">SQL注入 (CWE-89)</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-blue-500 h-4 rounded-full" style="width: 29.2%"></div>
+                          </div>
+                          <span class="text-sm font-medium">29.2%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">路径遍历 (CWE-22)</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-green-500 h-4 rounded-full" style="width: 26.7%"></div>
+                          </div>
+                          <span class="text-sm font-medium">26.7%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">XSS (CWE-79)</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-purple-500 h-4 rounded-full" style="width: 25%"></div>
+                          </div>
+                          <span class="text-sm font-medium">25%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">命令注入 (CWE-78)</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-red-500 h-4 rounded-full" style="width: 19.2%"></div>
+                          </div>
+                          <span class="text-sm font-medium">19.2%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 编程语言分布 -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4">编程语言分布</h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">PHP</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-blue-500 h-4 rounded-full" style="width: 50%"></div>
+                          </div>
+                          <span class="text-sm font-medium">50%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Python</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-green-500 h-4 rounded-full" style="width: 19.2%"></div>
+                          </div>
+                          <span class="text-sm font-medium">19.2%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Go</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-purple-500 h-4 rounded-full" style="width: 14.2%"></div>
+                          </div>
+                          <span class="text-sm font-medium">14.2%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">JavaScript</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-yellow-500 h-4 rounded-full" style="width: 14.2%"></div>
+                          </div>
+                          <span class="text-sm font-medium">14.2%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Java</span>
+                        <div class="flex items-center">
+                          <div class="w-32 bg-gray-200 rounded-full h-4 mr-2">
+                            <div class="bg-red-500 h-4 rounded-full" style="width: 2.5%"></div>
+                          </div>
+                          <span class="text-sm font-medium">2.5%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> A.S.E基准统计，包括顶级CWE类别、编程语言和仓库的分布。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>CWE类别分布:</strong> A.S.E涵盖四种主要的Web漏洞类型，反映了现实世界Web项目中最常见的安全问题</li>
+                <li><strong>SQL注入占比最高:</strong> 占29.2%，说明这是Web应用中最常见的安全漏洞之一</li>
+                <li><strong>编程语言分布:</strong> PHP占50%，反映了PHP在易受攻击的Web应用中的主导地位，同时覆盖了多种编程语言以评估模型的泛化能力</li>
+                <li><strong>多语言支持:</strong> 涵盖五种主流编程环境，使基准能够评估模型在不同编程语言中的表现</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+
+        <div class="prose max-w-none text-gray-700 mb-6">
+          <p>
+            作者对26个最先进的LLM进行了评估，包括18个专有模型和8个开源模型。评估的关键选择标准是同时支持"快速思考"和"慢速思考"模式，以便全面比较推理范式。
+          </p>
+        </div>
+
+        <!-- 表2：A.S.E基准上各种先进代码LLM的排行榜 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-trophy mr-2"></i>表2：A.S.E基准上各种先进代码LLM的排行榜
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  表2: A.S.E基准上各种先进代码LLM的排行榜
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+              </div>
+              
+              <!-- 表格内容 -->
+              <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-300 text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">排名</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">模型</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">许可</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">思考模式</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">综合得分</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">安全性</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">质量</th>
+                      <th class="py-2 px-3 border-b text-left font-medium text-gray-700">稳定性</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="bg-blue-50">
+                      <td class="py-2 px-3 border-b font-bold">1</td>
+                      <td class="py-2 px-3 border-b font-medium">Claude-3.7-Sonnet</td>
+                      <td class="py-2 px-3 border-b">专有</td>
+                      <td class="py-2 px-3 border-b text-green-600">✦ 快速</td>
+                      <td class="py-2 px-3 border-b font-bold text-blue-700">63.01</td>
+                      <td class="py-2 px-3 border-b">46.72</td>
+                      <td class="py-2 px-3 border-b">91.58</td>
+                      <td class="py-2 px-3 border-b">75.00</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3 border-b">2</td>
+                      <td class="py-2 px-3 border-b">Claude-3.7-Sonnet-Thinking</td>
+                      <td class="py-2 px-3 border-b">专有</td>
+                      <td class="py-2 px-3 border-b text-purple-600">▪ 慢速</td>
+                      <td class="py-2 px-3 border-b font-medium">61.04</td>
+                      <td class="py-2 px-3 border-b">44.65</td>
+                      <td class="py-2 px-3 border-b">89.85</td>
+                      <td class="py-2 px-3 border-b">72.92</td>
+                    </tr>
+                    <tr class="bg-green-50">
+                      <td class="py-2 px-3 border-b">3</td>
+                      <td class="py-2 px-3 border-b font-medium">Qwen3-235B-A22B-Instruct</td>
+                      <td class="py-2 px-3 border-b">开源</td>
+                      <td class="py-2 px-3 border-b text-green-600">✦ 快速</td>
+                      <td class="py-2 px-3 border-b font-bold text-green-700">60.15</td>
+                      <td class="py-2 px-3 border-b">48.03</td>
+                      <td class="py-2 px-3 border-b">82.08</td>
+                      <td class="py-2 px-3 border-b">67.08</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3 border-b">4</td>
+                      <td class="py-2 px-3 border-b">Qwen3-Coder</td>
+                      <td class="py-2 px-3 border-b">开源</td>
+                      <td class="py-2 px-3 border-b text-green-600">✦ 快速</td>
+                      <td class="py-2 px-3 border-b">59.31</td>
+                      <td class="py-2 px-3 border-b">42.69</td>
+                      <td class="py-2 px-3 border-b">85.16</td>
+                      <td class="py-2 px-3 border-b">81.54</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3 border-b">5</td>
+                      <td class="py-2 px-3 border-b">DeepSeek-V3</td>
+                      <td class="py-2 px-3 border-b">开源</td>
+                      <td class="py-2 px-3 border-b text-green-600">✦ 快速</td>
+                      <td class="py-2 px-3 border-b">58.59</td>
+                      <td class="py-2 px-3 border-b">40.89</td>
+                      <td class="py-2 px-3 border-b">85.87</td>
+                      <td class="py-2 px-3 border-b">82.94</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3 border-b">26</td>
+                      <td class="py-2 px-3 border-b">o3-20250416</td>
+                      <td class="py-2 px-3 border-b">专有</td>
+                      <td class="py-2 px-3 border-b text-purple-600">▪ 慢速</td>
+                      <td class="py-2 px-3 border-b font-medium text-red-600">10.22</td>
+                      <td class="py-2 px-3 border-b">0.36</td>
+                      <td class="py-2 px-3 border-b">0.36</td>
+                      <td class="py-2 px-3 border-b">98.91</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- 表注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>表注:</strong> 各种先进代码LLM在A.S.E基准上的排行榜。✦是快速思考模式，▪表示慢速思考模式。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>Claude-3.7-Sonnet表现最佳:</strong> 综合得分63.01，安全性得分46.72，质量得分91.58</li>
+                <li><strong>开源模型竞争力强:</strong> Qwen3-235B-A22B-Instruct排名第三，综合得分60.15，安全性得分48.03（所有模型中最高）</li>
+                <li><strong>快速思考模式普遍优于慢速思考:</strong> 排名前5的模型中，4个使用快速思考模式</li>
+                <li><strong>安全性普遍偏低:</strong> 即使最佳模型的安全性得分也不到50分，表明当前LLM在安全编码方面仍有很大提升空间</li>
+                <li><strong>高质量但低安全性:</strong> 许多模型代码质量得分高（>90），但安全性得分低（<50），说明模型优先考虑语法正确性而非安全性</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <div class="prose max-w-none text-gray-700 mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">关键发现</h3>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-4">
+            <h5 class="font-semibold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>主要发现
+            </h5>
+            <p class="text-gray-700">
+              评估结果揭示了当前LLM在安全代码生成方面的显著不足。即使是最好的模型，其安全性得分也远低于代码质量得分，表明安全编码仍然是当前LLM的关键弱点。
+            </p>
+          </div>
+
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">1. 开源与闭源模型的比较</h4>
+          <p class="mb-4">
+            结果表明，领先的开源和闭源代码LLM之间的性能差距正在缩小。虽然顶级的闭源模型在代码质量方面略有优势，但开源模型在生成稳定性方面表现出色。在整体性能方面，竞争非常激烈。
+          </p>
+
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">2. 推理范式的影响</h4>
+          <p class="mb-4">
+            作者发现，旨在进行更慎重和仔细生成的"慢速思考"范式在代码安全性方面往往表现不如其"快速思考"对应版本。这表明虽然慢速思考旨在改进推理，但可能会无意中增加安全风险。
+          </p>
+
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">3. 任务级挑战</h4>
+          <p class="mb-4">
+            路径遍历（Path Traversal）是最具挑战性的任务。在四种评估的漏洞类型中，所有代码LLM在路径遍历方面表现相对较弱，即使最先进的模型得分也低于50.0。
+          </p>
+
+          <h4 class="text-lg font-semibold text-gray-800 mb-3">4. 高稳定性不意味着更少漏洞</h4>
+          <p class="mb-4">
+            一些代码LLM在编码安全性和生成稳定性之间实现了良好的平衡，但也有一些模型在仓库级场景中始终产生无效或易受攻击的代码。例如，GPT-o3实现了最高的生成稳定性得分98.91，但代码安全性和代码质量得分均为0.36，是所有LLM中最低的。
+          </p>
+        </div>
+
+        <!-- 图7：不同代码LLM在A.S.E基准四个任务类别中的详细表现 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>图7：不同代码LLM在A.S.E基准四个任务类别中的详细表现
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  图7: 不同代码LLM在A.S.E基准四个任务类别中的详细表现
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 性能对比图占位符 -->
+              <div class="performance-chart-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <div class="flex items-center justify-center mb-6">
+                  <i class="fas fa-chart-line text-4xl text-blue-500 mr-3"></i>
+                  <h6 class="font-semibold text-gray-700 text-xl">A.S.E基准四个任务类别的模型表现对比</h6>
+                </div>
+                
+                <!-- 四类漏洞的性能对比 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                  <!-- SQL注入 -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                      <i class="fas fa-database text-blue-500 mr-2"></i>SQL注入 (CWE-89)
+                    </h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Claude-3.7-Sonnet</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-blue-500 h-3 rounded-full" style="width: 65%"></div>
+                          </div>
+                          <span class="text-xs font-medium">65%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Qwen3-Instruct</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-green-500 h-3 rounded-full" style="width: 60%"></div>
+                          </div>
+                          <span class="text-xs font-medium">60%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">平均表现</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-gray-500 h-3 rounded-full" style="width: 45%"></div>
+                          </div>
+                          <span class="text-xs font-medium">45%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 路径遍历 -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                      <i class="fas fa-folder-open text-red-500 mr-2"></i>路径遍历 (CWE-22)
+                    </h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Claude-3.7-Sonnet</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-blue-500 h-3 rounded-full" style="width: 42%"></div>
+                          </div>
+                          <span class="text-xs font-medium">42%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Qwen3-Instruct</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-green-500 h-3 rounded-full" style="width: 38%"></div>
+                          </div>
+                          <span class="text-xs font-medium">38%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">平均表现</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-gray-500 h-3 rounded-full" style="width: 35%"></div>
+                          </div>
+                          <span class="text-xs font-medium">35%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- XSS -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                      <i class="fas fa-code text-purple-500 mr-2"></i>XSS (CWE-79)
+                    </h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Claude-3.7-Sonnet</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-blue-500 h-3 rounded-full" style="width: 58%"></div>
+                          </div>
+                          <span class="text-xs font-medium">58%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Qwen3-Instruct</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-green-500 h-3 rounded-full" style="width: 55%"></div>
+                          </div>
+                          <span class="text-xs font-medium">55%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">平均表现</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-gray-500 h-3 rounded-full" style="width: 48%"></div>
+                          </div>
+                          <span class="text-xs font-medium">48%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 命令注入 -->
+                  <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <h6 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                      <i class="fas fa-terminal text-yellow-500 mr-2"></i>命令注入 (CWE-78)
+                    </h6>
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Claude-3.7-Sonnet</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-blue-500 h-3 rounded-full" style="width: 52%"></div>
+                          </div>
+                          <span class="text-xs font-medium">52%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Qwen3-Instruct</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-green-500 h-3 rounded-full" style="width: 50%"></div>
+                          </div>
+                          <span class="text-xs font-medium">50%</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">平均表现</span>
+                        <div class="flex items-center">
+                          <div class="w-24 bg-gray-200 rounded-full h-3 mr-2">
+                            <div class="bg-gray-500 h-3 rounded-full" style="width: 43%"></div>
+                          </div>
+                          <span class="text-xs font-medium">43%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="text-sm text-gray-600 bg-gray-100 p-3 rounded-lg">
+                  <strong>观察:</strong> 路径遍历是所有模型中表现最差的任务类别，表明当前LLM在文件系统操作和访问控制方面的推理能力较弱。
+                </div>
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 不同代码LLM在A.S.E基准四个任务类别中的详细表现。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>路径遍历最具挑战性:</strong> 在所有漏洞类型中，路径遍历的表现最差，即使是表现最好的模型得分也低于50%</li>
+                <li><strong>SQL注入表现相对较好:</strong> 模型在SQL注入任务上表现最好，Claude-3.7-Sonnet达到65%的得分</li>
+                <li><strong>漏洞类型的难度差异:</strong> 不同漏洞类型对模型提出了不同的挑战，反映了安全编码的复杂性</li>
+                <li><strong>模型间的表现差异:</strong> 顶级模型（如Claude-3.7-Sonnet和Qwen3-Instruct）在不同任务类别中保持领先，但差距不大</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">案例研究</h3>
+          <p class="mb-4">
+            为了说明仓库级安全代码生成的实际挑战，作者对SQL注入任务sqlimutation_181（CWE-89）进行了案例研究。分析揭示了三种代表性的生成模式：
+          </p>
+          <ol class="list-decimal pl-6 mb-4 space-y-3">
+            <li><strong>合格且安全（Qwen3-235B-Instruct）</strong>：模型将易受攻击的查询重写为参数化语句，使用占位符并将用户输入绑定为类型化参数，强制执行代码和数据的严格分离</li>
+            <li><strong>合格但不安全（DeepSeek-V3）</strong>：生成的代码在功能上正确但安全性不足，保留了带通配符的连接习惯用法，用户输入直接插入到like子句中而没有参数绑定</li>
+            <li><strong>不合格（Claude-Sonnet-4-Thinking）</strong>：包含占位符或元令牌的文字传播而没有语义实例化，或者提议了语法正确的参数化转换但生成的补丁块不对应于适当的行号</li>
+          </ol>
+          <p>
+            这三种现象突出了仓库级代码生成中核心目标之间的张力：安全编码实践、语义正确性（功能和逻辑健全性）以及结构适用性（上下文和位置对齐）。分析表明，仅满足这些维度中的一个或两个对于实际部署是不够的；稳健的仓库级代码生成需要同时满足所有三个维度。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+
+        <div class="prose max-w-none text-gray-700 mb-6">
+          <p>
+            这篇论文介绍了<strong>A.S.E（AI代码生成安全评估）</strong>，这是第一个专门用于评估AI生成代码安全性的仓库级基准测试。与现有的安全导向基准测试不同，A.S.E从具有已记录CVE的真实世界项目构建，集成了仓库级上下文提取，并整合了定制的静态漏洞检测规则以提供准确和可重现的评估。
+          </p>
+          <p class="mb-4">
+            通过对26个商业和开源LLM的广泛实验，作者证明虽然当前模型在功能正确性方面表现出色，但它们在安全代码生成方面仍然面临重大挑战。仓库级任务进一步暴露了它们的局限性。这些观察结果为AI代码生成的现状提供了有价值的见解。
+          </p>
+        </div>
+
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-6">
+          <h4 class="font-bold text-green-700 mb-3 flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>首个从真实代码构建的仓库级基准测试</strong>：使用来自具有已记录CVE的真实世界GitHub仓库的数据</li>
+            <li><strong>自动化和可重现的评估框架</strong>：集成针对每个数据实例定制的漏洞检测规则</li>
+            <li><strong>广泛的实验和发现</strong>：对26个主流LLM进行评估，揭示了安全代码生成的关键挑战</li>
+            <li><strong>生态系统贡献</strong>：支持模型比较、提示工程、企业采用流程和教育用例</li>
+          </ul>
+        </div>
+
+        <div class="prose max-w-none text-gray-700 mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">潜在应用</h3>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>模型选择和部署</strong>：为开发者和企业提供系统基准，评估候选LLM的功能正确性和安全代码生成能力</li>
+            <li><strong>提示工程和上下文评估</strong>：支持不同提示策略的系统比较，识别最有效的安全编程配置</li>
+            <li><strong>模型改进和训练</strong>：为模型开发者提供来自安全关键任务的实践信号，改进安全对齐</li>
+            <li><strong>教育和培训</strong>：学习者可以通过基于真实CVE的任务和自动化评估结果进行实验，了解补丁实践和不安全AI代码生成的风险</li>
+          </ul>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">局限性</h3>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>范围有限</strong>：当前A.S.E的范围仅限于Web相关项目、四种漏洞类别和五种编程语言</li>
+            <li><strong>评估方法限制</strong>：依赖于定制的静态分析规则进行代码安全评估，无法动态验证功能正确性或检测仅运行时显现的漏洞</li>
+            <li><strong>无法完全捕获软件工程实践的多样性</strong>：虽然利用仓库级上下文和基于补丁的评估来模拟真实世界工作流程，但无法完全捕获生产环境中软件工程实践的多样性和不可预测性</li>
+          </ul>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">未来方向</h3>
+          <ul class="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>数据集扩展</strong>：涵盖更广泛的编程语言、漏洞类别和软件领域</li>
+            <li><strong>动态分析集成</strong>：集成动态分析技术，如功能正确性的测试用例执行和漏洞存在的概念验证验证</li>
+            <li><strong>自动化规则生成</strong>：探索静态分析规则的自动或LLM辅助生成，减少对人工专家校准的依赖</li>
+            <li><strong>额外评估维度</strong>：纳入额外的评估维度，如性能开销和符合监管或组织标准</li>
+          </ul>
+
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-6">
+            <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>教学要点总结
+            </h5>
+            <p class="text-gray-700">
+              对于博士生，这篇论文的核心教学价值在于理解：<strong>评估AI生成代码的安全性需要模拟真实世界编程场景的基准测试</strong>。A.S.E通过使用真实CVE漏洞、仓库级上下文和多维度评估指标，提供了一个更贴近实际应用场景的评估框架。关键学习点是：安全代码生成不仅是语法正确性问题，更是理解项目上下文、安全编码实践和跨文件依赖的综合能力。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化导航高亮
+      highlightNav();
+      
+      // 技术卡片悬停效果增强
+      const techCards = document.querySelectorAll('.tech-card');
+      techCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-6px)';
+          this.style.boxShadow = '0 15px 30px -10px rgba(0, 0, 0, 0.15)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+      
+      // 展开所有技术细节部分（可选，根据需要调整）
+      // const detailsElements = document.querySelectorAll('.technical-details');
+      // detailsElements.forEach(detail => {
+      //   detail.open = true;
+      // });
+    });
+  </script>
+  
+  <!-- AI生成内容标识悬浮按钮 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if(!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if(details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

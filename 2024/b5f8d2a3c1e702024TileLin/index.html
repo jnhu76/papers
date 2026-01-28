@@ -1,0 +1,1850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TileLink: Generating Efficient Compute-Communication Overlapping Kernels using Tile-Centric Primitives</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      transition: all 0.3s ease;
+    }
+    .tech-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    .performance-bar {
+      transition: width 1.5s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+        <a href="#critique" class="nav-item whitespace-nowrap">论文评析</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          TileLink: Generating Efficient Compute-Communication Overlapping Kernels using Tile-Centric Primitives
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">作者信息</strong>
+                <div class="text-lg font-medium">Size Zheng, Jin Fang, Xuegui Zheng, Qi Hou, Wenlei Bao, Ningxin Zheng, Ziheng Jiang, Dongyang Wang, Jianxi Ye, Haibin Lin, Li-Wen Chang, Xin Liu</div>
+                <div class="text-sm text-gray-600 mt-2">ByteDance (字节跳动)</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">发表信息</strong>
+                <div class="text-base">预印本论文 • 2024年3月27日</div>
+                <div class="text-sm text-gray-600 mt-1">arXiv:2503.20313v3</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-2">研究领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">深度学习编译器</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">分布式系统</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">性能优化</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">GPU计算</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-2">项目链接</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border truncate">
+                  https://github.com/ByteDance-Seed/Triton-distributed
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700 pl-2">
+          <li><strong>Tile-Centric原语</strong>：提出了一组以tile为中心的编程原语，用于解耦通信和计算的设计空间</li>
+          <li><strong>编译自动化</strong>：通过编译技术自动生成计算-通信重叠的内核，大幅降低编程复杂度</li>
+          <li><strong>性能优越</strong>：在8×H800 GPU集群上实现1.17×到20.76×的性能提升</li>
+          <li><strong>编程效率</strong>：相比手工优化CUDA代码（约2000行），只需要约200行Python代码</li>
+          <li><strong>通用性</strong>：支持MLP、MoE和自注意力等多种工作负载，支持静态和动态映射</li>
+        </ul>
+      </div>
+
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            这篇论文要解决一个很实际的问题：<strong>在大模型分布式训练中，如何让计算和通信同时进行，而不是等一个做完再做另一个</strong>。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>问题本质
+              </h4>
+              <p class="text-sm text-gray-700">
+                训练大模型时，数据分布在多个GPU上，GPU之间需要通信交换数据。传统方法是：<br>
+                1. 等所有GPU算完自己的部分<br>
+                2. 互相通信交换数据<br>
+                3. 再继续计算<br>
+                <strong class="text-red-600">问题：通信时GPU闲着，浪费了计算资源</strong>
+              </p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>解决方案
+              </h4>
+              <p class="text-sm text-gray-700">
+                TileLink的核心思想：<br>
+                1. 把数据分成小"瓦片"(tile)<br>
+                2. 让GPU一边计算旧的瓦片，一边通信传输新的瓦片<br>
+                3. 通过编译器自动安排这种重叠执行<br>
+                <strong class="text-green-600">效果：GPU永远有活干，利用率提高</strong>
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-300">
+            <h4 class="font-bold text-gray-700 mb-2 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>简单比喻
+            </h4>
+            <p class="text-gray-700">
+              想象一个厨房，有厨师(计算)和助手(通信)：
+            </p>
+            <ul class="list-disc list-inside mt-2 text-sm text-gray-600 space-y-1">
+              <li><strong>传统方法</strong>：厨师切完所有菜，等助手送完所有调料，再开始炒菜</li>
+              <li><strong>TileLink方法</strong>：厨师一边炒菜(计算)，助手一边准备下一道菜的调料(通信)</li>
+              <li><strong>效果</strong>：厨房一直忙碌，出菜速度更快</li>
+            </ul>
+          </div>
+          
+          <div class="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+            <h5 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>给博士生的关键理解点
+            </h5>
+            <p class="text-sm text-gray-700">
+              1. <strong>问题是什么？</strong> - GPU在通信时闲着，浪费钱<br>
+              2. <strong>解决方案是什么？</strong> - 让计算和通信同时进行<br>
+              3. <strong>怎么实现的？</strong> - 用编译器自动安排，而不是手工写复杂的CUDA代码<br>
+              4. <strong>效果如何？</strong> - 最高能快20倍，写代码简单10倍
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- 左边：大模型趋势 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-2 text-green-500"></i>
+              大模型的"大"问题
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-weight-hanging text-blue-600"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-700">模型越来越大</h4>
+                  <p class="text-sm text-gray-600 mt-1">
+                    GPT-4、LLaMA等模型有数千亿参数，单个GPU放不下，必须分布到多个GPU上训练
+                  </p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-exchange-alt text-red-600"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-700">通信开销严重</h4>
+                  <p class="text-sm text-gray-600 mt-1">
+                    论文指出：即使使用高速互联，通信开销也占总执行时间的10%-50%。这意味着GPU有一半时间在"等数据"而不是"算数据"。
+                  </p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <i class="fas fa-money-bill-wave text-purple-600"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-700">经济成本高</h4>
+                  <p class="text-sm text-gray-600 mt-1">
+                    H800 GPU每小时租金很贵。如果GPU一半时间闲着，等于浪费了一半的钱。企业训练大模型要花数百万美元，优化通信就是省钱。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 右边：现有方法 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-tools mr-2 text-orange-500"></i>
+              现有方法的局限
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-2">方法一：算子分解</h4>
+                <p class="text-sm text-gray-700 mb-2">
+                  把大算子拆成小算子，交替执行计算和通信
+                </p>
+                <div class="text-xs text-gray-600 space-y-1">
+                  <div class="flex items-center">
+                    <i class="fas fa-check text-green-500 mr-2"></i>
+                    <span>实现简单，兼容现有框架</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-times text-red-500 mr-2"></i>
+                    <span>小算子效率低，缓存利用率差</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-times text-red-500 mr-2"></i>
+                    <span>需要主机干预，开销大</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg">
+                <h4 class="font-bold text-green-700 mb-2">方法二：内核融合</h4>
+                <p class="text-sm text-gray-700 mb-2">
+                  把通信和计算融合到一个内核里
+                </p>
+                <div class="text-xs text-gray-600 space-y-1">
+                  <div class="flex items-center">
+                    <i class="fas fa-check text-green-500 mr-2"></i>
+                    <span>性能高，减少主机开销</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-times text-red-500 mr-2"></i>
+                    <span>需要手写CUDA汇编，极其复杂</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-times text-red-500 mr-2"></i>
+                    <span>专家才能写，难维护</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <h4 class="font-bold text-purple-700 mb-2">核心矛盾</h4>
+                <p class="text-sm text-gray-700">
+                  <strong>简单的方法性能差，高性能的方法太复杂</strong>。TileLink要解决的就是这个矛盾：既简单又高性能。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 原图1占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：图1 - 层内并行FFN示例
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: Intra-layer parallel FFN example
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: 层内并行FFN示例，展示AllGather + GEMM和GEMM + ReduceScatter的数据流" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Intra-layer parallel FFN example. The weight matrices W1 and W2 are sharded across devices. The computation involves AllGather + GEMM followed by GEMM + ReduceScatter.
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>FFN层结构:</strong> 前馈神经网络(FFN)是大模型的核心组件，通常包含两个线性变换(GEMM)和一个激活函数</li>
+                <li><strong>张量并行:</strong> 将权重矩阵W1和W2切分到不同GPU上，每个GPU只存储一部分权重</li>
+                <li><strong>数据流:</strong> 
+                  <ol class="list-decimal list-inside ml-4 mt-1 space-y-1">
+                    <li>AllGather: 收集所有GPU的输入数据</li>
+                    <li>第一个GEMM: 本地计算部分结果</li>
+                    <li>第二个GEMM: 继续计算</li>
+                    <li>ReduceScatter: 汇总结果并分散到各GPU</li>
+                  </ol>
+                </li>
+                <li><strong>通信模式:</strong> AllGather和ReduceScatter是集体通信操作，需要所有GPU参与</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">通信计算重叠机会:</strong>
+                  <p>在传统实现中，这四个步骤是串行的。TileLink的关键观察是：第一个GEMM可以和AllGather重叠，第二个GEMM可以和ReduceScatter重叠。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">数据分块:</strong>
+                  <p>将输入数据分成多个tile(瓦片)。当GPU正在计算第一个tile时，可以同时通信传输第二个tile的数据。</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">通信开销:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>AllGather: 收集所有数据，通信量大</li>
+                    <li>ReduceScatter: 汇总并分散，通信量中等</li>
+                    <li>传统方法: 通信时GPU空闲</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">重叠潜力:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>GEMM计算密集型，适合与通信重叠</li>
+                    <li>tile越小，重叠机会越多</li>
+                    <li>但tile太小会降低计算效率</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="bg-gradient-to-br from-red-50 to-orange-50 border-l-4 border-red-500 p-6 rounded-r-lg mb-8">
+          <h3 class="text-xl font-bold text-red-700 mb-4 flex items-center">
+            <i class="fas fa-fire mr-2"></i>
+            核心问题：如何简单又高效地实现计算-通信重叠？
+          </h3>
+          <p class="text-gray-700 mb-4">
+            这个问题听起来简单，但实现起来有三大难点：
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="tech-card bg-red-50 p-6 rounded-lg border border-red-200">
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <i class="fas fa-puzzle-piece text-red-600 text-xl"></i>
+            </div>
+            <h4 class="font-bold text-red-700 text-lg mb-3">1. 设计空间耦合</h4>
+            <p class="text-gray-700 text-sm">
+              通信和计算的最佳参数不同：
+              <ul class="list-disc list-inside mt-2 text-xs text-gray-600 space-y-1">
+                <li><strong>通信</strong>：喜欢小tile，快速传输</li>
+                <li><strong>计算</strong>：喜欢大tile，高效计算</li>
+                <li><strong>冲突</strong>：传统方法必须选折中方案</li>
+              </ul>
+            </p>
+          </div>
+          
+          <div class="tech-card bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+              <i class="fas fa-code text-yellow-600 text-xl"></i>
+            </div>
+            <h4 class="font-bold text-yellow-700 text-lg mb-3">2. 编程复杂度高</h4>
+            <p class="text-gray-700 text-sm">
+              手写重叠内核需要：
+              <ul class="list-disc list-inside mt-2 text-xs text-gray-600 space-y-1">
+                <li>CUDA汇编编程</li>
+                <li>内存一致性控制</li>
+                <li>屏障同步管理</li>
+                <li>数千行复杂代码</li>
+              </ul>
+            </p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+              <i class="fas fa-cogs text-purple-600 text-xl"></i>
+            </div>
+            <h4 class="font-bold text-purple-700 text-lg mb-3">3. 灵活性不足</h4>
+            <p class="text-gray-700 text-sm">
+              现有方法缺乏灵活性：
+              <ul class="list-disc list-inside mt-2 text-xs text-gray-600 space-y-1">
+                <li>只支持固定模式</li>
+                <li>难适应新算法</li>
+                <li>不支持动态路由(MoE)</li>
+                <li>扩展性差</li>
+              </ul>
+            </p>
+          </div>
+        </div>
+        
+        <!-- 表1对比 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-table mr-2 text-blue-500"></i>
+            表1：TileLink与现有方法对比
+          </h4>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">系统</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">编译支持</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方法</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">原语类型</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">CoCoNet</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">
+                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">是</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-700">Fusion</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">无</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">Dist-Einsum</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">
+                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">是</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-700">Decompose</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">operator-centric</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">FLUX</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">
+                    <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">否</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-700">Fusion</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">无</td>
+                </tr>
+                <tr class="hover:bg-gray-50 bg-blue-50">
+                  <td class="px-4 py-3 text-sm font-bold text-blue-700">TileLink</td>
+                  <td class="px-4 py-3 text-sm text-blue-700">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-bold">是</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-bold text-blue-700">Fusion</td>
+                  <td class="px-4 py-3 text-sm font-bold text-blue-700">tile-centric</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-700">
+              <strong>关键发现：</strong>TileLink是唯一同时具备<strong>编译支持</strong>、<strong>融合方法</strong>和<strong>tile-centric原语</strong>的系统，这解释了为什么它能既简单又高效。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 给博士生的简单解释 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-300">
+          <h4 class="font-bold text-green-700 mb-3 flex items-center">
+            <i class="fas fa-user-graduate mr-2"></i>
+            给博士生的简单解释
+          </h4>
+          <div class="space-y-3">
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                <span class="text-green-700 font-bold text-sm">1</span>
+              </div>
+              <div>
+                <p class="text-gray-700 text-sm"><strong>问题像什么？</strong> 就像你要一边做饭(计算)一边买菜(通信)。传统方法是：先买完所有菜，再开始做饭。但这样厨师(GPU)有一半时间闲着。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                <span class="text-blue-700 font-bold text-sm">2</span>
+              </div>
+              <div>
+                <p class="text-gray-700 text-sm"><strong>现有解决方案的问题？</strong> 
+                <br>• <span class="text-red-600">简单方法</span>：让助手(CPU)帮忙安排，但助手反应慢<br>
+                • <span class="text-red-600">复杂方法</span>：需要世界级大厨手写详细菜谱，普通人学不会</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                <span class="text-purple-700 font-bold text-sm">3</span>
+              </div>
+              <div>
+                <p class="text-gray-700 text-sm"><strong>TileLink的创新？</strong> 发明了一个"智能厨房系统"，你只需要说"我要做10道菜"，系统自动安排厨师和助手的协作，既高效又简单。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 系统架构概览 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+            TileLink系统架构
+          </h3>
+          
+          <div class="architecture-placeholder mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div class="bg-blue-50 p-5 rounded-lg border-2 border-blue-300 text-center">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-keyboard text-blue-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-blue-700 text-lg mb-2">前端</h4>
+                <p class="text-sm text-gray-700">
+                  • Tile-centric原语<br>
+                  • Python编程接口<br>
+                  • 设计空间解耦
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-5 rounded-lg border-2 border-green-300 text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-cogs text-green-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-green-700 text-lg mb-2">编译引擎</h4>
+                <p class="text-sm text-gray-700">
+                  • 基于Triton编译器<br>
+                  • AST转换<br>
+                  • 自动代码生成
+                </p>
+              </div>
+              
+              <div class="bg-purple-50 p-5 rounded-lg border-2 border-purple-300 text-center">
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-microchip text-purple-600 text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-purple-700 text-lg mb-2">后端</h4>
+                <p class="text-sm text-gray-700">
+                  • GPU代码生成<br>
+                  • 内存一致性保证<br>
+                  • 性能优化
+                </p>
+              </div>
+            </div>
+            
+            <!-- 数据流向指示 -->
+            <div class="flex flex-col md:flex-row justify-center items-center text-gray-700 font-medium">
+              <div class="mb-4 md:mb-0 md:mr-6 text-center">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-code text-blue-600"></i>
+                </div>
+                <div>Python程序</div>
+              </div>
+              
+              <div class="mb-4 md:mb-0">
+                <i class="fas fa-arrow-right text-2xl text-gray-400 mx-4"></i>
+              </div>
+              
+              <div class="mb-4 md:mb-0 md:mr-6 text-center">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-compress-alt text-green-600"></i>
+                </div>
+                <div>编译优化</div>
+              </div>
+              
+              <div class="mb-4 md:mb-0">
+                <i class="fas fa-arrow-right text-2xl text-gray-400 mx-4"></i>
+              </div>
+              
+              <div class="text-center">
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <i class="fas fa-bolt text-purple-600"></i>
+                </div>
+                <div>高效GPU内核</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心创新1：Tile-Centric原语 -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-500 mb-8">
+          <h3 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+            <i class="fas fa-magic mr-2"></i>
+            核心创新1：Tile-Centric原语
+          </h3>
+          
+          <p class="text-gray-700 mb-4">
+            TileLink提出了一组以"瓦片"(tile)为中心的编程原语，这是它的核心创新。这些原语就像乐高积木，让程序员可以用简单的指令构建复杂的计算-通信重叠模式。
+          </p>
+          
+          <!-- 表3：Tile-centric primitives -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 mt-4">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-list mr-2 text-blue-500"></i>
+              表3：Tile-centric原语（简化版）
+            </h4>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">原语</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">功能</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">比喻</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">producer_tile_notify</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">生产者瓦片完成，通知消费者</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">厨师喊："菜切好了！"</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">consumer_tile_wait</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">消费者瓦片等待依赖完成</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">炒锅等："菜还没切好，我先等着"</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">tile_push_data</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">推送数据到其他GPU</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">助手把菜送到其他厨师那里</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">tile_pull_data</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">从其他GPU拉取数据</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">厨师去其他厨房拿需要的菜</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+              <p class="text-sm text-yellow-700">
+                <strong>关键理解：</strong>这些原语抽象了底层的复杂同步操作。程序员不再需要理解CUDA内存模型，只需要用这些高级原语描述"谁等谁"、"谁通知谁"。
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心创新2：设计空间解耦 -->
+        <div class="bg-gradient-to-r from-green-50 to-teal-50 p-6 rounded-lg border-l-4 border-green-500 mb-8">
+          <h3 class="text-xl font-bold text-green-700 mb-4 flex items-center">
+            <i class="fas fa-unlink mr-2"></i>
+            核心创新2：设计空间解耦
+          </h3>
+          
+          <p class="text-gray-700 mb-4">
+            传统方法中，通信和计算的设计选择是耦合的。TileLink将它们解耦，让每个部分可以独立优化。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-expand-arrows-alt mr-2"></i>
+                Tile大小解耦
+              </h4>
+              <p class="text-sm text-gray-700">
+                通信可以用128×128的小tile快速传输，计算可以用128×256的大tile高效计算。传统方法必须用相同的tile大小。
+              </p>
+              <div class="mt-2 text-xs text-gray-600">
+                <div class="flex items-center mb-1">
+                  <div class="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+                  <span>通信：小tile (128×128)</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-green-500 rounded mr-2"></div>
+                  <span>计算：大tile (128×256)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-sort-amount-down mr-2"></i>
+                Tile顺序解耦
+              </h4>
+              <p class="text-sm text-gray-700">
+                通信可以用环形顺序，计算可以用任意顺序。这就像快递员按固定路线送货，但仓库可以按任何顺序处理包裹。
+              </p>
+              <div class="mt-2 text-xs text-gray-600">
+                <div class="flex items-center mb-1">
+                  <div class="w-3 h-3 bg-purple-500 rounded mr-2"></div>
+                  <span>通信：环形顺序</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-orange-500 rounded mr-2"></div>
+                  <span>计算：任意顺序</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-server mr-2"></i>
+                资源映射解耦
+              </h4>
+              <p class="text-sm text-gray-700">
+                通信可以用DMA引擎或计算核心。计算可以用Tensor Core。可以灵活组合，适应不同硬件。
+              </p>
+              <div class="mt-2 text-xs text-gray-600">
+                <div class="flex items-center mb-1">
+                  <div class="w-3 h-3 bg-red-500 rounded mr-2"></div>
+                  <span>通信：DMA引擎</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
+                  <span>计算：Tensor Core</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 原图2占位符 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：图2 - 通信与计算的三个设计子空间
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: Examples of the three design sub-spaces of communication and computation
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 通信与计算的三个设计子空间示例：(a) tile大小解耦，(b) tile顺序解耦，(c) 资源映射解耦" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Examples of the three design sub-spaces of communication and computation. (a) Tile size subspace: communication and computation use different tile sizes. (b) Tile order subspace: communication uses ring order while computation waits for data from two ranks. (c) Resource binding subspace: communication and computation can be mapped to different units or the same unit.
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>图2(a) Tile大小解耦:</strong> 展示了通信部分使用小tile(128×128)而计算部分使用大tile(128×256)。这种解耦允许每个组件选择最优的tile大小。</li>
+                <li><strong>图2(b) Tile顺序解耦:</strong> 展示了通信使用环形顺序，而计算可以等待来自两个rank的数据。这种灵活性提高了缓存效率。</li>
+                <li><strong>图2(c) 资源映射解耦:</strong> 展示了通信可以映射到DMA引擎(避免资源冲突)或计算核心(消除主机开销)。</li>
+                <li><strong>设计空间组合:</strong> 这三个子空间的解耦创造了巨大的设计空间，传统耦合方法无法探索。</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">Tile大小解耦实现:</strong>
+                  <p>通过TileLink的tile-centric原语，通信和计算可以声明不同的tile大小。编译器自动处理不同tile大小之间的数据依赖和同步。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">Tile顺序解耦实现:</strong>
+                  <p>使用peer_tile_wait和peer_tile_notify原语，程序员可以指定任意的tile顺序。编译器生成相应的屏障和同步指令。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">资源映射解耦实现:</strong>
+                  <p>通过tile_push_data(映射到计算核心)和rank_copy_data(映射到DMA引擎)原语，程序员可以灵活选择资源映射策略。</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">性能优势:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>通信效率: 小tile减少延迟</li>
+                    <li>计算效率: 大tile提高计算密度</li>
+                    <li>缓存效率: 灵活顺序提高数据局部性</li>
+                    <li>资源利用率: 避免资源冲突</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">设计权衡:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>通信vs计算tile大小: 需要平衡</li>
+                    <li>顺序复杂度: 更复杂顺序需要更多同步</li>
+                    <li>资源冲突: DMA引擎vs计算核心</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 编译流程 -->
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-500">
+          <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center">
+            <i class="fas fa-code mr-2"></i>
+            编译流程：从Python到高效GPU代码
+          </h3>
+          
+          <div class="space-y-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-step-forward mr-2 text-blue-500"></i>
+                步骤1：Python程序输入
+              </h4>
+              <div class="bg-gray-900 text-gray-100 p-3 rounded-lg font-mono text-sm overflow-x-auto">
+                <span class="text-green-400"># 简单的TileLink程序示例</span><br>
+                <span class="text-blue-400">@triton.jit</span><br>
+                <span class="text-yellow-400">def</span> <span class="text-purple-400">overlapped_gemm_rs</span>(A, B, C, block_channel):<br>
+                &nbsp;&nbsp;<span class="text-gray-500"># 生产者GEMM</span><br>
+                &nbsp;&nbsp;tile_id = block_channel.tile_id()<br>
+                &nbsp;&nbsp;compute_tile(A, B, C, tile_id)<br>
+                &nbsp;&nbsp;<span class="text-purple-400">producer_tile_notify</span>(tile_id, <span class="text-green-400">"broadcast"</span>)<br>
+                <br>
+                &nbsp;&nbsp;<span class="text-gray-500"># 消费者ReduceScatter</span><br>
+                &nbsp;&nbsp;<span class="text-purple-400">consumer_tile_wait</span>(tile_id)<br>
+                &nbsp;&nbsp;reduce_scatter(C, tile_id)<br>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">只需约200行这样的Python代码，就能实现复杂重叠内核</p>
+            </div>
+            
+            <div class="flex justify-center">
+              <i class="fas fa-arrow-down text-2xl text-gray-400"></i>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2 text-green-500"></i>
+                步骤2：编译优化
+              </h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-2">
+                <li><strong>AST转换</strong>：解析Python代码，转换为抽象语法树</li>
+                <li><strong>Tile-centric映射</strong>：计算shape映射、rank映射、channel映射</li>
+                <li><strong>内存一致性保证</strong>：插入必要的内存屏障指令</li>
+                <li><strong>性能优化</strong>：流水线编排、缓存优化、指令调度</li>
+              </ul>
+            </div>
+            
+            <div class="flex justify-center">
+              <i class="fas fa-arrow-down text-2xl text-gray-400"></i>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-microchip mr-2 text-red-500"></i>
+                步骤3：GPU代码生成
+              </h4>
+              <div class="bg-gray-900 text-gray-100 p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                <span class="text-green-400">// 生成的PTX汇编代码（简化）</span><br>
+                .entry overlapped_gemm_rs<br>
+                &nbsp;&nbsp;.reg .b32 %r1, %r2;<br>
+                &nbsp;&nbsp;.reg .pred %p1;<br>
+                <br>
+                <span class="text-green-400">// GEMM计算部分</span><br>
+                &nbsp;&nbsp;mma.sync.aligned.m16n8k16.f32.f32.f32 ...<br>
+                <br>
+                <span class="text-green-400">// 生产者通知（内存释放语义）</span><br>
+                &nbsp;&nbsp;st.global.release.b32 [%rd1], %r2;<br>
+                &nbsp;&nbsp;bar.sync 0;<br>
+                <br>
+                <span class="text-green-400">// 消费者等待（内存获取语义）</span><br>
+                &nbsp;&nbsp;ld.global.acquire.b32 %r1, [%rd2];<br>
+                &nbsp;&nbsp;bar.sync 0;<br>
+                <br>
+                <span class="text-green-400">// ReduceScatter部分</span><br>
+                &nbsp;&nbsp;red.global.add.f32 [%rd3], %f1;<br>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">编译器自动生成数千行优化汇编，无需人工编写</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 实验设置 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-flask mr-2 text-blue-500"></i>
+            实验设置
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-server mr-2"></i>
+                硬件环境
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-microchip text-blue-500 mt-1 mr-2"></i>
+                  <div>
+                    <strong>GPU:</strong> NVIDIA H800 GPU集群<br>
+                    <span class="text-xs text-gray-600">单节点：8×H800，多节点：16×H800</span>
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-bolt text-green-500 mt-1 mr-2"></i>
+                  <div>
+                    <strong>高速互联:</strong> NVLink/NVSwitch<br>
+                    <span class="text-xs text-gray-600">提供高带宽GPU间通信</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-code-branch mr-2"></i>
+                对比基准
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex items-start">
+                  <div class="w-3 h-3 bg-red-500 rounded-full mt-1 mr-2"></div>
+                  <div><strong>Non-Overlap:</strong> cuBLAS + NCCL（无重叠）</div>
+                </li>
+                <li class="flex items-start">
+                  <div class="w-3 h-3 bg-yellow-500 rounded-full mt-1 mr-2"></div>
+                  <div><strong>Decomposition:</strong> Async-TP PyTorch（算子分解）</div>
+                </li>
+                <li class="flex items-start">
+                  <div class="w-3 h-3 bg-blue-500 rounded-full mt-1 mr-2"></div>
+                  <div><strong>Fusion:</strong> FLUX（手工融合内核）</div>
+                </li>
+                <li class="flex items-start">
+                  <div class="w-3 h-3 bg-green-500 rounded-full mt-1 mr-2"></div>
+                  <div><strong>TileLink:</strong> 本文方法</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>
+              重要：为什么选择这些对比？
+            </h4>
+            <p class="text-sm text-gray-700">
+              这些对比覆盖了所有现有方法：<br>
+              1. <strong>Non-Overlap</strong>：性能下限（最差情况）<br>
+              2. <strong>Decomposition</strong>：简单但低效的方法<br>
+              3. <strong>Fusion</strong>：复杂但高效的方法（当前最优）<br>
+              4. <strong>TileLink</strong>：本文方法，目标是既简单又高效
+            </p>
+          </div>
+        </div>
+        
+        <!-- MLP层性能结果 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-brain mr-2 text-purple-500"></i>
+            MLP层性能结果
+          </h3>
+          
+          <div class="performance-chart-placeholder mb-6">
+            <div class="space-y-6">
+              <!-- AG+GEMM性能 -->
+              <div>
+                <h4 class="font-bold text-gray-700 mb-3">AllGather + GEMM 性能对比</h4>
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium text-red-600">Non-Overlap (基准)</span>
+                      <span class="text-sm font-medium">0.676 ms</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-gray-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium text-yellow-600">Decomposition (Async-TP)</span>
+                      <span class="text-sm font-medium">1.301 ms <span class="text-red-600">(更慢)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-yellow-500 h-4 rounded-full performance-bar" style="width: 192%"></div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1">分解方法反而更慢，因为小算子效率低</p>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium text-blue-600">Fusion (FLUX)</span>
+                      <span class="text-sm font-medium">0.504 ms <span class="text-green-600">(最快)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1">手工优化内核，性能最优</p>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium text-green-600">TileLink (本文)</span>
+                      <span class="text-sm font-medium">0.505 ms <span class="text-green-600">(接近最优)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 75%"></div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1">自动生成内核，达到FLUX的99%性能</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- GEMM+RS性能 -->
+              <div class="pt-6 border-t border-gray-200">
+                <h4 class="font-bold text-gray-700 mb-3">GEMM + ReduceScatter 性能对比</h4>
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium">Non-Overlap</span>
+                      <span class="text-sm font-medium">0.541 ms</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-gray-500 h-4 rounded-full performance-bar" style="width: 100%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium">Decomposition (Async-TP)</span>
+                      <span class="text-sm font-medium">1.443 ms <span class="text-red-600">(更慢)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-yellow-500 h-4 rounded-full performance-bar" style="width: 267%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium">Fusion (FLUX)</span>
+                      <span class="text-sm font-medium">0.610 ms</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-blue-500 h-4 rounded-full performance-bar" style="width: 113%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm font-medium text-green-600">TileLink (本文)</span>
+                      <span class="text-sm font-medium">0.504 ms <span class="text-green-600">(最优)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                      <div class="bg-green-500 h-4 rounded-full performance-bar" style="width: 93%"></div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1"><strong>关键发现：</strong>TileLink在这个场景下超越了手工优化的FLUX！</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 编程效率对比 -->
+          <div class="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-lg border-l-4 border-purple-500">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-code mr-2"></i>
+              编程效率对比
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="flex items-center mb-3">
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-file-code text-blue-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700">FLUX (手工优化)</h5>
+                    <p class="text-sm text-gray-600">需要专家级CUDA编程</p>
+                  </div>
+                </div>
+                <div class="text-center py-4">
+                  <div class="text-3xl font-bold text-red-600 mb-2">≈2,000</div>
+                  <div class="text-sm text-gray-700">行CUDA代码</div>
+                  <div class="text-xs text-gray-500 mt-1">需要数月开发时间</div>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="flex items-center mb-3">
+                  <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fab fa-python text-green-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700">TileLink (本文)</h5>
+                    <p class="text-sm text-gray-600">高级Python编程</p>
+                  </div>
+                </div>
+                <div class="text-center py-4">
+                  <div class="text-3xl font-bold text-green-600 mb-2">≈200</div>
+                  <div class="text-sm text-gray-700">行Python代码</div>
+                  <div class="text-xs text-gray-500 mt-1">10倍编程效率提升</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+              <p class="text-sm text-yellow-700">
+                <strong>商业价值：</strong>对于字节跳动这样的大公司，开发效率提升10倍意味着可以更快推出新功能，节省数百万美元的开发成本。
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- MoE和自注意力结果 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <!-- MoE结果 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-robot mr-2 text-orange-500"></i>
+              MoE层性能结果
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="p-3 bg-blue-50 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-2">MoE的特殊挑战</h4>
+                <p class="text-sm text-gray-700">
+                  MoE（专家混合）有动态路由：每个token选择不同的专家。这需要<strong>动态映射</strong>，传统方法不支持。
+                </p>
+              </div>
+              
+              <div class="p-3 bg-green-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-bold text-green-700">性能提升</h4>
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">最大20.76×</span>
+                </div>
+                <p class="text-sm text-gray-700">
+                  TileLink相比cuBLAS+NCCL实现，在MoE上获得<strong>最大20.76倍</strong>加速，相比vLLM也有<strong>1.14-1.51倍</strong>提升。
+                </p>
+              </div>
+              
+              <div class="p-3 bg-purple-50 rounded-lg">
+                <h4 class="font-bold text-purple-700 mb-2">创新点</h4>
+                <p class="text-sm text-gray-700">
+                  TileLink是<strong>第一个支持MoE重叠</strong>的编译器方案。这证明了tile-centric原语的<strong>通用性和灵活性</strong>。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 自注意力结果 -->
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <i class="fas fa-eye mr-2 text-red-500"></i>
+              自注意力层性能结果
+            </h3>
+            
+            <div class="space-y-4">
+              <div class="p-3 bg-red-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-bold text-red-700">平均加速比</h4>
+                  <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-bold">5.04×</span>
+                </div>
+                <p class="text-sm text-gray-700">
+                  相比PyTorch非重叠实现，TileLink在自注意力上获得<strong>平均5.04倍</strong>加速，序列长度从16k到128k都有效。
+                </p>
+              </div>
+              
+              <div class="p-3 bg-yellow-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-bold text-yellow-700">重叠效率</h4>
+                  <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold">43.9%</span>
+                </div>
+                <p class="text-sm text-gray-700">
+                  平均<strong>43.9%的通信开销被隐藏</strong>，GPU空闲时间大幅减少。
+                </p>
+              </div>
+              
+              <div class="p-3 bg-blue-50 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-2">对比RingAttention</h4>
+                <p class="text-sm text-gray-700">
+                  相比RingAttention，TileLink获得<strong>平均1.97倍</strong>加速，证明编译自动化的优势。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 端到端评估 -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border-l-4 border-blue-500">
+          <h3 class="text-xl font-bold text-blue-700 mb-6 flex items-center">
+            <i class="fas fa-project-diagram mr-2"></i>
+            端到端模型评估
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                <i class="fas fa-server mr-2 text-green-500"></i>
+                单节点 (8×H800 GPUs)
+              </h4>
+              
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-700">密集模型平均加速</span>
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full font-bold">1.20×</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-700">MoE模型平均加速</span>
+                  <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-bold">1.54×</span>
+                </div>
+                
+                <div class="flex justify-between items-center border-t border-gray-200 pt-4">
+                  <span class="font-bold text-gray-800">总体平均加速</span>
+                  <span class="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-bold text-lg">1.32×</span>
+                </div>
+              </div>
+              
+              <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-700">
+                  <strong>测试8个不同LLM：</strong>LLaMA-7B/3.1-8B/3.1-70B, Gemma-2-9B/27B, Qwen-2-72B等
+                </p>
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-200">
+              <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                <i class="fas fa-network-wired mr-2 text-orange-500"></i>
+                多节点 (16×H800 GPUs)
+              </h4>
+              
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-700">跨节点通信开销</span>
+                  <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">额外开销</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-700">批处理大小</span>
+                  <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-bold">双倍</span>
+                </div>
+                
+                <div class="flex justify-between items-center border-t border-gray-200 pt-4">
+                  <span class="font-bold text-gray-800">总体平均加速</span>
+                  <span class="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-bold text-lg">1.29×</span>
+                </div>
+              </div>
+              
+              <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-700">
+                  <strong>配置：</strong>节点内张量并行 + 节点间数据并行<br>
+                  <strong>结果：</strong>性能与单节点接近，证明良好的扩展性
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 p-8 rounded-lg border-l-4 border-green-500">
+          <div class="space-y-6">
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-green-700 mb-2">解决了什么核心问题？</h3>
+                <p class="text-gray-700">
+                  TileLink成功解决了<strong>计算-通信重叠的实现复杂度与性能之间的根本矛盾</strong>。传统方法要么简单但低效（算子分解），要么高效但复杂（手工内核融合）。TileLink通过编译自动化实现了<strong>既简单又高效</strong>的解决方案。
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-trophy text-blue-600 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-blue-700 mb-2">主要技术贡献</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 pl-2">
+                  <li><strong>Tile-centric原语</strong>：一组高级编程抽象，解耦通信和计算的设计空间</li>
+                  <li><strong>编译自动化</strong>：自动生成高效重叠内核，无需手写CUDA汇编</li>
+                  <li><strong>通用性设计</strong>：支持MLP、MoE、自注意力等多种工作负载，支持静态和动态映射</li>
+                  <li><strong>性能验证</strong>：在真实硬件上实现1.17×到20.76×的性能提升</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-rocket text-purple-600 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-purple-700 mb-2">实际影响</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-white p-4 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-green-700 mb-2">技术影响</h4>
+                    <p class="text-sm text-gray-700">
+                      • 降低分布式训练优化门槛<br>
+                      • 加速新模型架构的部署<br>
+                      • 推动编译器技术在系统优化中的应用
+                    </p>
+                  </div>
+                  <div class="bg-white p-4 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-blue-700 mb-2">商业影响</h4>
+                    <p class="text-sm text-gray-700">
+                      • 10倍编程效率提升<br>
+                      • 减少GPU闲置，节省计算成本<br>
+                      • 加速AI产品迭代速度
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-road text-yellow-600 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-yellow-700 mb-2">未来方向</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 pl-2">
+                  <li><strong>更多硬件支持</strong>：扩展到AMD GPU、Google TPU等其他加速器</li>
+                  <li><strong>模型级并行</strong>：支持流水线并行等更复杂的并行模式</li>
+                  <li><strong>自动调优</strong>：结合自动调优技术，自动搜索最优tile大小和映射策略</li>
+                  <li><strong>生态建设</strong>：集成到PyTorch、TensorFlow等主流框架</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 给博士生的最终总结 -->
+        <div class="mt-8 bg-gradient-to-r from-pink-50 to-orange-50 p-6 rounded-lg border border-pink-300">
+          <h4 class="font-bold text-pink-700 text-xl mb-4 flex items-center">
+            <i class="fas fa-user-graduate mr-2"></i>
+            给博士生的最终总结（一句话版）
+          </h4>
+          
+          <div class="space-y-4">
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <p class="text-gray-800 font-medium">
+                <span class="text-pink-600 font-bold">TileLink是什么？</span><br>
+                一个让GPU一边计算一边通信的"智能管家"，通过编译器自动安排，既快又简单。
+              </p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <p class="text-gray-800 font-medium">
+                <span class="text-green-600 font-bold">解决了什么问题？</span><br>
+                传统方法：要么简单但慢（像普通厨师），要么快但复杂（需要米其林大厨）。<br>
+                TileLink：发明了"智能厨房系统"，普通人也能做出米其林级别的菜。
+              </p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <p class="text-gray-800 font-medium">
+                <span class="text-blue-600 font-bold">怎么做到的？</span><br>
+                1. 发明了"乐高积木"（tile-centric原语）<br>
+                2. 造了"自动装配机"（编译器）<br>
+                3. 用积木描述要做什么，机器自动生成最优方案
+              </p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <p class="text-gray-800 font-medium">
+                <span class="text-purple-600 font-bold">效果如何？</span><br>
+                最快能快20倍，写代码简单10倍。就像原来需要2000行复杂代码，现在只要200行简单代码。
+              </p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+              <p class="text-gray-800 font-medium">
+                <span class="text-red-600 font-bold">为什么重要？</span><br>
+                大公司训练AI要花几百万美元，TileLink能省很多钱。更重要的是，它让更多普通程序员也能做高性能优化。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 论文评析 -->
+      <section id="critique" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-clipboard-check mr-3 text-blue-500"></i>
+          论文评析
+        </h2>
+        
+        <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg border-l-4 border-gray-500">
+          <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-balance-scale mr-2"></i>
+            论文优点与不足分析
+          </h3>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 优点 -->
+            <div class="bg-white p-6 rounded-lg border border-green-300 shadow-sm">
+              <h4 class="text-xl font-bold text-green-700 mb-6 flex items-center">
+                <i class="fas fa-thumbs-up mr-2"></i>
+                论文优点
+              </h4>
+              
+              <div class="space-y-6">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-bullseye text-green-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">问题定义清晰</h5>
+                    <p class="text-sm text-gray-600">
+                      论文清晰地定义了计算-通信重叠的核心矛盾：简单vs性能。对现有方法（分解vs融合）的分析准确到位。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-lightbulb text-green-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">创新点明确</h5>
+                    <p class="text-sm text-gray-600">
+                      Tile-centric原语是核心创新，设计空间解耦的思想有深度。不是简单优化，而是提出了新的抽象层次。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-chart-line text-green-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">实验设计全面</h5>
+                    <p class="text-sm text-gray-600">
+                      覆盖MLP、MoE、自注意力多种工作负载，单层和端到端评估结合，硬件配置真实，对比基线选择合理。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-code text-green-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">工程实现扎实</h5>
+                    <p class="text-sm text-gray-600">
+                      基于Triton编译器，实现细节描述充分。开源代码可用，增加了论文可信度。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 不足 -->
+            <div class="bg-white p-6 rounded-lg border border-red-300 shadow-sm">
+              <h4 class="text-xl font-bold text-red-700 mb-6 flex items-center">
+                <i class="fas fa-thumbs-down mr-2"></i>
+                论文不足与局限
+              </h4>
+              
+              <div class="space-y-6">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-microchip text-red-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">硬件局限性</h5>
+                    <p class="text-sm text-gray-600">
+                      目前只支持NVIDIA GPU，对AMD GPU、Google TPU、华为昇腾等其他硬件支持不足。限制了通用性。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-expand text-red-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">扩展性验证不足</h5>
+                    <p class="text-sm text-gray-600">
+                      只在16个GPU上测试，对于千卡级超大集群的扩展性缺乏验证。跨节点性能下降(1.32×→1.29×)提示可能有扩展性问题。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-cogs text-red-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">编译时间开销未讨论</h5>
+                    <p class="text-sm text-gray-600">
+                      论文没有讨论TileLink的编译时间。对于动态工作负载，如果编译时间太长，可能抵消运行时的性能优势。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-random text-red-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">复杂模式支持有限</h5>
+                    <p class="text-sm text-gray-600">
+                      主要关注层内并行，对流水线并行、专家并行等更复杂的并行模式支持有限或未验证。
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                    <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-bold text-gray-700 mb-2">对比基线版本问题</h5>
+                    <p class="text-sm text-gray-600">
+                      部分对比基线（如CoCoNet）因为源代码已废弃，可能不是最新版本，影响了对比的公平性。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 学术贡献评价 -->
+          <div class="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border-l-4 border-blue-500">
+            <h4 class="text-xl font-bold text-blue-700 mb-4 flex items-center">
+              <i class="fas fa-university mr-2"></i>
+              学术贡献评价
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-center mb-3">
+                  <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-star text-blue-600 text-xl"></i>
+                  </div>
+                </div>
+                <h5 class="font-bold text-gray-700 text-center mb-2">创新性</h5>
+                <p class="text-sm text-gray-600 text-center">
+                  Tile-centric原语是新颖的抽象，设计空间解耦的思想有理论深度。不是渐进式改进，而是范式创新。
+                </p>
+                <div class="text-center mt-3">
+                  <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-bold">高</span>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-center mb-3">
+                  <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                  </div>
+                </div>
+                <h5 class="font-bold text-gray-700 text-center mb-2">实用性</h5>
+                <p class="text-sm text-gray-600 text-center">
+                  在真实硬件上验证，性能提升显著，编程效率大幅提高。来自字节跳动，有工业应用背景。
+                </p>
+                <div class="text-center mt-3">
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">高</span>
+                </div>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-center mb-3">
+                  <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-expand-arrows-alt text-purple-600 text-xl"></i>
+                  </div>
+                </div>
+                <h5 class="font-bold text-gray-700 text-center mb-2">影响力</h5>
+                <p class="text-sm text-gray-600 text-center">
+                  解决大模型训练的实际痛点，可能推动编译器技术在系统优化中的更广泛应用。开源代码促进社区发展。
+                </p>
+                <div class="text-center mt-3">
+                  <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-bold">中高</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 给博士生的研究启示 -->
+          <div class="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-lg border-l-4 border-amber-500">
+            <h4 class="text-xl font-bold text-amber-700 mb-4 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>
+              给博士生的研究启示
+            </h4>
+            
+            <div class="space-y-4">
+              <div class="bg-white p-4 rounded-lg">
+                <h5 class="font-bold text-gray-700 mb-2">如何找到好问题？</h5>
+                <p class="text-sm text-gray-700">
+                  TileLink的成功在于找到了<strong>实际工业需求</strong>（大模型训练效率）与<strong>学术研究空白</strong>（简单vs性能的矛盾）的交集。博士研究也应该从实际需求出发，而不是纯粹的理论问题。
+                </p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h5 class="font-bold text-gray-700 mb-2">如何设计解决方案？</h5>
+                <p class="text-sm text-gray-700">
+                  TileLink的关键是<strong>抽象层次的选择</strong>。它在"算子级"和"汇编级"之间找到了"tile级"这个合适的抽象层次。好的研究往往是在合适的抽象层次上解决问题。
+                </p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h5 class="font-bold text-gray-700 mb-2">如何验证工作价值？</h5>
+                <p class="text-sm text-gray-700">
+                  这篇论文的验证很全面：<strong>性能对比</strong>（比现有方法好）、<strong>编程效率</strong>（代码行数减少）、<strong>通用性</strong>（多种工作负载）、<strong>可扩展性</strong>（多节点测试）。博士论文也应该多维度验证。
+                </p>
+              </div>
+              
+              <div class="bg-white p-4 rounded-lg">
+                <h5 class="font-bold text-gray-700 mb-2">论文写作技巧</h5>
+                <p class="text-sm text-gray-700">
+                  注意这篇论文的<strong>清晰结构</strong>：问题→现有方法局限→解决方案→实验验证。特别是表1的对比和表2的动机例子，让读者快速理解核心贡献。好的图表胜过千言万语。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- AI生成内容浮动标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // AI标识交互
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+      
+      // 性能条动画
+      setTimeout(() => {
+        document.querySelectorAll('.performance-bar').forEach(bar => {
+          bar.style.transition = 'width 1.5s ease-in-out';
+        });
+      }, 500);
+      
+      // 技术卡片悬停效果
+      document.querySelectorAll('.tech-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = 'none';
+        });
+      });
+      
+      // 移动端优化：点击技术细节时自动滚动
+      document.querySelectorAll('details.technical-details').forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open && window.innerWidth < 768) {
+            setTimeout(() => {
+              this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300);
+          }
+        });
+      });
+    });
+    
+    // 页面加载完成后执行一些动画
+    window.addEventListener('load', function() {
+      // 触发性能条动画
+      document.querySelectorAll('.performance-bar').forEach(bar => {
+        const currentWidth = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+          bar.style.width = currentWidth;
+        }, 100);
+      });
+    });
+  </script>
+</body>
+</html>

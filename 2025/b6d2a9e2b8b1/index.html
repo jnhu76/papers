@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Principles and Methodologies for Serial Performance Optimization</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#methodologies" class="nav-item whitespace-nowrap">优化方法论</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Principles and Methodologies for Serial Performance Optimization
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Sujin Park, Mingyu Guan, Xiang Cheng, Taesoo Kim</div>
+                <div class="text-sm text-gray-600 mt-1">Georgia Institute of Technology</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>19th USENIX Symposium on Operating Systems Design and Implementation (OSDI 2025)</div>
+                <div class="text-sm text-gray-600">July 7-9, 2025 • Boston, MA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://www.usenix.org/conference/osdi25/presentation/park-sujin</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">性能优化</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">串行执行</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">系统优化</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">AI辅助优化</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>形式化串行执行性能并定义三个优化原则：任务移除、替换和重排序</li>
+          <li>建立八个系统化的串行性能优化方法论</li>
+          <li>通过对过去十年OSDI和SOSP论文的综合分析验证框架的完整性</li>
+          <li>开发SysGPT，一个基于AI的性能优化助手，展示AI辅助性能优化的潜力</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">在计算机科学的历史中，优化现有系统以实现更高性能一直是一个长期追求的目标。虽然这一努力的主要重点在于减少延迟和提高吞吐量，但这两个方面密切相关，而回答"如何"优化的问题仍然是一个挑战，通常依赖于直觉和经验。</p>
+          <p class="mb-4">本文介绍了一种优化串行任务的系统化方法，这对整体性能至关重要。作者定义了三个原则——任务移除、替换和重排序——并将其提炼为八个可操作的方法论：批处理、缓存、预计算、延迟执行、松弛化、上下文化、硬件专业化和分层优化。</p>
+          <p class="mb-4">通过对过去十年OSDI和SOSP论文的回顾，作者表明这些技术共同全面解释了观察到的串行优化策略。为了说明框架的实际价值，作者提供了两个案例研究：一个关于文件和存储系统，另一个分析内核同步以发现错过的优化机会。</p>
+          <p>此外，作者介绍了SysGPT，一个基于精选文献分析微调的GPT模型，提供上下文感知的性能建议。SysGPT的输出比GPT-4更具体和可行，与最新研究的核心策略保持一致，展示了其作为优化助手的实用性。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">提高计算机系统的性能一直是计算机科学领域的关键目标，深刻影响着用户体验、操作效率和成本降低。高性能系统以更高的速度和效率处理任务，从而最小化用户应用程序的响应时间并增强计算操作的吞吐量。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-2">Amdahl定律的重要性</h5>
+            <p class="text-gray-700">Amdahl定律强调，系统的最大潜在加速受到程序必须保持串行的部分的限制。尽管并行处理有所进展，但解决串行瓶颈仍然是实现有意义性能增益的基础。</p>
+            <div class="mt-3 bg-white p-3 rounded border">
+              <code class="text-sm">S<sub>parallel</sub> = 1 / (F<sub>serial</sub> + F<sub>parallel</sub> / #threads)</code>
+            </div>
+          </div>
+          
+          <p class="mb-4">作者提出了一种优化串行性能的结构化方法，基于三个关键原则：序列中任务的移除、替换或重排序。串行执行的性能本质上由序列本身定义，因为每个任务的执行时间直接贡献给总运行时间，并且任务必须按特定顺序完成。</p>
+          
+          <p>这种确定性特性意味着修改序列——通过移除任务以减少总体序列长度，用更快的替代方案替换较慢的任务，或重排序任务以实现更高效的执行——构成了在固定硬件和执行环境下提高串行性能的唯一实用手段。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">性能优化是一个多步骤、迭代的过程，涉及低效识别、解决方案设计、实施和评估。虽然用于问题识别和评估的工具和基准测试随着时间的推移已经成熟，但中间步骤——设计和实施解决方案——仍然在很大程度上依赖于研究人员的专业知识、创造力和经验。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h5 class="font-semibold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>当前挑战
+              </h5>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>缺乏系统化的优化方法</li>
+                <li>过度依赖专家经验和直觉</li>
+                <li>难以全面识别优化机会</li>
+                <li>优化策略之间关系不明确</li>
+              </ul>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h5 class="font-semibold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>研究范围
+              </h5>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>专注于优化系统性能的串行部分</li>
+                <li>关注吞吐量和延迟</li>
+                <li>仅优化现有系统</li>
+                <li>排除全新算法设计</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p>这些阶段通常最具挑战性，因为它们需要深厚的系统知识和预测变更如何与更广泛的系统动态交互的能力。在此背景下，本文专注于为第二步——设计解决方案——建立系统化方法。</p>
+        </div>
+      </section>
+      
+      <!-- 优化方法论 -->
+      <section id="methodologies" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          优化方法论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p class="mb-4">系统优化技术的领域广阔且通常非正式讨论，对于存在多少种不同策略或它们如何相互关联几乎没有共识。在本节中，作者提炼了系统社区十年的性能优化研究，并定义了八个可操作的方法论，共同构成了串行性能优化的结构化框架。</p>
+        </div>
+        
+        <!-- 八个方法论的网格展示 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-object-group mr-2"></i>批处理
+            </h4>
+            <p class="text-sm text-gray-700">将多个项目合并为批次处理，降低单位处理成本</p>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-database mr-2"></i>缓存
+            </h4>
+            <p class="text-sm text-gray-700">存储计算结果以供后续重用，避免冗余计算</p>
+          </div>
+          
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-forward mr-2"></i>预计算
+            </h4>
+            <p class="text-sm text-gray-700">提前执行任务，将其移出关键路径</p>
+          </div>
+          
+          <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-pause-circle mr-2"></i>延迟执行
+            </h4>
+            <p class="text-sm text-gray-700">推迟任务执行以获得更好的决策信息</p>
+          </div>
+          
+          <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-compress-alt mr-2"></i>松弛化
+            </h4>
+            <p class="text-sm text-gray-700">使用近似方法替代精确计算</p>
+          </div>
+          
+          <div class="tech-card bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+            <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>上下文化
+            </h4>
+            <p class="text-sm text-gray-700">利用运行时上下文信息优化决策</p>
+          </div>
+          
+          <div class="tech-card bg-pink-50 p-4 rounded-lg border border-pink-200">
+            <h4 class="font-bold text-pink-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-microchip mr-2"></i>硬件专业化
+            </h4>
+            <p class="text-sm text-gray-700">针对特定硬件配置定制系统设计</p>
+          </div>
+          
+          <div class="tech-card bg-teal-50 p-4 rounded-lg border border-teal-200">
+            <h4 class="font-bold text-teal-700 text-base md:text-lg mb-2 flex items-center">
+              <i class="fas fa-layer-group mr-2"></i>分层优化
+            </h4>
+            <p class="text-sm text-gray-700">通过合并、分解或绕过层来减少开销</p>
+          </div>
+        </div>
+        
+        <!-- 方法论可视化 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-700 text-lg">
+              <i class="fas fa-image mr-2 text-blue-500"></i>
+              方法论可视化概览
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文图1</span>
+          </div>
+          
+          <!-- 原图占位符 -->
+          <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+            <img src="./images/fig1.png" alt="论文图1: 八个优化方法论的视觉概览，展示它们如何应用于任务序列优化" class="max-w-full h-auto rounded-lg">
+          </div>
+          
+          <!-- 图注 -->
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 八个方法论的总结，详细说明其基本原则、视觉表示、必要条件和战略应用。
+          </div>
+        </div>
+        
+        <!-- 技术细节卡片 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：八个优化方法论详解
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 批处理技术解释 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-object-group mr-2"></i>批处理 (Batching)
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>核心原理:</strong> 当一批项目的计算成本低于单独计算每个项目的总成本时，将这些项目合并为批次将提高整体效率</li>
+                <li><strong>应用原则:</strong> 利用所有三个原则（移除、替换、重排序）</li>
+                <li><strong>优势:</strong> 通过消除任务间的冗余成本，批处理项目可以实现更高的带宽和吞吐量</li>
+                <li><strong>挑战:</strong> 可能导致延迟增加，因为批次中的早期任务可能需要等待后续任务到达</li>
+              </ul>
+            </div>
+            
+            <!-- 缓存技术解释 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2"></i>缓存 (Caching)
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>核心原理:</strong> 将计算结果保存在内存中并在以后重用，从而避免冗余计算并利用先前计算的值</li>
+                <li><strong>应用原则:</strong> 主要通过替换原则（P<sub>rep</sub>）</li>
+                <li><strong>有效性条件:</strong> 计算冗余必须超过使用和维护缓存的开销</li>
+                <li><strong>优化策略:</strong> 选择性缓存频繁访问的数据，优化缓存策略以提高缓存命中率</li>
+              </ul>
+            </div>
+            
+            <!-- 方法论关系 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-project-diagram mr-2"></i>方法论间的关系
+              </h5>
+              <div class="text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-purple-700">批处理与延迟执行:</strong>
+                  <p>批处理聚合多个操作以集体执行它们，固有地修改了它们的执行时间。例如，写缓冲区结合使用批处理和延迟执行，因为它累积多个写操作以便在以后一起执行。</p>
+                </div>
+                <div>
+                  <strong class="text-purple-700">解耦与专业化:</strong>
+                  <p>解耦将紧密集成的组件分离为更细粒度的子任务，增强模块化和灵活性。这种分离促进了对单个组件的更有针对性的优化。通常，为特定硬件配置或软件要求量身定制的专业化需要初始解耦集成机制。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 案例研究：SynCord -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h5 class="font-semibold text-gray-700 text-lg mb-4 flex items-center">
+            <i class="fas fa-code-branch mr-2 text-blue-500"></i>
+            案例研究：SynCord - 应用知情的内核同步原语
+          </h5>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">SynCord应用的方法论:</h6>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li><strong>上下文化:</strong> 允许用户空间创建自己的锁获取规则</li>
+                <li><strong>重排序:</strong> 动态重新排序等待队列中的线程</li>
+                <li><strong>批处理:</strong> 将来自相同NUMA节点的线程批处理在一起</li>
+                <li><strong>移除:</strong> 移除缓存行弹跳</li>
+                <li><strong>分层优化:</strong> 提供API完全绕过内核锁</li>
+                <li><strong>松弛化:</strong> 放宽安全保证以揭示性能增强机会</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h6 class="font-medium text-gray-700 mb-2">识别出的优化机会:</h6>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li><strong>缓存:</strong> 为辅助数据引入缓存机制</li>
+                <li><strong>延迟优化:</strong> 将用户定义策略编译为本机代码</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p class="mb-4">为了验证框架的完整性，作者对过去十年在OSDI和SOSP发表的477篇论文进行了详尽回顾。分析表明，这八个方法论共同涵盖了在过去十年实践中观察到的所有串行性能改进的常见模式。</p>
+        </div>
+        
+        <!-- 方法论使用统计 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-700 text-lg">
+              <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+              方法论使用统计
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文图2</span>
+          </div>
+          
+          <!-- 原图占位符 -->
+          <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+            <img src="./images/fig2.png" alt="论文图2: 利用每个方法论的论文数量。由于每篇论文可能采用多种方法论，方法论累计计数超过了我们范围内的论文总数。" class="max-w-full h-auto rounded-lg">
+          </div>
+          
+          <!-- 图注 -->
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 利用每个方法论的论文数量。由于每篇论文可能采用多种方法论，方法论累计计数超过了我们范围内的论文总数。
+          </div>
+        </div>
+        
+        <!-- SysGPT评估 -->
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-purple-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-robot mr-2"></i>SysGPT: AI辅助性能优化
+          </h4>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 class="font-semibold text-purple-700 mb-2">SysGPT实现</h5>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>基于2013-2022年所有SOSP和OSDI论文构建微调数据集</li>
+                <li>对GPT-4o进行微调以产生SysGPT</li>
+                <li>提供结构化建议，每个建议都基于方法论并附有简要理由</li>
+                <li>发布完整数据集和评估基准以支持可重复性</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h5 class="font-semibold text-purple-700 mb-2">评估结果</h5>
+              <ul class="list-disc list-inside text-gray-700 space-y-1">
+                <li>在42篇测试论文中，88%的情况下评估者偏好SysGPT的输出</li>
+                <li>SysGPT产生更具体和可行的建议</li>
+                <li>在方法论预测任务中显著优于基线模型</li>
+                <li>F1-score从0.426提高到0.701</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 性能对比表格 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h5 class="font-semibold text-gray-700 text-lg mb-4 flex items-center">
+            <i class="fas fa-table mr-2 text-blue-500"></i>
+            方法论预测评估结果
+          </h5>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="py-2 px-4 border-b text-left">模型</th>
+                  <th class="py-2 px-4 border-b text-left">N</th>
+                  <th class="py-2 px-4 border-b text-left">输出</th>
+                  <th class="py-2 px-4 border-b text-left">精确率</th>
+                  <th class="py-2 px-4 border-b text-left">召回率</th>
+                  <th class="py-2 px-4 border-b text-left">F1-score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">GPT-4o</td>
+                  <td class="py-2 px-4 border-b">0</td>
+                  <td class="py-2 px-4 border-b">-</td>
+                  <td class="py-2 px-4 border-b">0.277</td>
+                  <td class="py-2 px-4 border-b">0.934</td>
+                  <td class="py-2 px-4 border-b">0.426</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">GPT-4o</td>
+                  <td class="py-2 px-4 border-b">3</td>
+                  <td class="py-2 px-4 border-b">-</td>
+                  <td class="py-2 px-4 border-b">0.342</td>
+                  <td class="py-2 px-4 border-b">0.840</td>
+                  <td class="py-2 px-4 border-b">0.486</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">GPT-4o</td>
+                  <td class="py-2 px-4 border-b">10</td>
+                  <td class="py-2 px-4 border-b">-</td>
+                  <td class="py-2 px-4 border-b">0.345</td>
+                  <td class="py-2 px-4 border-b">0.868</td>
+                  <td class="py-2 px-4 border-b">0.479</td>
+                </tr>
+                <tr class="bg-green-50">
+                  <td class="py-2 px-4 border-b font-semibold">SysGPT</td>
+                  <td class="py-2 px-4 border-b">-</td>
+                  <td class="py-2 px-4 border-b">-</td>
+                  <td class="py-2 px-4 border-b font-semibold">0.758</td>
+                  <td class="py-2 px-4 border-b font-semibold">0.651</td>
+                  <td class="py-2 px-4 border-b font-semibold">0.701</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600">
+            <strong>评估说明:</strong> 在SOSP/OSDI'24测试集上的方法论预测评估。比较了SysGPT和GPT-4o在少样本提示（N=0,3,5,10）下有无top-2输出约束的表现。
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">优化串行系统性能在系统研究中仍然是一个基础但通常缺乏结构的任务。作者提出了一个基于三个核心原则——移除、替换和重排序——的系统化框架，并将其提炼为在十年系统文献中常用的八个可操作方法论。</p>
+          
+          <p class="mb-4">这种分类法阐明了优化机会的空间，并为推理性能提供了系统化语言。基于此基础，作者介绍了SysGPT，一个经过微调的LLM，训练用于建议基于此方法论的策略。在未见过的论文上评估，SysGPT在定性和定量评估中都显著优于GPT-4基线，展示了其为现实世界系统性能问题生成有针对性的、可行建议的卓越能力。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h5 class="font-semibold text-yellow-700 mb-2">未来工作方向</h5>
+            <ul class="list-disc list-inside text-gray-700 space-y-1">
+              <li>将方法论扩展到包含协调感知技术</li>
+              <li>改进SysGPT以处理更复杂的系统优化问题</li>
+              <li>探索自动化整个优化流程的可能性</li>
+              <li>将框架应用于更多样化的系统领域</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片的初始状态
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.open = false;
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

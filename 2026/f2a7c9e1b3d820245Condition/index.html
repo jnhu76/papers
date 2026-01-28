@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engram: Conditional Memory as a Complementary Sparsity Axis for Efficient Language Models</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Engram: Conditional Memory as a Complementary Sparsity Axis for Efficient Language Models
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Huishuai Zhang, Di Zhao, Xin Cheng, Wangding Zeng, Damai Dai</div>
+                <div class="text-sm text-gray-600 mt-1">Peking University & DeepSeek-AI</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">论文来源</strong>
+                <div>arXiv预印本: 2601.07372v1</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">项目资源</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">代码仓库: https://github.com/deepseek-ai/Engram</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">条件记忆</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">稀疏计算</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">N-gram嵌入</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">MoE扩展</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>条件记忆作为稀疏计算的新维度：</strong>提出条件记忆作为混合专家（MoE）的补充，实现了知识查找的O(1)时间复杂度</li>
+          <li><strong>Engram模块设计：</strong>基于现代N-gram嵌入技术，包含tokenizer压缩、多头哈希和上下文感知门控等创新</li>
+          <li><strong>稀疏分配优化：</strong>发现了MoE与Engram之间的U型缩放规律，指导参数在动态计算和静态存储之间的最优分配</li>
+          <li><strong>系统效率优化：</strong>确定性寻址支持运行时预取，实现存储与计算的解耦，最小化推理开销</li>
+        </ul>
+      </div>
+
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p>这篇论文解决了当前大语言模型的一个重要问题：<strong>缺乏原生的知识查找机制</strong>。当前的Transformer模型被迫通过计算来模拟检索，这导致效率低下。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h5 class="font-bold text-blue-700 mb-2"><i class="fas fa-lightbulb mr-2"></i>核心思想</h5>
+            <p>作者提出了<strong>条件记忆</strong>的概念，作为条件计算（MoE）的补充稀疏轴。通过Engram模块实现，该模块现代化了经典的N-gram嵌入技术，实现了静态模式的O(1)查找。</p>
+          </div>
+          
+          <p><strong>主要发现：</strong></p>
+          <ul class="list-disc list-inside space-y-2 ml-4">
+            <li>发现了MoE和Engram之间的U型缩放规律，表明混合分配优于纯MoE</li>
+            <li>Engram-27B在同等参数和FLOPs下优于MoE基线</li>
+            <li>不仅在知识检索任务上表现更好，在推理、代码和数学任务上也有显著提升</li>
+            <li>Engram通过减少早期层的静态重建任务，有效增加了模型的"有效深度"</li>
+          </ul>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200 mt-4">
+            <h5 class="font-bold text-green-700 mb-2"><i class="fas fa-cogs mr-2"></i>系统优势</h5>
+            <p>Engram的确定性寻址允许运行时从主机内存预取，实现了存储与计算的解耦，使得100B参数表的卸载开销小于3%。</p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <!-- 技术机制可视化 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-brain mr-2"></i>语言建模的双重性质
+            </h4>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li><strong>组合推理：</strong>需要深度、动态的计算过程</li>
+              <li><strong>知识检索：</strong>涉及静态、局部、高度模式化的内容</li>
+              <li><strong>问题：</strong>当前Transformer缺乏原生知识查找机制</li>
+            </ul>
+          </div>
+          
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-history mr-2"></i>N-gram模型的启示
+            </h4>
+            <ul class="space-y-2 text-sm text-gray-700">
+              <li>经典N-gram模型能有效捕捉局部依赖</li>
+              <li>这些规律可以表示为计算成本低的查找操作</li>
+              <li>为条件记忆提供了理论基础</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 mb-6">
+          <h5 class="font-bold text-yellow-700 mb-3 flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>关键观察
+          </h5>
+          <p class="text-gray-700">作者观察到，解析一个常见的多标记实体（如"Diana, Princess of Wales"）需要消耗多个早期层的注意力和前馈网络。这本质上相当于对一个静态查找表进行昂贵的运行时重建，浪费了宝贵的序列深度。</p>
+        </div>
+        
+        <div class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-800 text-lg">
+              <i class="fas fa-table mr-2 text-blue-500"></i>
+              实体解析示例（表3）
+            </h5>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700">层数</th>
+                  <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700">潜在状态转换</th>
+                  <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700">解释</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b text-sm">1-2</td>
+                  <td class="py-2 px-4 border-b text-sm">英国的一个国家</td>
+                  <td class="py-2 px-4 border-b text-sm">威尔士</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b text-sm">3</td>
+                  <td class="py-2 px-4 border-b text-sm">欧洲的一个国家</td>
+                  <td class="py-2 px-4 border-b text-sm">威尔士</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b text-sm">4</td>
+                  <td class="py-2 px-4 border-b text-sm">女性君主或王后拥有的头衔</td>
+                  <td class="py-2 px-4 border-b text-sm">威尔士王妃（非特定）</td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="py-2 px-4 border-b text-sm">5</td>
+                  <td class="py-2 px-4 border-b text-sm">威尔士亲王（后来的国王）妻子的头衔</td>
+                  <td class="py-2 px-4 border-b text-sm">威尔士王妃（非特定）</td>
+                </tr>
+                <tr class="hover:bg-gray-50 bg-blue-50">
+                  <td class="py-2 px-4 border-b text-sm font-medium">6</td>
+                  <td class="py-2 px-4 border-b text-sm font-medium">威尔士王妃戴安娜（1961-1997），查尔斯王子的第一任妻子，以其美丽和人道主义工作而闻名</td>
+                  <td class="py-2 px-4 border-b text-sm font-medium">戴安娜，威尔士王妃</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>技术要点：</strong>这个表格展示了LLM如何通过多个注意力层和前馈网络层逐步构建"戴安娜，威尔士王妃"这个实体的内部表示。这是一个昂贵的运行时重建过程，而Engram通过O(1)查找直接获取这些静态知识。
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-bolt mr-2"></i>计算效率问题
+            </h4>
+            <ul class="space-y-2 text-gray-700">
+              <li><strong>昂贵的重建：</strong>Transformer通过计算模拟查找，效率低下</li>
+              <li><strong>深度浪费：</strong>早期层用于重建静态知识，浪费了用于复杂推理的深度</li>
+              <li><strong>注意力过载：</strong>局部依赖占用了宝贵的注意力容量</li>
+            </ul>
+          </div>
+          
+          <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-memory mr-2"></i>存储与计算耦合
+            </h4>
+            <ul class="space-y-2 text-gray-700">
+              <li><strong>GPU内存限制：</strong>大规模模型受限于GPU HBM容量</li>
+              <li><strong>动态路由开销：</strong>MoE的动态路由难以优化</li>
+              <li><strong>系统瓶颈：</strong>存储和计算紧密耦合，限制了扩展性</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg border border-gray-300">
+          <h5 class="font-bold text-gray-800 mb-4 text-lg">技术挑战总结</h5>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div class="text-3xl text-red-500 mb-2">1</div>
+              <h6 class="font-semibold text-gray-700 mb-2">架构不匹配</h6>
+              <p class="text-sm text-gray-600">Transformer缺乏原生知识查找机制</p>
+            </div>
+            <div class="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div class="text-3xl text-blue-500 mb-2">2</div>
+              <h6 class="font-semibold text-gray-700 mb-2">资源分配</h6>
+              <p class="text-sm text-gray-600">如何在MoE和记忆之间分配稀疏容量</p>
+            </div>
+            <div class="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div class="text-3xl text-green-500 mb-2">3</div>
+              <h6 class="font-semibold text-gray-700 mb-2">系统效率</h6>
+              <p class="text-sm text-gray-600">大规模参数表的存储和访问效率</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- Engram架构概览 -->
+        <div class="original-figure-container bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-800 text-lg">
+              <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+              Engram架构概览（图1）
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+          </div>
+          
+          <div class="architecture-placeholder mb-6">
+            <div class="flex flex-col md:flex-row items-center justify-center mb-6">
+              <div class="bg-blue-100 p-4 rounded-lg border-2 border-blue-300 mb-4 md:mb-0 md:mr-6">
+                <i class="fas fa-database text-4xl text-blue-500"></i>
+              </div>
+              <div class="text-center md:text-left">
+                <h6 class="font-semibold text-gray-700 text-lg mb-2">Engram模块架构</h6>
+                <p class="text-gray-600">通过检索静态N-gram记忆并通过上下文感知门控与动态隐藏状态融合来增强主干网络</p>
+              </div>
+            </div>
+            
+            <!-- 架构组件可视化 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+                <i class="fas fa-search text-2xl text-blue-500 mb-3"></i>
+                <h6 class="font-semibold text-blue-700 mb-2">稀疏检索</h6>
+                <p class="text-sm text-gray-600">通过哈希N-gram提取和压缩后缀</p>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                <i class="fas fa-sliders-h text-2xl text-green-500 mb-3"></i>
+                <h6 class="font-semibold text-green-700 mb-2">上下文感知门控</h6>
+                <p class="text-sm text-gray-600">动态调制检索到的嵌入</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+                <i class="fas fa-code-branch text-2xl text-purple-500 mb-3"></i>
+                <h6 class="font-semibold text-purple-700 mb-2">多分支集成</h6>
+                <p class="text-sm text-gray-600">与多分支架构集成</p>
+              </div>
+            </div>
+            
+            <!-- 数据流向 -->
+            <div class="flex flex-col md:flex-row justify-center items-center text-gray-600 text-sm mb-4">
+              <div class="flex items-center mb-2 md:mb-0">
+                <span class="bg-gray-100 px-3 py-1 rounded">输入序列</span>
+                <i class="fas fa-arrow-right mx-2"></i>
+              </div>
+              <div class="flex items-center mb-2 md:mb-0">
+                <span class="bg-blue-100 px-3 py-1 rounded">哈希检索</span>
+                <i class="fas fa-arrow-right mx-2"></i>
+              </div>
+              <div class="flex items-center mb-2 md:mb-0">
+                <span class="bg-green-100 px-3 py-1 rounded">门控融合</span>
+                <i class="fas fa-arrow-right mx-2"></i>
+              </div>
+              <div class="flex items-center">
+                <span class="bg-purple-100 px-3 py-1 rounded">残差连接</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> Engram架构。该模块通过检索静态N-gram记忆并通过上下文感知门控将其与动态隐藏状态融合来增强主干网络。此模块仅应用于特定层，以将记忆与计算解耦，保持标准输入嵌入和解嵌入模块不变。
+          </div>
+        </div>
+        
+        <!-- 关键技术组件 -->
+        <div class="space-y-8">
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 text-xl mb-4 flex items-center">
+              <i class="fas fa-key mr-3 text-blue-500"></i>
+              关键技术组件
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-3 text-lg">1. Tokenizer压缩</h5>
+                <div class="bg-blue-50 p-4 rounded-lg">
+                  <p class="text-gray-700 mb-2">将原始token ID映射到规范标识符：</p>
+                  <div class="font-mono text-sm bg-white p-3 rounded border mb-2">
+                    <span class="text-blue-600">Apple</span> → <span class="text-green-600">apple</span><br>
+                    <span class="text-blue-600">NFKC归一化</span> + <span class="text-green-600">小写转换</span>
+                  </div>
+                  <p class="text-sm text-gray-600"><strong>效果：</strong>128k tokenizer的词汇量减少23%</p>
+                </div>
+              </div>
+              
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-3 text-lg">2. 多头哈希</h5>
+                <div class="bg-green-50 p-4 rounded-lg">
+                  <p class="text-gray-700 mb-2">使用K个独立哈希头解决冲突：</p>
+                  <div class="font-mono text-sm bg-white p-3 rounded border mb-2">
+                    z<sub>t,n,k</sub> = φ<sub>n,k</sub>(g<sub>t,n</sub>)<br>
+                    e<sub>t,n,k</sub> = E<sub>n,k</sub>[z<sub>t,n,k</sub>]
+                  </div>
+                  <p class="text-sm text-gray-600"><strong>实现：</strong>轻量级乘法-XOR哈希，使用素数大小M<sub>n,k</sub></p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h5 class="font-semibold text-gray-700 mb-3 text-lg">3. 上下文感知门控</h5>
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <p class="text-gray-700 mb-2">使用注意力机制进行动态调制：</p>
+                <div class="font-mono text-sm bg-white p-3 rounded border mb-3">
+                  α<sub>t</sub> = σ(RMSNorm(h<sub>t</sub>)<sup>T</sup>RMSNorm(k<sub>t</sub>)/√d)<br>
+                  ẑ<sub>t</sub> = α<sub>t</sub>·v<sub>t</sub>
+                </div>
+                <p class="text-gray-700"><strong>设计原理：</strong>如果检索到的记忆与当前上下文矛盾，门控值α<sub>t</sub>趋近于0，有效抑制噪声</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 系统实现图 -->
+          <div class="original-figure-container bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h5 class="font-semibold text-gray-800 text-lg">
+                <i class="fas fa-server mr-2 text-blue-500"></i>
+                系统实现（图2）
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+                <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-graduation-cap mr-2"></i>训练阶段
+                </h6>
+                <ul class="space-y-2 text-sm text-gray-700">
+                  <li><strong>分片存储：</strong>大规模嵌入表分片到可用GPU</li>
+                  <li><strong>All-to-All通信：</strong>跨设备检索活动嵌入行</li>
+                  <li><strong>线性扩展：</strong>总内存容量随加速器数量线性扩展</li>
+                </ul>
+              </div>
+              
+              <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+                <h6 class="font-semibold text-green-700 mb-3 flex items-center">
+                  <i class="fas fa-bolt mr-2"></i>推理阶段
+                </h6>
+                <ul class="space-y-2 text-sm text-gray-700">
+                  <li><strong>预取策略：</strong>Engram表卸载到主机内存</li>
+                  <li><strong>确定性寻址：</strong>主机异步预取和传输嵌入</li>
+                  <li><strong>重叠通信：</strong>与设备上前Transformer块的计算重叠</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="text-center p-4 bg-gray-50 rounded-lg border border-gray-300">
+              <div class="flex justify-center items-center mb-3">
+                <span class="bg-white px-4 py-2 rounded-lg border">主机内存</span>
+                <i class="fas fa-arrow-right mx-4 text-gray-500"></i>
+                <span class="bg-white px-4 py-2 rounded-lg border">PCIe传输</span>
+                <i class="fas fa-arrow-right mx-4 text-gray-500"></i>
+                <span class="bg-white px-4 py-2 rounded-lg border">GPU计算</span>
+              </div>
+              <p class="text-sm text-gray-600">通信与计算重叠，实现最小化延迟</p>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Engram的系统实现。(a)训练阶段：大规模嵌入表分片到可用GPU。使用All-to-All通信原语跨设备检索活动嵌入行。(b)推理阶段：Engram表卸载到主机内存。通过利用确定性检索逻辑，主机异步预取和传输嵌入，将通信与设备上前Transformer块的计算重叠。
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <!-- 稀疏分配结果 -->
+        <div class="original-figure-container bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-800 text-lg">
+              <i class="fas fa-chart-bar mr-2 text-blue-500"></i>
+              稀疏分配与Engram扩展（图3）
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h6 class="font-semibold text-blue-700 mb-4 text-center">左图：稀疏分配优化</h6>
+              <div class="space-y-4">
+                <div>
+                  <h6 class="font-medium text-gray-700 mb-2">U型缩放规律</h6>
+                  <div class="bg-white p-3 rounded border mb-3">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-sm">ρ = 100% (纯MoE)</span>
+                      <span class="text-sm font-medium">损失较高</span>
+                    </div>
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-sm">ρ ≈ 80% (最优)</span>
+                      <span class="text-sm font-medium text-green-600">损失最低</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm">ρ = 0% (纯Engram)</span>
+                      <span class="text-sm font-medium">损失较高</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                  <p><strong>关键发现：</strong>混合分配（ρ ≈ 75-80%）优于纯MoE或纯Engram</p>
+                  <p class="mt-2"><strong>实验设置：</strong>总参数P<sub>tot</sub>和激活参数P<sub>act</sub>固定，稀疏参数P<sub>sparse</sub>在MoE和Engram之间分配</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h6 class="font-semibold text-green-700 mb-4 text-center">右图：无限内存扩展</h6>
+              <div class="space-y-4">
+                <div class="performance-chart-placeholder">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">2.58×10<sup>5</sup> slots:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-blue-500 h-4 rounded-full" style="width: 70%"></div>
+                      </div>
+                      <span class="text-sm font-medium ml-2">基准</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium">1.0×10<sup>7</sup> slots:</span>
+                      <div class="flex-1 bg-gray-200 rounded-full h-4">
+                        <div class="bg-green-500 h-4 rounded-full" style="width: 100%"></div>
+                      </div>
+                      <span class="text-sm font-medium ml-2 text-green-600">+0.04</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                  <p><strong>关键发现：</strong>Engram在log空间中呈现线性扩展趋势</p>
+                  <p class="mt-2"><strong>技术意义：</strong>更大的内存持续带来收益，无需额外计算</p>
+                  <p class="mt-2"><strong>对比：</strong>Engram比OverEncoding解锁更大的扩展潜力</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 稀疏分配和Engram扩展。左图：不同分配比例ρ的验证损失。显示了两个计算预算（2e20和6e20 FLOPs）。两种机制都表现出U型，混合分配超过纯MoE。右图：无限内存机制中的扩展行为。验证损失相对于嵌入数量呈现对数线性趋势。
+          </div>
+        </div>
+        
+        <!-- 大规模预训练结果 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h5 class="font-bold text-gray-800 text-lg mb-4 flex items-center">
+            <i class="fas fa-rocket mr-3 text-purple-500"></i>
+            大规模预训练结果（表1）
+          </h5>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">模型</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">Dense-4B</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">MoE-27B</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">Engram-27B</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">Engram-40B</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-blue-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">总参数</td>
+                  <td class="py-2 px-4 border-b text-sm">4.1B</td>
+                  <td class="py-2 px-4 border-b text-sm">26.7B</td>
+                  <td class="py-2 px-4 border-b text-sm">26.7B</td>
+                  <td class="py-2 px-4 border-b text-sm">39.5B</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium text-sm">激活参数</td>
+                  <td class="py-2 px-4 border-b text-sm">3.8B</td>
+                  <td class="py-2 px-4 border-b text-sm">3.8B</td>
+                  <td class="py-2 px-4 border-b text-sm">3.8B</td>
+                  <td class="py-2 px-4 border-b text-sm">3.8B</td>
+                </tr>
+                <tr class="bg-green-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">MMLU (Acc.)</td>
+                  <td class="py-2 px-4 border-b text-sm">48.6</td>
+                  <td class="py-2 px-4 border-b text-sm">57.4</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">60.4</td>
+                  <td class="py-2 px-4 border-b text-sm">60.6</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium text-sm">CMMLU (Acc.)</td>
+                  <td class="py-2 px-4 border-b text-sm">47.9</td>
+                  <td class="py-2 px-4 border-b text-sm">57.9</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">61.9</td>
+                  <td class="py-2 px-4 border-b text-sm">63.4</td>
+                </tr>
+                <tr class="bg-yellow-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">BBH (EM)</td>
+                  <td class="py-2 px-4 border-b text-sm">42.8</td>
+                  <td class="py-2 px-4 border-b text-sm">50.9</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">55.9</td>
+                  <td class="py-2 px-4 border-b text-sm">57.5</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium text-sm">HumanEval (Pass@1)</td>
+                  <td class="py-2 px-4 border-b text-sm">26.8</td>
+                  <td class="py-2 px-4 border-b text-sm">37.8</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">40.8</td>
+                  <td class="py-2 px-4 border-b text-sm">38.4</td>
+                </tr>
+                <tr class="bg-purple-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">MATH (EM)</td>
+                  <td class="py-2 px-4 border-b text-sm">15.2</td>
+                  <td class="py-2 px-4 border-b text-sm">28.3</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">30.7</td>
+                  <td class="py-2 px-4 border-b text-sm">30.6</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-300">
+            <h6 class="font-semibold text-gray-700 mb-3">关键发现分析：</h6>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li><strong>同等参数和FLOPs下：</strong>Engram-27B全面优于MoE-27B</li>
+              <li><strong>知识密集型任务：</strong>MMLU (+3.0), CMMLU (+4.0) 显著提升</li>
+              <li><strong>推理任务：</strong>BBH (+5.0), ARC-Challenge (+3.7) 提升更大</li>
+              <li><strong>代码/数学：</strong>HumanEval (+3.0), MATH (+2.4) 表现优异</li>
+              <li><strong>扩展性：</strong>Engram-40B进一步降低预训练损失</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 机制分析 -->
+        <div class="original-figure-container bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-800 text-lg">
+              <i class="fas fa-microscope mr-2 text-blue-500"></i>
+              表示对齐与收敛速度分析（图4）
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h6 class="font-semibold text-blue-700 mb-4">(a) 层间KL散度</h6>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">Engram-27B</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-3">
+                    <div class="bg-green-500 h-3 rounded-full" style="width: 60%"></div>
+                  </div>
+                  <span class="text-sm font-medium text-green-600">低散度</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">MoE-27B</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-3">
+                    <div class="bg-red-500 h-3 rounded-full" style="width: 85%"></div>
+                  </div>
+                  <span class="text-sm font-medium text-red-600">高散度</span>
+                </div>
+              </div>
+              <div class="mt-4 text-sm text-gray-600">
+                <p><strong>结论：</strong>Engram在早期层表现出更小的KL散度，表明预测收敛更快</p>
+                <p class="mt-2"><strong>意义：</strong>通过显式知识访问减少计算步骤，在网络层次中更早达到高置信度预测</p>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h6 class="font-semibold text-green-700 mb-4">(b-c) CKA相似性热图</h6>
+              <div class="space-y-4">
+                <div class="text-center p-3 bg-white rounded border">
+                  <div class="flex justify-center items-center mb-2">
+                    <span class="bg-blue-100 px-3 py-1 rounded text-sm">Engram层5</span>
+                    <i class="fas fa-arrow-right mx-3 text-gray-500"></i>
+                    <span class="bg-green-100 px-3 py-1 rounded text-sm">≈ MoE层12</span>
+                  </div>
+                  <p class="text-xs text-gray-600">表示的对角线向上偏移</p>
+                </div>
+                <div class="text-sm text-gray-600">
+                  <p><strong>发现：</strong>a<sub>j</sub> > j 对于广泛层范围成立</p>
+                  <p class="mt-2"><strong>意义：</strong>Engram的浅层功能上等同于MoE模型的深层，有效增加了模型的深度</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>原图图注:</strong> 表示对齐和收敛速度分析。(a)通过LogitLens的层间KL散度。早期层持续较低的散度表明Engram加速了预测收敛。(b-c)通过CKA计算的相似性热图。高相似性对角线的明显向上偏移表明Engram的浅层功能上等同于MoE模型的深层，有效增加了模型的深度。
+          </div>
+        </div>
+        
+        <!-- 架构消融研究 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <h5 class="font-bold text-gray-800 text-lg mb-4 flex items-center">
+            <i class="fas fa-clipboard-check mr-3 text-red-500"></i>
+            架构消融研究（图5）
+          </h5>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+              <h6 class="font-semibold text-red-700 mb-4">层敏感性分析</h6>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">层2 (最优)</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-3">
+                    <div class="bg-green-500 h-3 rounded-full" style="width: 100%"></div>
+                  </div>
+                  <span class="text-sm font-medium">损失=1.770</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">层6</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-3">
+                    <div class="bg-yellow-500 h-3 rounded-full" style="width: 75%"></div>
+                  </div>
+                  <span class="text-sm font-medium">损失=1.790</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">层12</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-3 mx-3">
+                    <div class="bg-red-500 h-3 rounded-full" style="width: 50%"></div>
+                  </div>
+                  <span class="text-sm font-medium">损失=1.810</span>
+                </div>
+              </div>
+              <div class="mt-4 text-sm text-gray-600">
+                <p><strong>结论：</strong>层2实现最佳单层性能，随着插入点变深而性能下降</p>
+                <p><strong>权衡：</strong>早期插入卸载局部模式重建，但门控精度较低</p>
+              </div>
+            </div>
+            
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h6 class="font-semibold text-blue-700 mb-4">组件消融分析</h6>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">多分支集成</span>
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">关键</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">上下文感知门控</span>
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">关键</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">Tokenizer压缩</span>
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">关键</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">深度卷积</span>
+                  <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">中等</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm">4-gram分配</span>
+                  <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">次优</span>
+                </div>
+              </div>
+              <div class="mt-4 text-sm text-gray-600">
+                <p><strong>结论：</strong>三个组件产生最显著收益：多分支集成、上下文感知门控、tokenizer压缩</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 系统效率测试 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h5 class="font-bold text-gray-800 text-lg mb-4 flex items-center">
+            <i class="fas fa-tachometer-alt mr-3 text-purple-500"></i>
+            系统效率测试（表4）
+          </h5>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">基础模型</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">配置</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">吞吐量 (tok/s)</th>
+                  <th class="py-3 px-4 border-b text-left text-sm font-medium text-gray-700">开销</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium text-sm">4B-Dense</td>
+                  <td class="py-2 px-4 border-b text-sm">基线</td>
+                  <td class="py-2 px-4 border-b text-sm">9,031.62</td>
+                  <td class="py-2 px-4 border-b text-sm">-</td>
+                </tr>
+                <tr class="bg-green-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">4B-Dense</td>
+                  <td class="py-2 px-4 border-b text-sm">+ 100B Engram (CPU卸载)</td>
+                  <td class="py-2 px-4 border-b text-sm">8,858.28</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">-1.92%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium text-sm">8B-Dense</td>
+                  <td class="py-2 px-4 border-b text-sm">基线</td>
+                  <td class="py-2 px-4 border-b text-sm">6,315.52</td>
+                  <td class="py-2 px-4 border-b text-sm">-</td>
+                </tr>
+                <tr class="bg-green-50">
+                  <td class="py-2 px-4 border-b font-medium text-sm">8B-Dense</td>
+                  <td class="py-2 px-4 border-b text-sm">+ 100B Engram (CPU卸载)</td>
+                  <td class="py-2 px-4 border-b text-sm">6,140.02</td>
+                  <td class="py-2 px-4 border-b text-sm font-bold text-green-600">-2.78%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h6 class="font-semibold text-blue-700 mb-3">关键发现</h6>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li><strong>最小开销：</strong>卸载100B参数表仅产生<3%的吞吐量惩罚</li>
+              <li><strong>确定性寻址优势：</strong>与MoE的动态路由相比，Engram支持运行时预取</li>
+              <li><strong>计算重叠：</strong>早期密集块的计算强度提供了足够的时间窗口来掩盖检索延迟</li>
+              <li><strong>保守估计：</strong>实验中所有检索都通过PCIe总线，实际优化实现开销更小</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border-l-4 border-green-500">
+            <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-3"></i>主要贡献总结
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-3">1. 条件记忆范式</h5>
+                <ul class="space-y-2 text-sm text-gray-600">
+                  <li>提出条件记忆作为MoE的补充稀疏轴</li>
+                  <li>解决通过计算模拟知识检索的低效问题</li>
+                  <li>实现静态模式的O(1)查找</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-3">2. Engram模块设计</h5>
+                <ul class="space-y-2 text-sm text-gray-600">
+                  <li>现代化N-gram嵌入技术</li>
+                  <li>集成tokenizer压缩、多头哈希、上下文感知门控</li>
+                  <li>支持与多分支架构集成</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-3"></i>关键技术发现
+            </h4>
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <h6 class="font-semibold text-gray-700 mb-2">U型缩放规律</h6>
+                  <p class="text-sm text-gray-600">混合分配(ρ≈80%)优于纯MoE或纯Engram</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <h6 class="font-semibold text-gray-700 mb-2">有效深度增加</h6>
+                  <p class="text-sm text-gray-600">Engram浅层功能上等同于MoE深层</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                  <h6 class="font-semibold text-gray-700 mb-2">系统效率</h6>
+                  <p class="text-sm text-gray-600">100B参数表卸载开销<3%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 论文不足之处 -->
+          <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+            <h4 class="font-bold text-red-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-3"></i>论文局限性与未来方向
+            </h4>
+            <div class="space-y-4">
+              <div class="bg-white p-4 rounded-lg">
+                <h6 class="font-semibold text-gray-700 mb-2">1. 训练数据效率</h6>
+                <p class="text-sm text-gray-600">论文未详细探讨Engram对训练数据效率的影响，特别是对于新知识的获取和更新机制</p>
+              </div>
+              <div class="bg-white p-4 rounded-lg">
+                <h6 class="font-semibold text-gray-700 mb-2">2. 长尾N-gram处理</h6>
+                <p class="text-sm text-gray-600">虽然利用了Zipfian分布，但对于低频N-gram的处理策略和性能影响分析不够深入</p>
+              </div>
+              <div class="bg-white p-4 rounded-lg">
+                <h6 class="font-semibold text-gray-700 mb-2">3. 多模态扩展</h6>
+                <p class="text-sm text-gray-600">当前工作专注于文本模态，未探讨条件记忆范式在视觉、语音等多模态任务中的适用性</p>
+              </div>
+              <div class="bg-white p-4 rounded-lg">
+                <h6 class="font-semibold text-gray-700 mb-2">4. 动态知识更新</h6>
+                <p class="text-sm text-gray-600">静态记忆如何支持动态知识更新和纠错机制需要进一步研究</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-eye mr-3"></i>对博士生的建议
+            </h4>
+            <div class="space-y-4 text-gray-700">
+              <div class="flex items-start">
+                <div class="bg-blue-100 p-2 rounded-lg mr-4">
+                  <i class="fas fa-1 text-blue-500"></i>
+                </div>
+                <div>
+                  <h6 class="font-semibold mb-1">问题是什么？</h6>
+                  <p class="text-sm">当前大模型缺乏原生的知识查找机制，被迫用计算模拟查找，效率低下。</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 p-2 rounded-lg mr-4">
+                  <i class="fas fa-2 text-green-500"></i>
+                </div>
+                <div>
+                  <h6 class="font-semibold mb-1">解决方案是什么？</h6>
+                  <p class="text-sm">Engram模块：基于N-gram的O(1)查找 + 条件记忆作为MoE的补充。</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-purple-100 p-2 rounded-lg mr-4">
+                  <i class="fas fa-3 text-purple-500"></i>
+                </div>
+                <div>
+                  <h6 class="font-semibold mb-1">核心创新是什么？</h6>
+                  <p class="text-sm">发现了MoE和Engram的U型缩放规律，找到了最优分配比例(~80% MoE, ~20% Engram)。</p>
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-lg mr-4">
+                  <i class="fas fa-4 text-red-500"></i>
+                </div>
+                <div>
+                  <h6 class="font-semibold mb-1">效果如何？</h6>
+                  <p class="text-sm">同等参数和计算下全面优于MoE，推理任务提升更大(如BBH +5.0)，系统开销极小(<3%)。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-300">
+            <h4 class="font-bold text-purple-700 text-xl mb-4">未来展望</h4>
+            <p class="text-gray-700 mb-4">作者将条件记忆视为下一代稀疏模型不可或缺的建模原语。Engram通过将存储与计算解耦，为实现具有万亿参数且保持高效推理的模型开辟了新途径。</p>
+            <div class="inline-flex items-center bg-white px-4 py-2 rounded-full shadow-sm">
+              <i class="fas fa-code-branch text-purple-500 mr-2"></i>
+              <span class="text-sm font-medium text-gray-700">开源代码: https://github.com/deepseek-ai/Engram</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始高亮
+      highlightNav();
+      
+      // 技术细节展开/收起
+      const detailsElements = document.querySelectorAll('details.technical-details');
+      detailsElements.forEach(details => {
+        const summary = details.querySelector('summary');
+        summary.addEventListener('click', function() {
+          const icon = this.querySelector('i');
+          if (details.open) {
+            icon.className = 'fas fa-microscope mr-2';
+          } else {
+            icon.className = 'fas fa-microscope mr-2 text-blue-500';
+          }
+        });
+      });
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

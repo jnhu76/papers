@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selective On-Device Execution of Data-Dependent Read I/Os</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Selective On-Device Execution of Data-Dependent Read I/Os
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Chanyoung Park, Minu Chung, and Hyungon Moon</div>
+                <div class="text-sm text-gray-600 mt-1">UNIST (Ulsan National Institute of Science and Technology)</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>23rd USENIX Conference on File and Storage Technologies (FAST '25)</div>
+                <div class="text-sm text-gray-600">February 25–27, 2025 • Santa Clara, CA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">ISBN 978-1-939133-45-8</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">On-Device Computing</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Data-Dependent I/O</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">NVMe</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">eBPF</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>首次探索设备内计算资源对数据依赖读I/O的加速潜力</strong>：在存储技术最新进展的背景下，研究设备内计算资源是否能加速数据依赖读I/O</li>
+          <li><strong>提出选择性设备内执行(SODE)框架</strong>：动态选择在设备内或内核中执行重新提交任务，充分利用两种环境的优势</li>
+          <li><strong>实验验证性能提升</strong>：在B+树键值存储和WiredTiger上分别实现了高达41%的吞吐量提升和3.85%的尾延迟降低</li>
+          <li><strong>设计创新</strong>：包括混合重新提交、乐观重新提交和并行重新提交任务支持三个关键设计选择</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">近期研究表明，使用设备内和内核内存储功能具有显著优势。设备内功能主要用于在存储设备内预处理数据，有效减少I/O量。相比之下，内核内功能被提出来加速数据依赖读I/O请求序列，特别适用于遍历磁盘数据结构的应用程序。</p>
+          
+          <p class="mb-4">本工作研究了使用设备内功能处理只读磁盘数据结构上的数据依赖读I/O请求的未开发潜力。结果令人鼓舞：设备内I/O功能使应用程序能够更快地发出I/O请求，并与内核内功能无缝集成以高效管理大量请求。</p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-4">
+            <p class="text-yellow-700"><strong>关键发现：</strong>作者在先进的存储模拟器NVMeVirt上开发了该设备内功能的原型。通过使用简单的B+树键值存储和广泛使用的基于日志结构合并树的键值存储WiredTiger的实验证明，设备内功能提高了性能。与仅使用主机内核内存储功能相比，设备内功能将B+树键值存储的吞吐量提高了高达41%，并将WiredTiger在YCSB C上的99百分位尾延迟降低了高达3.85%。</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">存储计算的发展</h3>
+          <p class="mb-4">近存储和存储内计算因其在性能、能效和可扩展性方面的优势而受到关注。数据量的增加需要具有高带宽的大容量存储。存储供应商通过开发具有更高带宽和更低延迟的设备来满足这一需求，应用程序通常使用远程存储以获得更大的存储空间。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>设备内计算
+              </h4>
+              <p class="text-sm text-gray-700">存储设备（通常是SSD）是本地设置中计算卸载的唯一可用选择。SSD是一个独立的计算机系统，除了作为持久数据存储的闪存外，还有处理器和内存。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>快速重新提交路径
+              </h4>
+              <p class="text-sm text-gray-700">XRP提出在主机软件栈的最低可能层（设备驱动程序上方或内部）放置计算以发出I/O请求，特别有利于遍历磁盘数据结构的工作负载模式。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">eBPF技术</h3>
+          <p class="mb-4">eBPF是一个框架，允许执行用户编写的小段代码作为Linux内核的一部分。虽然最初是为数据包过滤开发的，但现在被用作在内核中执行应用程序代码的通用手段，用于性能测量、调度或安全检查。</p>
+          
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-6">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-shield-alt mr-2"></i>eBPF沙箱特性
+            </h4>
+            <p class="text-sm text-gray-700">eBPF过滤器经过严格验证，确保它们不能被恶意利用来操纵内核行为。这些特性使其成为将重新提交功能委托到更接近存储设备的可行选择。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">设备内重新提交的潜在优势</h3>
+          <p class="mb-4">本研究探索了使用设备内处理器执行重新提交任务的潜在优势，这是先前研究未证明的。以下两个观察结果表明了使用设备内处理器提高重新提交任务性能的可能性：</p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li><strong>现代SSD在其控制器SoC中仍有通用处理器</strong>：虽然处理器的计算能力有限，但它比跨越PCIe互连运行的内核内存储功能更接近存储元素</li>
+            <li><strong>存储设备内的重新提交带来了PCIe往返延迟之外的优势</strong>：设备驱动程序完成NVMe请求需要微秒级时间，而单个内核内重新提交必须经过此过程</li>
+          </ul>
+          
+          <!-- 表1：512 B随机读延迟 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>技术细节：表1 - 512 B随机读延迟对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-table mr-2 text-blue-500"></i>
+                    表1: 512 B随机读延迟对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 表格展示 -->
+                <div class="overflow-x-auto bg-white p-4 rounded-lg border border-gray-200">
+                  <table class="min-w-full text-sm text-center">
+                    <thead class="bg-gray-100">
+                      <tr>
+                        <th class="py-2 px-4 border">设备类型</th>
+                        <th class="py-2 px-4 border">NAND (1)</th>
+                        <th class="py-2 px-4 border">NAND (2)</th>
+                        <th class="py-2 px-4 border">NAND (3)</th>
+                        <th class="py-2 px-4 border">NVM</th>
+                        <th class="py-2 px-4 border">NVM (NVMeVirt)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="py-2 px-4 border font-medium">SW延迟</td>
+                        <td class="py-2 px-4 border">44.4μs (18.6%)</td>
+                        <td class="py-2 px-4 border">30.6μs (28.8%)</td>
+                        <td class="py-2 px-4 border">35.3μs (34.3%)</td>
+                        <td class="py-2 px-4 border">3.0μs (48.4%)</td>
+                        <td class="py-2 px-4 border">7.5μs (52.8%)</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border font-medium">HW延迟</td>
+                        <td class="py-2 px-4 border">194.4μs (81.4%)</td>
+                        <td class="py-2 px-4 border">75.7μs (71.2%)</td>
+                        <td class="py-2 px-4 border">67.5μs (65.6%)</td>
+                        <td class="py-2 px-4 border">3.2μs (51.6%)</td>
+                        <td class="py-2 px-4 border">6.7μs (47.2%)</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原表说明:</strong> 使用五种存储设备的512 B随机读延迟。NAND (1)、NAND (2)和NAND (3)是使用Intel D3-S4520、Samsung 980 Pro和Samsung Z-SSD获得的结果，均使用NAND作为存储元件。NVM是从XRP使用Intel Optane P5800X报告的结果，NVM (NVMeVirt)是我们使用NVMeVirt模拟Intel P4800X SSD获得的结果。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>延迟组成分析:</strong> 表格显示了软件(SW)和硬件(HW)延迟的分布，百分比表示各部分在总延迟中的占比</li>
+                  <li><strong>NVM设备优势:</strong> NVM设备(如Intel Optane)相比传统NAND设备具有显著更低的延迟，软件开销占比更高</li>
+                  <li><strong>性能瓶颈转移:</strong> 随着存储设备延迟降低，软件层的延迟影响相对增大，需要机制来绕过软件栈</li>
+                  <li><strong>研究动机:</strong> 这种延迟分布的变化为在设备驱动程序级别执行计算提供了性能优化机会</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本研究解决了现代设备内计算资源是否能加速数据依赖读I/O的开放性问题，其中读请求依赖于先前计算的结果，减少数据传输的优势并不明显。作者首先提出了两个观察来解释为什么现有的设备内计算工作主要关注以吞吐量为中心的工作负载。</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>挑战1：设备计算能力有限
+              </h4>
+              <p class="text-sm text-gray-700">存储设备预计具有相对较低的计算能力，特别是在处理器的操作频率方面。因此，每个任务在设备上可能比在内核中经历更高的延迟，失去了较低数据访问延迟的优势。</p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>挑战2：PCIe互连延迟
+              </h4>
+              <p class="text-sm text-gray-700">可以运行此类设备内计算的现有商业设备并非为访问延迟的潜在优势而设计。内部存储和设备内计算资源（包括FPGA）通过PCIe互连连接，因此从设备内FPGA的访问延迟并不比从主机处理器的访问延迟低得多。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">设备内计算受益于低访问延迟的约束条件</h3>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <p class="text-yellow-700"><strong>关键约束：</strong>这两个观察结果突出了设备内计算可以从低访问延迟中受益的约束条件：</p>
+          </div>
+          
+          <ul class="list-disc list-inside space-y-3 mb-6">
+            <li><strong>任务延迟必须短</strong>：分派的任务不能有长延迟；它必须足够快地产生后续存储读请求。否则，低数据访问延迟的好处将被增加的任务执行时间所抵消</li>
+            <li><strong>处理器必须位于设备内</strong>：处理器必须位于设备内，可能与存储设备控制器在同一SoC中</li>
+          </ul>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">技术瓶颈分析</h3>
+          
+          <div class="overflow-x-auto bg-white p-4 rounded-lg border border-gray-200 mb-6">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border text-left">工作负载</th>
+                  <th class="py-2 px-4 border text-center">内核内重新提交延迟</th>
+                  <th class="py-2 px-4 border text-center">设备内重新提交延迟</th>
+                  <th class="py-2 px-4 border text-center">延迟增加</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border font-medium">BPF-KV</td>
+                  <td class="py-2 px-4 border text-center">418ns</td>
+                  <td class="py-2 px-4 border text-center">633ns</td>
+                  <td class="py-2 px-4 border text-center text-red-600">+51.4%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border font-medium">WiredTiger</td>
+                  <td class="py-2 px-4 border text-center">1867ns</td>
+                  <td class="py-2 px-4 border text-center">4403ns</td>
+                  <td class="py-2 px-4 border text-center text-red-600">+135.8%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <p class="mb-4">从表中可以看出，设备内重新提交任务的执行时间显著高于内核内执行，这主要是由于设备内处理器的计算能力有限。这种延迟增加可能会抵消设备内执行带来的低数据访问延迟优势。</p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">设计目标</h3>
+          <p class="mb-4">作者旨在探索使用设备内处理器增强受益于近存储重新提交的应用程序性能的潜力。此类应用程序的示例是键值存储，它遍历磁盘数据结构以检索与查询键关联的值。对于这些应用程序，作者设计了SODE以同时改进目标操作的吞吐量、平均延迟和尾延迟。</p>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+            <p class="text-green-700"><strong>设计目标：</strong>不旨在在这项工作中权衡一个指标与另一个指标，因为所有三个指标在评估键值存储性能时都至关重要。</p>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">SODE概述</h3>
+          <p class="mb-4">SODE建立在三个对实现设计目标不可或缺的设计选择上：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-code-branch mr-2"></i>D1: 混合重新提交
+              </h4>
+              <p class="text-sm text-gray-700">存储设备预计具有计算能力有限的处理器。为克服此挑战，作者建议将重新提交任务从设备卸载到主机内核，利用现有的内核内重新提交路径。</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>D2: 乐观重新提交
+              </h4>
+              <p class="text-sm text-gray-700">I/O请求只有在文件偏移转换为逻辑块地址后才能重新提交。翻译只能使用文件元数据完成，设备内运行时无法直接访问。为避免锁定文件并遭受PCIe往返延迟，SODE选择使用设备上缓存的元数据副本乐观执行重新提交链，并在完成时检查有效性。</p>
+            </div>
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-parallel mr-2"></i>D3: 并行重新提交
+              </h4>
+              <p class="text-sm text-gray-700">SODE还允许将重新提交任务编写为多个并行运行的eBPF过滤器。设备上有限的计算能力导致任务执行延迟增加，可能抵消近存储重新提交的优势。重新提交任务通常具有一些并行性，SODE使开发人员能够利用这些并行性来减少重新提交任务的设备内执行时间。</p>
+            </div>
+          </div>
+          
+          <!-- 图1：SODE概述 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - SODE系统概述
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: SODE系统概述
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: SODE系统架构和流程概述" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 应用程序通过调用新的系统调用read_sode使用SODE。接收read_sode调用后，SODE将请求与SODE需要用于请求重新提交的元数据一起传递到设备内运行时。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>系统调用流程:</strong> 应用程序通过新的read_sode系统调用与SODE交互，而不是传统的read调用</li>
+                  <li><strong>元数据获取:</strong> SODE首先从文件系统获取文件偏移到逻辑块地址映射的副本</li>
+                  <li><strong>NVMe SODE命令:</strong> 提交特殊的NVMe命令，包含第一次读取位置、映射摘要和在设备内运行的存储功能</li>
+                  <li><strong>设备内执行:</strong> 在设备中完成第一次读取后，SODE的设备内运行时执行重新提交任务以确定是否应使用新计算的文件偏移再次读取或响应应用程序</li>
+                  <li><strong>反向卸载:</strong> 如果设备内处理器太忙且预计会延迟传入的重新提交请求，SODE通过使用特殊标志响应主机回退到内核内重新提交路径</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">混合执行策略:</strong>
+                    <p>SODE使用其设备内路径仅作为补充内核内路径的辅助资源，以利用两个世界的优势。接收从read_sode请求生成的NVMe命令后，其设备内运行时确定在哪里执行重新提交任务。如果运行时可以立即执行，SODE将任务分配给设备内运行时；否则，任务被转发到主机的内核内路径。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">BPF Hook:</strong>
+                    <p>SODE的设备内路径运行编写为eBPF过滤器的重新提交任务。它创建一个新的BPF类型(BPF_PROG_TYPE_SODE)，其结构取自XRP，即SODE的内核内路径。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">沙箱机制:</strong>
+                    <p>SODE必须沙箱化设备内重新提交任务。重新提交任务必须被限制使用为其分配的内存区域，并且必须禁止未经授权的磁盘访问尝试。SODE使用先前工作中引入的机制，XRP和λ-IO。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">实现细节</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-laptop-code mr-2"></i>原型实现
+            </h4>
+            <p class="text-sm text-gray-700 mb-3">作者通过扩展NVMeVirt实现了一个SODE原型，以模拟运行编写为eBPF过滤器的重新提交任务的计算存储设备。NVMeVirt是一个最近开发的基于软件的模拟器，支持新存储设备的快速原型设计和性能分析。</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-gray-700">设备内重新提交路径:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>通过添加模拟设备内重新提交路径行为的重新提交线程实现</li>
+                  <li>线程与NVMeVirt中的两种线程交互：调度器线程和I/O线程</li>
+                  <li>保留NVMeVirt的核心组件以实现精确模拟</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-gray-700">弱设备核心模拟:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>通过频率缩放模拟设备内处理器的性能</li>
+                  <li>假设设备内重新提交任务在性能类似于低功耗ARM处理器的处理器上运行</li>
+                  <li>配置Xeon处理器以1.2 GHz运行以进行性能模拟</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验环境</h3>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-blue-700">硬件配置:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>服务器配备Intel Xeon Gold 6136处理器，以3.00GHz运行在NUMA配置中</li>
+                  <li>两个NUMA节点，每个有12个核心和192 GB内存</li>
+                  <li>操作系统：Ubuntu 18.04 with Linux kernel 5.12.0</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-blue-700">软件配置:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>所有实验使用O_DIRECT运行，关闭超线程、处理器C-states和turbo boost</li>
+                  <li>节点1的核心部分配置为1.2GHz以模拟存储设备的嵌入式处理器性能</li>
+                  <li>使用XRP提供的BPF-KV和WiredTiger 4.4.0</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">BPF-KV评估结果</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2 text-green-500"></i>延迟改进
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">SODE减少了查找操作的平均延迟和尾延迟。无论应用程序线程数如何，SODE在尾延迟方面优于XRP。</p>
+              <div class="bg-green-50 p-3 rounded">
+                <p class="text-green-700 text-sm"><strong>关键结果:</strong> SODE的第99和第99.9百分位尾延迟分别比read或XRP低11.6-37.5%和8.2-30.1%。</p>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-chart-bar mr-2 text-blue-500"></i>吞吐量改进
+              </h4>
+              <p class="text-sm text-gray-700 mb-3">SODE的吞吐量比read高55.3-121.5%，比XRP高16.4-38.5%。SODE对BPF-KV的好处对其他索引深度（高达41%）仍然显著。</p>
+              <div class="bg-blue-50 p-3 rounded">
+                <p class="text-blue-700 text-sm"><strong>关键结果:</strong> 当使用12个线程和索引深度6运行时，SODE使用内核内路径处理约62%的重新提交，使用设备内路径处理38%。</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图3：BPF-KV延迟 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图3 - BPF-KV随机键查找操作延迟
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: BPF-KV随机键查找操作延迟
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: BPF-KV随机键查找操作延迟对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用read、XRP或SODE运行BPF-KV时的随机单键查找延迟。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>延迟优势:</strong> 四个图表显示SODE减少了查找操作的平均延迟和尾延迟</li>
+                  <li><strong>线程扩展性:</strong> 无论应用程序线程数如何，SODE在尾延迟方面优于XRP</li>
+                  <li><strong>索引深度影响:</strong> SODE在索引深度变化时仍然优于XRP或read高达32.3%，除了索引深度为1的情况</li>
+                  <li><strong>浅树限制:</strong> SODE的好处在使用浅树（低索引深度）时减少，因为每次查找涉及较少的重新提交，而SODE加速了这些重新提交</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: Intel Xeon Gold 6136处理器，NUMA配置</li>
+                      <li>软件栈: Ubuntu 18.04 with Linux kernel 5.12.0</li>
+                      <li>工作负载: BPF-KV随机键查找操作</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>尾延迟改进: 第99和第99.9百分位尾延迟分别降低11.6-37.5%和8.2-30.1%</li>
+                      <li>平均延迟: 随着树深度增加，影响变得更加显著</li>
+                      <li>扩展性: 在不同线程数和索引深度下保持优势</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-8">WiredTiger评估结果</h3>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-database mr-2 text-purple-500"></i>WiredTiger性能改进
+            </h4>
+            <p class="text-sm text-gray-700 mb-3">作者使用WiredTiger，一个广泛使用的基于LSM树的持久键值存储，评估SODE对实际应用程序的性能影响。作为工作负载，使用YCSB，它也广泛用于评估键值存储。</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div class="bg-green-50 p-3 rounded border border-green-200">
+                <h5 class="font-bold text-green-700 text-sm mb-2">吞吐量改进</h5>
+                <p class="text-xs text-gray-700">SODE将WiredTiger在运行YCSB工作负载时的吞吐量相比XRP平均提高了5.46%。设备内处理器成为SODE执行重新提交任务的额外资源，有助于吞吐量改进。</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                <h5 class="font-bold text-blue-700 text-sm mb-2">尾延迟改进</h5>
+                <p class="text-xs text-gray-700">SODE的尾延迟与XRP大致相同，实现了设计目标。SODE在某些配置下优于XRP，但在其他配置下差异几乎不明显。</p>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">并行化的重要性</h3>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <p class="text-yellow-700"><strong>关键发现：</strong>启用并行化重新提交任务对于在运行WiredTiger时提高吞吐量至关重要。没有并行化重新提交任务，使用SODE时的吞吐量比使用read运行的WiredTiger低约54%。</p>
+          </div>
+          
+          <p class="mb-4">WiredTiger的重新提交任务的执行时间比BPF-KV长得多，当它从主机移动到设备处理器时，延迟增加了超过2.5μs。这种差异抵消了设备内重新提交的潜在延迟优势，导致图中显示的性能下降。并行化重新提交任务将其在设备上的延迟从4403 ns平均减少到993 ns，使SODE相比read和XRP分别提高了19%和2%的吞吐量。</p>
+          
+          <!-- 图7：WiredTiger吞吐量 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图7 - WiredTiger在YCSB上的吞吐量
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: WiredTiger在YCSB上的吞吐量
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: WiredTiger在YCSB上的吞吐量对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> WiredTiger在YCSB上的吞吐量，使用1、2和3个线程（标记为1T、2T和3T）和512 MB缓存。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>吞吐量改进:</strong> SODE将WiredTiger在运行YCSB工作负载时的吞吐量相比XRP平均提高了5.46%</li>
+                  <li><strong>资源利用:</strong> 设备内处理器成为SODE执行重新提交任务的额外资源，有助于吞吐量改进</li>
+                  <li><strong>路径分布:</strong> 当WiredTiger使用一个线程运行时，大多数I/O重新提交由设备内路径处理，但SODE在其他情况下使用内核内（31%）和设备内（69%）路径</li>
+                  <li><strong>缓存影响:</strong> SODE的性能好处在缓存大小变化时仍然存在，但随着缓存大小增加而减少，因为更大的缓存减少了需要磁盘遍历的请求数</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本文提出了关于在接近存储介质的弱处理器上运行数据依赖读I/O重新提交任务的研究。在存储设备侧的执行带来了PCIe往返时间之外的延迟优势。然而，设备内处理器的有限性能使得释放其潜力变得不简单，需要一种机制将它们与加速数据依赖读I/O的现有方法（内核内路径）混合。</p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>主要贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>选择性设备内执行框架</strong>：提出了SODE，选择性地使用设备内重新提交路径与内核内重新提交路径</li>
+              <li><strong>性能验证</strong>：使用两个遍历磁盘数据结构的基准测试的实验表明，SODE提高了基准测试的吞吐量和延迟</li>
+              <li><strong>设计创新</strong>：包括混合重新提交、乐观重新提交和并行重新提交任务支持三个关键设计选择</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">关键启示</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2 text-green-500"></i>启示1
+              </h4>
+              <p class="text-sm text-gray-700">设备内计算可以在设备资源立即可用时加速数据依赖读I/O。当设备内处理器可用且任务适合设备内执行时，可以显著减少I/O延迟。</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-balance-scale mr-2 text-blue-500"></i>启示2
+              </h4>
+              <p class="text-sm text-gray-700">PCIe延迟和设备内限制的组合通常证明依赖主机侧执行是合理的，SODE动态适应这一点。通过混合执行策略，SODE在设备资源紧张时自动回退到内核内执行。</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">局限性</h3>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <p class="text-yellow-700"><strong>论文局限性：</strong>作者在SODE的评估中力求全面，但本文缺少几个方面：</p>
+          </div>
+          
+          <ul class="list-disc list-inside space-y-3 mb-6">
+            <li><strong>元数据不一致的可能性</strong>：SODE乐观地完成一系列重新提交，并仅在完成后检查元数据有效性。在结束时发现的任何元数据不一致导致重新执行重新提交任务，这可能导致显著的性能损失</li>
+            <li><strong>多设备环境</strong>：实际存储系统通常由多个设备组成，而作者的评估侧重于单设备设置</li>
+            <li><strong>与SSD维护的潜在竞争</strong>：SODE的实现假设四个核心专用于重新提交任务。如果设备没有为重新提交任务分配四个专用核心或这些核心与其他工作负载共享，SODE的性能好处可能会减少</li>
+            <li><strong>对主流基于闪存的SSD的性能影响</strong>：受XRP启发，SODE使用低延迟存储设备的模型进行评估，这在实践中不常用</li>
+          </ul>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">未来工作</h3>
+          
+          <p class="mb-4">基于本研究的发现和局限性，作者提出了几个未来研究方向：</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="bg-blue-50 p-3 rounded border border-blue-200">
+              <strong class="text-blue-700">元数据一致性改进</strong>
+              <p class="mt-1 text-gray-600">研究更有效的元数据同步机制，减少因元数据不一致导致的性能损失。</p>
+            </div>
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+              <strong class="text-green-700">多设备支持</strong>
+              <p class="mt-1 text-gray-600">扩展SODE以支持跨多个存储设备的重新提交任务，适应实际存储系统的需求。</p>
+            </div>
+            <div class="bg-purple-50 p-3 rounded border border-purple-200">
+              <strong class="text-purple-700">资源管理优化</strong>
+              <p class="mt-1 text-gray-600">开发更精细的资源分配策略，处理设备内计算资源与SSD维护任务之间的竞争。</p>
+            </div>
+            <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700">主流SSD适配</strong>
+              <p class="mt-1 text-gray-600">评估SODE在主流基于闪存的SSD上的性能，探索在更广泛硬件环境中的适用性。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What Every Computer Scientist Should Know About Floating-Point Arithmetic</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .survey-analysis {
+        margin: 1rem 0;
+      }
+      .pdf-figure-container {
+        padding: 1rem;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-purple-600 hover:bg-purple-50;
+    }
+    .nav-item.active {
+      @apply text-purple-600 bg-purple-100;
+    }
+    /* 图像交互样式 */
+    .pdf-figure-container img {
+      transition: transform 0.3s ease;
+    }
+    .pdf-figure-container img:hover {
+      transform: scale(1.02);
+    }
+    .floating-point-example {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border-radius: 10px;
+      padding: 20px;
+      color: white;
+      margin: 20px 0;
+    }
+    .interactive-demo {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      border-left: 4px solid #4f46e5;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#introduction" class="nav-item whitespace-nowrap">引言</a>
+        <a href="#rounding-error" class="nav-item whitespace-nowrap">舍入误差</a>
+        <a href="#ieee-standard" class="nav-item whitespace-nowrap">IEEE标准</a>
+        <a href="#systems-aspects" class="nav-item whitespace-nowrap">系统方面</a>
+        <a href="#details" class="nav-item whitespace-nowrap">技术细节</a>
+        <a href="#summary" class="nav-item whitespace-nowrap">总结</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          What Every Computer Scientist Should Know About Floating-Point Arithmetic
+        </h1>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">作者信息</strong>
+                <div class="text-lg">David Goldberg</div>
+                <div class="text-sm text-gray-600 mt-1">Xerox Palo Alto Research Center</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">发表信息</strong>
+                <div>ACM Computing Surveys, Vol. 23, No. 1, March 1991</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-purple-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/103162.103163</div>
+              </div>
+              <div>
+                <strong class="text-purple-700 block mb-1">综述范围</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">浮点表示</span>
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">IEEE标准</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">舍入误差</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">系统设计</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要部分 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-purple-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed">
+            这篇论文全面介绍了浮点算术的关键概念，特别是IEEE 754标准。文章解释了为什么浮点计算会产生误差，如何测量这些误差，以及如何设计计算机系统来更好地处理浮点运算。论文分为三个主要部分：舍入误差分析、IEEE浮点标准详解，以及浮点运算对计算机系统设计的影响。
+          </p>
+          
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>核心问题
+              </h4>
+              <p class="text-sm text-gray-700">无限实数如何用有限位表示，以及由此产生的舍入误差</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>解决方案
+              </h4>
+              <p class="text-sm text-gray-700">IEEE 754标准提供了统一的浮点表示和运算规范</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-laptop-code mr-2"></i>应用价值
+              </h4>
+              <p class="text-sm text-gray-700">帮助计算机系统设计者更好地支持浮点运算</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 引言部分 -->
+      <section id="introduction" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-purple-500"></i>
+          引言
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            浮点算术在计算机系统中无处不在，但关于它的详细资料却很少。本文旨在填补这一空白，为计算机系统设计者提供关于浮点算术的实用知识。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-map mr-2"></i>研究领域概览
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>浮点表示方法：如何用有限位表示实数</li>
+              <li>舍入误差分析：误差的来源、测量和控制</li>
+              <li>IEEE 754标准：统一的浮点运算规范</li>
+              <li>系统设计影响：指令集、编译器和异常处理</li>
+            </ul>
+          </div>
+          
+          <div class="floating-point-example">
+            <h4 class="font-bold text-white mb-3">浮点数示例</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-sm">十进制: 0.1</p>
+                <p class="text-sm">二进制近似: 1.10011001100110011001101×2⁻⁴</p>
+              </div>
+              <div>
+                <p class="text-sm">格式: ± d.dd...d × βᵉ</p>
+                <p class="text-sm">其中d是数字，β是基数，e是指数</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 舍入误差部分 -->
+      <section id="rounding-error" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-purple-500"></i>
+          舍入误差
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            舍入误差是浮点计算的基本特征。由于实数无法完全用有限位表示，计算结果必须舍入以适应有限的表示形式。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-radiation-alt mr-2"></i>灾难性抵消
+              </h4>
+              <p class="text-sm text-gray-700">当操作数本身含有舍入误差时，相近数的减法会导致大量精确数字消失。</p>
+              <div class="mt-2 text-xs bg-white p-2 rounded border">
+                <p>例子: b² - 4ac</p>
+                <p>b² ≈ 11.2, 4ac ≈ 11.1</p>
+                <p>结果: 0.1 (误差70 ulps)</p>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>良性抵消
+              </h4>
+              <p class="text-sm text-gray-700">当操作数是精确已知时，相近数的减法误差很小。</p>
+              <div class="mt-2 text-xs bg-white p-2 rounded border">
+                <p>例子: (x-y)(x+y) vs x²-y²</p>
+                <p>前者将灾难性抵消转为良性抵消</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="interactive-demo">
+            <h4 class="font-bold text-gray-800 mb-3">保护位的作用</h4>
+            <p class="text-sm text-gray-700 mb-3">没有保护位时:</p>
+            <div class="bg-gray-100 p-3 rounded font-mono text-sm mb-2">
+              x = 1.01×10¹ <br>
+              y = 0.99×10¹ <br>
+              x - y = 0.02×10¹ = 0.2 (错误!)
+            </div>
+            
+            <p class="text-sm text-gray-700 mb-3">有保护位时:</p>
+            <div class="bg-gray-100 p-3 rounded font-mono text-sm">
+              x = 1.010×10¹ <br>
+              y = 0.993×10¹ <br>
+              x - y = 0.017×10¹ = 0.17 (正确!)
+            </div>
+          </div>
+          
+          <!-- PDF图像占位符 -->
+          <div class="pdf-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 mt-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                论文图 1: 归一化数字示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">PDF原图</span>
+            </div>
+            
+            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+              <img src="./images/fig1.png" 
+                   alt="论文图1: 归一化数字示例" 
+                   class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              
+              <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                <div class="flex flex-col items-center justify-center">
+                  <i class="fas fa-sort-numeric-up-alt text-3xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600 font-medium mb-2">图 1: 归一化数字示例</p>
+                  <p class="text-sm text-gray-500 text-center">展示当β=2, p=3, e_min=-1, e_max=2时的16个归一化浮点数</p>
+                  <div class="mt-3 text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    图像路径: ./images/fig1.png
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 p-3 rounded border">
+                <h6 class="font-semibold text-gray-700 mb-2 flex items-center">
+                  <i class="fas fa-list-alt mr-2 text-blue-500"></i>图像内容
+                </h6>
+                <p class="text-sm text-gray-600">展示了基数为2、精度为3、指数范围从-1到2的归一化浮点数分布</p>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <h6 class="font-semibold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-lightbulb mr-2 text-blue-500"></i>技术要点
+                </h6>
+                <ul class="text-sm text-gray-600 list-disc list-inside">
+                  <li>归一化要求前导数字非零</li>
+                  <li>这种表示方法使得浮点数表示唯一</li>
+                  <li>粗体标记对应有效数字为1.00的数字</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong class="text-yellow-700 flex items-center">
+                <i class="fas fa-quote-left mr-2"></i>原图图注:
+              </strong>
+              <span class="ml-2">Normalized numbers when β=2, p=3, e_min=-1, e_max=2.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- IEEE标准部分 -->
+      <section id="ieee-standard" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-balance-scale mr-3 text-purple-500"></i>
+          IEEE浮点标准
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            IEEE 754标准定义了二进制浮点算术的规范，包括格式、运算规则和异常处理。该标准的主要目标是提高浮点计算的可靠性和可移植性。
+          </p>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">参数</th>
+                  <th class="py-2 px-4 border-b text-left">单精度</th>
+                  <th class="py-2 px-4 border-b text-left">单精度扩展</th>
+                  <th class="py-2 px-4 border-b text-left">双精度</th>
+                  <th class="py-2 px-4 border-b text-left">双精度扩展</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">p (精度)</td>
+                  <td class="py-2 px-4 border-b">24</td>
+                  <td class="py-2 px-4 border-b">≥32</td>
+                  <td class="py-2 px-4 border-b">53</td>
+                  <td class="py-2 px-4 border-b">≥64</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">e_max</td>
+                  <td class="py-2 px-4 border-b">+127</td>
+                  <td class="py-2 px-4 border-b">≥+1023</td>
+                  <td class="py-2 px-4 border-b">+1023</td>
+                  <td class="py-2 px-4 border-b">>+16383</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">e_min</td>
+                  <td class="py-2 px-4 border-b">-126</td>
+                  <td class="py-2 px-4 border-b">≤-1023</td>
+                  <td class="py-2 px-4 border-b">-1022</td>
+                  <td class="py-2 px-4 border-b">≤-16382</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">指数宽度(位)</td>
+                  <td class="py-2 px-4 border-b">8</td>
+                  <td class="py-2 px-4 border-b">≥11</td>
+                  <td class="py-2 px-4 border-b">11</td>
+                  <td class="py-2 px-4 border-b">≥15</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">格式宽度(位)</td>
+                  <td class="py-2 px-4 border-b">32</td>
+                  <td class="py-2 px-4 border-b">≥43</td>
+                  <td class="py-2 px-4 border-b">64</td>
+                  <td class="py-2 px-4 border-b">≥79</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-infinity mr-2"></i>特殊值
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>NaN (非数字): 表示未定义操作的结果</li>
+                <li>±∞: 表示溢出情况</li>
+                <li>±0: 带符号的零</li>
+                <li>非规格化数: 渐进下溢</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-exchange-alt mr-2"></i>舍入模式
+              </h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>向最接近的值舍入(默认)</li>
+                <li>向零舍入</li>
+                <li>向正无穷舍入</li>
+                <li>向负无穷舍入</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="interactive-demo">
+            <h4 class="font-bold text-gray-800 mb-3">NaN和无穷大的示例</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-red-50 p-3 rounded border">
+                <p class="text-sm font-semibold text-red-700">产生NaN的操作:</p>
+                <ul class="text-xs text-gray-700 mt-1 list-disc list-inside">
+                  <li>0/0</li>
+                  <li>∞ + (-∞)</li>
+                  <li>0 × ∞</li>
+                  <li>√x (当x<0时)</li>
+                </ul>
+              </div>
+              <div class="bg-blue-50 p-3 rounded border">
+                <p class="text-sm font-semibold text-blue-700">无穷大的操作:</p>
+                <ul class="text-xs text-gray-700 mt-1 list-disc list-inside">
+                  <li>1/0 = ∞</li>
+                  <li>1/∞ = 0</li>
+                  <li>∞ + x = ∞ (x为有限数)</li>
+                  <li>∞ × ∞ = ∞</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 系统方面部分 -->
+      <section id="systems-aspects" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-laptop-code mr-3 text-purple-500"></i>
+          系统方面
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            浮点算术对计算机系统的多个方面都有影响，包括指令集设计、编译器优化和异常处理。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>指令集设计
+              </h4>
+              <p class="text-sm text-gray-700">需要支持基本浮点运算和特殊值处理</p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-code mr-2"></i>编译器优化
+              </h4>
+              <p class="text-sm text-gray-700">需要谨慎处理浮点表达式，避免破坏数值稳定性</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-bug mr-2"></i>异常处理
+              </h4>
+              <p class="text-sm text-gray-700">需要处理溢出、下溢、除零等异常情况</p>
+            </div>
+          </div>
+          
+          <div class="interactive-demo">
+            <h4 class="font-bold text-gray-800 mb-3">Kahan求和公式</h4>
+            <p class="text-sm text-gray-700 mb-3">用于高精度求和的算法:</p>
+            <div class="bg-gray-100 p-3 rounded font-mono text-sm">
+              S = X[1] <br>
+              C = 0 <br>
+              for j = 2 to N { <br>
+              &nbsp;&nbsp;Y = X[j] - C <br>
+              &nbsp;&nbsp;T = S + Y <br>
+              &nbsp;&nbsp;C = (T - S) - Y <br>
+              &nbsp;&nbsp;S = T <br>
+              }
+            </div>
+            <p class="text-sm text-gray-700 mt-3">该算法可以显著减少累加误差，误差界为O(Nε²)∑|x_j|，而不是简单求和的O(Nε)∑|x_j|。</p>
+          </div>
+          
+          <div class="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>编译器优化的陷阱
+            </h4>
+            <p class="text-sm text-gray-700">
+              编译器不应随意对浮点表达式应用代数恒等式优化。例如，(x+y)+z 和 x+(y+z) 在浮点运算中可能产生不同结果，特别是当数值大小差异很大时。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 技术细节部分 -->
+      <section id="details" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-calculator mr-3 text-purple-500"></i>
+          技术细节
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            这部分提供了论文中提到的数学证明和技术细节，包括误差分析和精确舍入操作的实现。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2">定理9: 保护位下的减法误差</h4>
+              <p class="text-sm text-gray-700">
+                如果使用p+1位(即一个保护位)进行减法，结果的相对舍入误差小于2ε。
+              </p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2">定理10: 加法误差界限</h4>
+              <p class="text-sm text-gray-700">
+                即使没有保护位，计算x+y(x≥0, y≥0)的相对误差最多为2ε。
+              </p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2">定理12: 三角形面积公式</h4>
+              <p class="text-sm text-gray-700">
+                使用改进的三角形面积公式，相对误差最多为16ε(当ε<0.005时)。
+              </p>
+            </div>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2">二进制到十进制转换</h4>
+              <p class="text-sm text-gray-700">
+                单精度二进制数需要9位十进制数才能无损恢复，双精度需要17位十进制数。
+              </p>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h4 class="font-bold text-gray-700 mb-2">浮点运算的精确实现</h4>
+            <p class="text-sm text-gray-700">
+              论文提供了多个算法和定理，展示了如何在浮点运算中实现精确计算，包括:
+            </p>
+            <ul class="text-sm text-gray-700 mt-2 list-disc list-inside">
+              <li>使用保护位减少减法误差</li>
+              <li>精确舍入操作的设计</li>
+              <li>高精度求和的Kahan算法</li>
+              <li>二进制与十进制转换的精确实现</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 总结部分 -->
+      <section id="summary" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-purple-500"></i>
+          总结
+        </h2>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            本文系统地介绍了浮点算术的关键概念，特别是IEEE 754标准。通过严格的数学分析，论文展示了如何理解和控制浮点计算中的误差，以及如何设计计算机系统来更好地支持浮点运算。
+          </p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>提供了浮点误差的严格分析方法</li>
+              <li>详细解释了IEEE 754标准的各个方面</li>
+              <li>展示了浮点算术对计算机系统设计的影响</li>
+              <li>提供了多个精确算法的实现和证明</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>实际意义
+            </h4>
+            <p class="text-sm text-gray-700">
+              随着IEEE浮点标准的广泛接受，使用标准特性的代码变得越来越可移植。本文的见解有助于编写可靠、准确的浮点代码，并设计更好的计算机系统来支持浮点运算。
+            </p>
+          </div>
+          
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-2">论文的局限性</h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>主要关注IEEE 754标准，对其他浮点标准讨论较少</li>
+                <li>部分数学证明较为复杂，可能对初学者不友好</li>
+                <li>没有涵盖所有浮点运算的边界情况</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-2">后续研究方向</h4>
+              <ul class="text-sm text-gray-700 list-disc list-inside">
+                <li>更高精度浮点运算的研究</li>
+                <li>新型硬件架构对浮点运算的支持</li>
+                <li>自动误差分析和优化工具的开发</li>
+                <li>浮点运算在人工智能和机器学习中的应用</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 图像交互增强
+      const images = document.querySelectorAll('.pdf-figure-container img');
+      images.forEach(img => {
+        img.addEventListener('click', function() {
+          this.classList.toggle('max-w-full');
+          this.classList.toggle('max-w-none');
+          this.classList.toggle('cursor-zoom-out');
+        });
+        
+        img.style.cursor = 'zoom-in';
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

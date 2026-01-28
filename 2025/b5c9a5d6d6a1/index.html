@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlphaEvolve: A coding agent for scientific and algorithmic discovery</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      transition: all 0.2s;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      color: #4b5563;
+    }
+    .nav-item:hover {
+      color: #2563eb;
+      background-color: #dbeafe;
+    }
+    .nav-item.active {
+      color: #2563eb;
+      background-color: #dbeafe;
+    }
+    .prose {
+      color: #374151;
+      line-height: 1.75;
+    }
+    .prose p {
+      margin-bottom: 1rem;
+    }
+    .image-placeholder {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border: 2px dashed #d1d5db;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          AlphaEvolve: A coding agent for scientific and algorithmic discovery
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-sm">Alexander Novikov, Ngan Vu, Marvin Eisenberger, Emilien Dupont, Po-Sen Huang, Adam Zsolt Wagner, Sergey Shirobokov, Borislav Kozlovskii, Francisco J. R. Ruiz, Abbas Mehrabian, M. Pawan Kumar, Abigail See, Swarat Chaudhuri, George Holland, Alex Davies, Sebastian Nowozin, Pushmeet Kohli, Matej Balog</div>
+                <div class="text-xs text-gray-600 mt-1">Google DeepMind</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div class="text-sm">arXiv preprint arXiv:2506.13131v1</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">论文标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2506.13131v1</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">AI Agent</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">Evolutionary Algorithm</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs">Code Generation</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs">Scientific Discovery</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>提出了一个结合进化计算与LLM的代码超优化智能体AlphaEvolve</li>
+          <li>在矩阵乘法算法上取得突破，发现了56年来首个改进Strassen算法的4×4矩阵乘法算法</li>
+          <li>在超过50个数学问题上，20%的情况下超越了现有最优解</li>
+          <li>成功优化了Google计算生态系统的关键组件，包括数据中心调度、硬件电路设计和编译器优化</li>
+          <li>展示了AI智能体在科学发现和工程优化中的实际应用价值</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p>在本白皮书中，作者提出了AlphaEvolve，这是一种进化式编码智能体，显著提升了最先进LLM在高度挑战性任务上的能力，如解决开放性科学问题或优化关键计算基础设施组件。</p>
+          <p>AlphaEvolve编排了一个自主的LLM流水线，其任务是通过直接修改代码来改进算法。采用进化方法，持续接收来自一个或多个评估器的反馈，AlphaEvolve迭代地改进算法，可能带来新的科学和实际发现。</p>
+          
+          <!-- 系统概览图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm my-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 1: AlphaEvolve高层概览
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder p-8 rounded-lg">
+              <img src="./images/fig1.png" alt="AlphaEvolve高层概览图，展示系统整体架构和组件交互" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> AlphaEvolve高层概览，展示系统整体架构和组件交互流程
+            </div>
+          </div>
+          
+          <p>作者通过将其应用于多个重要计算问题来展示这种方法的广泛适用性。当应用于优化Google大规模计算堆栈的关键组件时，AlphaEvolve为数据中心开发了更高效的调度算法，在硬件加速器的电路设计中发现了功能等效的简化，并加速了支撑AlphaEvolve本身的LLM的训练。</p>
+          <p>此外，AlphaEvolve发现了新颖的、可证明正确的算法，在数学和计算机科学的一系列问题上超越了最先进的解决方案，显著扩展了先前自动发现方法的范围。值得注意的是，AlphaEvolve开发了一种搜索算法，找到了使用48次标量乘法来乘以两个4×4复值矩阵的过程；这是56年来在这种设置下首次改进Strassen算法。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p>发现新的高价值知识，如做出新颖的科学发现或开发具有商业价值的算法，通常需要经历一个漫长的构思、探索、回溯无望假设、实验和验证的过程。最近，利用大型语言模型（LLM）自动化这一过程的重要部分引起了广泛兴趣。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 my-6">
+            <h5 class="font-semibold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>技术背景
+            </h5>
+            <p>FunSearch系统是AlphaEvolve的前身，它使用LLM引导的进化来发现启发式方法，以构建新颖的数学对象或驱动在线算法的操作。然而，FunSearch只能演化单个Python函数，而AlphaEvolve可以演化跨多个函数和组件的复杂算法。</p>
+          </div>
+          
+          <p>AlphaEvolve与之前系统的关键区别在于其规模和通用性。它利用最先进的LLM来演化实现复杂算法的大型代码片段，这些算法跨越多个函数和组件。因此，它能够在规模和通用性上显著超越其前身。</p>
+          
+          <!-- 对比表格图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm my-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-table mr-2 text-blue-500"></i>
+                原图 表1: AlphaEvolve与FunSearch能力对比
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原表</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder p-8 rounded-lg">
+              <img src="./images/table1.png" alt="AlphaEvolve与FunSearch能力对比表格，展示系统改进点" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> AlphaEvolve与FunSearch能力对比，包括代码演化规模、语言支持、评估能力等方面的改进
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>技术优势
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>演化整个代码文件而非单个函数</li>
+                <li>支持数百行代码的演化</li>
+                <li>支持任何编程语言</li>
+                <li>可并行评估数小时</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>效率提升
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>数千个LLM样本即可满足需求</li>
+                <li>受益于最先进的LLM</li>
+                <li>提示中包含丰富的上下文和反馈</li>
+                <li>可同时优化多个指标</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p>AlphaEvolve是一个编码智能体，编排了一个自主的计算流水线，包括对LLM的查询，并生成解决用户指定任务的算法。在高层面上，编排过程是一种进化算法，逐渐开发出提高与任务相关的自动评估指标得分的程序。</p>
+          
+          <!-- AlphaEvolve系统架构 -->
+          <div class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <div class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 py-2">
+              <i class="fas fa-sitemap mr-2"></i>AlphaEvolve系统架构
+            </div>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: AlphaEvolve发现过程扩展视图
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图展示区域 -->
+                <div class="image-placeholder p-6 md:p-8 rounded-lg">
+                  <img src="./images/fig2.png" alt="AlphaEvolve发现过程扩展视图，展示详细的工作流程" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AlphaEvolve发现过程扩展视图。用户提供初始程序（标记要演化的组件）、评估代码和可选配置。AlphaEvolve然后启动进化循环。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>任务规范:</strong> 用户提供评估机制和初始程序，代码块可以注释为由系统演化</li>
+                  <li><strong>提示采样:</strong> 使用程序数据库中的程序构建丰富的提示</li>
+                  <li><strong>创意生成:</strong> LLM根据提示生成代码修改（差异）</li>
+                  <li><strong>评估:</strong> 评估器对新程序进行评分</li>
+                  <li><strong>进化:</strong> 有前景的解决方案被注册回程序数据库</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>AlphaEvolve使用异步计算流水线（使用asyncio Python库）实现，其中许多计算并发运行，每个计算在其下一步依赖于另一个尚未完成计算的结果时阻塞（等待）。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>使用Gemini 2.0 Flash和Gemini 2.0 Pro的集成，平衡计算吞吐量与生成解决方案的质量。Gemini 2.0 Flash具有较低的延迟，实现更高的候选生成率，而Gemini 2.0 Pro具有更强的能力，提供偶尔的、更高质量的建议。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">输出格式:</strong>
+                    <p>当AlphaEvolve要求LLM修改现有代码时，它请求以特定格式提供更改作为一系列差异块：SEARCH/REPLACE块格式。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 代码示例图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm my-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-code mr-2 text-blue-500"></i>
+                原图 3: AlphaEvolve应用于监督学习管道的示例
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder p-8 rounded-lg">
+              <img src="./images/fig3.png" alt="AlphaEvolve应用于监督学习管道的代码示例" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 将AlphaEvolve应用于演化监督学习管道的说明性示例。所有代码片段都已缩写，省略号表示跳过的行。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">关键组件</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-code mr-2"></i>任务规范
+              </h4>
+              <p class="text-gray-700">用户提供评估机制和初始程序，代码块可以注释为由系统演化。评估函数h将解决方案映射到一组标量评估指标。</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-comment-alt mr-2"></i>提示采样
+              </h4>
+              <p class="text-gray-700">支持各种类型的定制和提供长上下文作为主要进化提示的一部分。提示包括从程序数据库采样的先前发现的解决方案。</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-lightbulb mr-2"></i>创意生成
+              </h4>
+              <p class="text-gray-700">利用最先进LLM的能力来消化先前开发的解决方案信息，并提出新的、多样化的改进解决方案的方法。</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-chart-bar mr-2"></i>评估
+              </h4>
+              <p class="text-gray-700">支持评估级联、LLM生成的反馈和并行化评估等机制，使评估更加灵活和高效。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p>作者在多个领域评估了AlphaEvolve的性能，包括矩阵乘法算法发现、数学问题解决和Google计算生态系统优化。</p>
+          
+          <!-- 矩阵乘法结果 -->
+          <div class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <div class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 py-2">
+              <i class="fas fa-cube mr-2"></i>矩阵乘法算法发现
+            </div>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: AlphaEvolve提出的矩阵乘法算法改进
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图展示区域 -->
+                <div class="image-placeholder p-6 md:p-8 rounded-lg">
+                  <img src="./images/fig4.png" alt="AlphaEvolve提出的发现更快矩阵乘法算法的更改" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AlphaEvolve提出的发现更快矩阵乘法算法的更改。完整差异在左侧概述，一些摘录在右侧突出显示。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>问题表述:</strong> 矩阵乘法算法可以表示为给定3D张量分解为秩一张量</li>
+                  <li><strong>关键指标:</strong> 分解的秩（项数）精确指定计算矩阵乘积所需的标量乘法次数</li>
+                  <li><strong>评估方法:</strong> 选择一组矩阵乘法目标并运行算法，使用多个随机种子初始化</li>
+                  <li><strong>性能测量:</strong> 每个目标上实现的最佳（最低）秩以及实现该秩的种子比例</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">关键突破:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>对于4×4矩阵乘法，AlphaEvolve发现了秩为48的算法</li>
+                      <li>这是56年来在特征为0的任意域上设计秩小于49的算法的首次突破</li>
+                      <li>超越了Strassen算法的49次乘法</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">整体表现:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>在14个不同的矩阵乘法目标上改进了现有技术</li>
+                      <li>在54个考虑的大小中，38个匹配现有技术，14个超越，2个落后</li>
+                      <li>所有情况都提供精确算法，使用整数或半整数条目</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 数学构造结果图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm my-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-shapes mr-2 text-blue-500"></i>
+                原图 5: 使用AlphaEvolve发现的SOTA-breaking数学构造
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder p-8 rounded-lg">
+              <img src="./images/fig5.png" alt="使用AlphaEvolve发现的SOTA-breaking数学构造示例" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 使用AlphaEvolve发现的SOTA-breaking数学构造示例。AlphaEvolve的多功能性使我们能够解决分析、几何和组合数学中的问题。
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">数学问题解决</h3>
+          
+          <p>作者将AlphaEvolve应用于一个精选的50多个数学问题集合，涵盖超过五个不同的数学分支，包括分析、组合数学、数论和几何。</p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200 my-6">
+            <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-chart-pie mr-2"></i>数学问题解决表现
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="text-3xl font-bold text-blue-600">75%</div>
+                <div class="text-sm text-gray-600 mt-1">重新发现最佳已知构造</div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="text-3xl font-bold text-green-600">20%</div>
+                <div class="text-sm text-gray-600 mt-1">超越现有最优解</div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="text-3xl font-bold text-gray-600">5%</div>
+                <div class="text-sm text-gray-600 mt-1">未达到最佳已知</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 消融实验图 -->
+          <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm my-6">
+            <div class="flex items-center justify-between mb-3">
+              <h5 class="font-semibold text-gray-700">
+                <i class="fas fa-clipboard-check mr-2 text-blue-500"></i>
+                原图 8: AlphaEvolve消融实验结果
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+            </div>
+            
+            <!-- 原图展示区域 -->
+            <div class="image-placeholder p-8 rounded-lg">
+              <img src="./images/fig8.png" alt="AlphaEvolve消融实验结果图表" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <!-- 图注 -->
+            <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> 左：AlphaEvolve在寻找更快矩阵乘法的低秩张量分解问题上的消融。右：AlphaEvolve在寻找改进接吻数的球体填充问题上的消融。
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p>AlphaEvolve展示了将最先进的LLM与进化框架内的自动评估指标相结合的惊人力量，这可以导致在数十年历史的数学问题上取得新发现，以及对高度优化的计算堆栈的实际改进。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 my-6">
+            <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键洞察
+            </h5>
+            <p>有趣的是，AlphaEvolve通常允许以不同的方式处理相同的问题：直接搜索解决方案，找到从零开始构建它的函数，或者演化搜索算法来找到它。以不同方式应用AlphaEvolve带有不同的偏见（例如，寻找构造函数可能有利于发现高度对称的对象），因此可以适合不同的问题。</p>
+          </div>
+          
+          <p>AlphaEvolve也可以被视为一种测试时计算智能体，通过其进化过程，显著增强了基础LLM的能力（与例如重复采样相比）。一方面，这可以被视为机器反馈如何能够维持测试时计算扩展到新科学发现和高度有价值的实际优化得以实现的机制的有力证明。另一方面，一个自然的下一步将是考虑将AlphaEvolve增强的基础LLM的性能提炼到下一代基础模型中。</p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200 my-6">
+            <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>局限性与未来工作
+            </h5>
+            <p>AlphaEvolve的主要限制是它处理可以设计自动评估器的问题。虽然这在数学和计算科学的许多问题中是成立的，但在自然科学等领域，只有一些实验可以模拟或自动化。虽然AlphaEvolve确实允许LLM提供对想法的评估，但这不是作者优化的设置。然而，并行工作表明这是可能的，一个自然的步骤将是链接这两个设置，LLM在高级想法上提供反馈，然后过渡到实现阶段，通过代码执行可以获得机器反馈。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化导航高亮
+      highlightNav();
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

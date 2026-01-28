@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Prefetching for Indirect Memory Accesses: A Microarchitectural Perspective</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .original-figure-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Software Prefetching for Indirect Memory Accesses: A Microarchitectural Perspective
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Sam Ainsworth and Timothy M. Jones</div>
+                <div class="text-sm text-gray-600 mt-1">University of Cambridge, UK</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>ACM Transactions on Computer Systems (TOCS) • Vol. 1, No. 1, Article 1 • March 2019</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">论文领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">编译器优化</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">软件预取</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">内存系统</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">性能分析</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">核心贡献</strong>
+                <p class="text-sm">首个针对间接内存访问的自动化软件预取编译器Pass，在8种不同微架构上评估</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>本文核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>首个自动化编译器Pass：</strong>针对间接内存访问（如 <code>array1[array2[i]]</code>）实现自动化软件预取指令插入</li>
+          <li><strong>全面的微架构评估：</strong>在8种不同的处理器（包括Intel、ARM、Qualcomm）上评估性能，涵盖乱序执行和顺序执行核心</li>
+          <li><strong>智能调度算法：</strong>基于依赖负载数量和微架构常数，自动计算最优的预取提前量（look-ahead distance）</li>
+          <li><strong>安全性保证：</strong>通过边界检查和故障避免技术，确保生成的预取代码不会引入新的内存错误</li>
+          <li><strong>可配置基准测试：</strong>创建了Kangaroo和Camel两个可配置基准，系统性地探索了不同工作负载特性下预取的效果</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            许多现代数据处理和高性能计算（HPC）工作负载严重受限于内存延迟。软件预取是一种有吸引力的解决方案，通过特殊的非阻塞加载指令在数据被需要之前将其带入缓存层次结构。
+          </p>
+          <p class="mb-4">
+            然而，手动插入有效的预取指令非常困难，现有的自动化插入技术也有限。本文开发了一种新颖的编译器Pass，用于为间接内存访问（一种在高性能工作负载中常见的特殊不规则内存访问模式）自动生成软件预取指令。
+          </p>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+            <h5 class="font-semibold text-gray-800 mb-2">关键性能结果：</h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-sm"><strong>乱序执行核心：</strong></p>
+                <ul class="list-disc list-inside text-sm text-gray-600 ml-2">
+                  <li>Intel Haswell: <span class="text-green-600 font-medium">1.3×</span> 平均加速比</li>
+                  <li>ARM Cortex-A57: <span class="text-green-600 font-medium">1.1×</span></li>
+                  <li>Intel Kaby Lake: <span class="text-green-600 font-medium">1.2×</span></li>
+                  <li>Intel Xeon Phi KNL: <span class="text-green-600 font-medium">1.35×</span></li>
+                </ul>
+              </div>
+              <div>
+                <p class="text-sm"><strong>顺序执行核心：</strong></p>
+                <ul class="list-disc list-inside text-sm text-gray-600 ml-2">
+                  <li>ARM Cortex-A53: <span class="text-green-600 font-medium">2.1×</span> 平均加速比</li>
+                  <li>第一代Intel Xeon Phi: <span class="text-green-600 font-medium">2.7×</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <p class="mt-4">
+            本文进一步分析了影响软件预取效用的微架构因素，包括提前量距离、内存带宽、动态指令数和TLB支持等。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">1. 内存延迟瓶颈</h3>
+          <p class="mb-4">
+            现代高性能计算（HPC）和数据处理工作负载通常受限于内存访问延迟。硬件预取器可以检测并预取规律的内存访问模式（如步长访问），但对于不规则模式（如间接内存访问）效果有限。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">2. 间接内存访问模式</h3>
+          <p class="mb-4">
+            间接内存访问是一种常见的不规则访问模式，形式如 <code>target_array[base_array[i]]</code>。这种模式出现在：
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2"><i class="fas fa-database mr-2"></i>数据库系统</h4>
+              <p class="text-sm">哈希连接操作中的哈希表查找</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2"><i class="fas fa-project-diagram mr-2"></i>图计算</h4>
+              <p class="text-sm">图遍历中的邻接表访问</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2"><i class="fas fa-sort-numeric-down mr-2"></i>科学计算</h4>
+              <p class="text-sm">稀疏矩阵向量乘法</p>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2"><i class="fas fa-code mr-2"></i>编译器优化</h4>
+              <p class="text-sm">桶排序等算法</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">3. 软件预取的挑战</h3>
+          <div class="bg-red-50 p-5 rounded-lg border border-red-200 mb-6">
+            <h4 class="font-bold text-red-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>为什么手动插入软件预取困难？
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>时机难以把握：</strong>预取太早可能导致缓存污染，太晚则无法掩盖内存延迟</li>
+              <li><strong>指令开销：</strong>预取地址计算指令本身可能引起停顿</li>
+              <li><strong>正确性风险：</strong>不正确的预取可能访问非法地址，导致程序崩溃</li>
+              <li><strong>架构依赖性：</strong>最优预取策略随微架构特性变化</li>
+            </ul>
+          </div>
+          
+          <!-- 图1：间接访问模式示意图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图1 - 间接内存访问模式
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 许多工作负载执行从数组开始的步长间接遍历
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 展示间接内存访问模式，base_array顺序访问，target_array通过base_array的值进行间接访问" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 许多工作负载执行从数组开始的步长间接遍历。我们可以提前查看base_array并从target_array预取未来的值。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>访问模式：</strong><code>for(i=0; i<base_array_size; i++) { target_array[func(base_array[i])]++; }</code></li>
+                  <li><strong>步长间接访问：</strong>顺序遍历base_array，使用其值作为target_array的索引</li>
+                  <li><strong>预取机会：</strong>由于base_array是顺序访问的，我们可以提前加载其值，从而计算未来要访问的target_array地址</li>
+                  <li><strong>硬件预取器局限性：</strong>硬件预取器无法预测这种数据依赖的访问模式</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">关键洞察：</strong>
+                    <p>虽然target_array的访问地址是不规则的，但计算这些地址所需的信息（base_array的值）是按顺序访问的。因此，可以通过提前访问base_array来预测未来的target_array地址。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">预取策略：</strong>
+                    <p>在循环迭代i时，预取<code>target_array[func(base_array[i+offset])]</code>，其中offset是提前量距离。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 mb-6">
+            <h3 class="font-bold text-yellow-800 mb-3 text-lg">
+              <i class="fas fa-question-circle mr-2"></i>核心研究问题
+            </h3>
+            <p class="mb-3">
+              如何为间接内存访问模式<strong>自动化生成有效的软件预取指令</strong>，同时确保：
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>在不同的微架构上都能获得性能提升</li>
+              <li>不会引入新的程序错误或内存访问违规</li>
+              <li>预取开销不会抵消性能收益</li>
+              <li>能够处理复杂的间接访问模式（如多层间接、哈希函数）</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">技术挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-red-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-bug text-red-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">1. 正确性保证</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                预取地址计算可能涉及加载操作，这些加载本身可能引发内存错误。必须确保预取代码不会访问原始程序不会访问的地址。
+              </p>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-blue-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-tachometer-alt text-blue-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">2. 性能调度</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                确定最优的预取提前量（look-ahead distance）。太小则无法掩盖内存延迟，太大则导致缓存污染和资源浪费。
+              </p>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-green-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-microchip text-green-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">3. 架构差异性</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                不同微架构（乱序vs顺序、不同内存子系统、不同TLB支持）对软件预取的响应差异很大。需要跨架构有效的通用策略。
+              </p>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-purple-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-code-branch text-purple-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">4. 模式识别</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                在编译器中间表示（IR）中自动识别间接访问模式，包括处理复杂的控制流和phi节点。
+              </p>
+            </div>
+          </div>
+          
+          <!-- 图2：预取插入的复杂性示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-code mr-2"></i>技术细节：图2 - 软件预取插入的复杂性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 整数排序基准测试中的软件预取位置
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 展示在整数排序基准测试中插入软件预取的复杂性，直观预取和最优预取策略的对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 即使在简单情况下，插入软件预取以实现最大性能也是一个挑战。在(a)中，直观的预取插入位置只有第4行，而最优性能还需要第6行的预取。在(b)中，直观方案会留下性能潜力，选择正确的偏移量对于高性能至关重要。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>代码示例：</strong>整数排序中的关键循环：<code>key_buff1[key_buff2[i]]++</code></li>
+                  <li><strong>直观预取：</strong>只预取<code>key_buff1[key_buff2[i+offset]]</code></li>
+                  <li><strong>最优预取：</strong>还需要预取<code>key_buff2[i+offset+2]</code>，因为硬件预取器可能无法充分预取顺序访问的base_array</li>
+                  <li><strong>性能影响：</strong>仅使用直观预取获得1.08倍加速，同时预取两个数组获得1.30倍加速</li>
+                  <li><strong>关键洞察：</strong>即使对于顺序访问的数组，硬件预取器也可能因交错访问模式而混淆，需要软件预取辅助</li>
+                </ul>
+              </div>
+              
+              <!-- 设计启示部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-lightbulb mr-2"></i>设计启示：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">交错预取的必要性：</strong>
+                    <p>对于间接访问模式，需要为依赖链中的所有数组插入交错的预取指令，即使某些数组是顺序访问的。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">自动化的重要性：</strong>
+                    <p>即使对于这个相对简单的例子，找到最优的预取策略也很困难，这突显了自动化编译器Pass的价值。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">偏移量选择：</strong>
+                    <p>预取偏移量的选择对性能有显著影响，需要根据工作负载特性和微架构特性进行优化。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有方法的局限性</h3>
+          <div class="bg-gray-50 p-5 rounded-lg border border-gray-300 mb-6">
+            <table class="w-full text-sm text-gray-700">
+              <thead>
+                <tr class="bg-gray-200">
+                  <th class="p-3 text-left">方法</th>
+                  <th class="p-3 text-left">局限性</th>
+                  <th class="p-3 text-left">对间接访问的支持</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-300">
+                  <td class="p-3 font-medium">硬件步长预取器</td>
+                  <td class="p-3">只能检测规律地址模式，无法处理数据依赖的间接访问</td>
+                  <td class="p-3"><span class="text-red-600 font-medium">无</span></td>
+                </tr>
+                <tr class="border-b border-gray-300">
+                  <td class="p-3 font-medium">手动软件预取</td>
+                  <td class="p-3">困难、易错、需要专业知识、不可移植</td>
+                  <td class="p-3"><span class="text-yellow-600 font-medium">有限</span></td>
+                </tr>
+                <tr class="border-b border-gray-300">
+                  <td class="p-3 font-medium">Intel ICC编译器预取</td>
+                  <td class="p-3">只支持简单模式，默认不启用，信息不透明</td>
+                  <td class="p-3"><span class="text-yellow-600 font-medium">基本</span></td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">本文方法</td>
+                  <td class="p-3">自动化、安全、跨架构、支持复杂模式</td>
+                  <td class="p-3"><span class="text-green-600 font-medium">全面</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">总体架构</h3>
+          <p class="mb-6">
+            作者实现了一个LLVM IR Pass，在编译器中间表示级别自动识别间接内存访问模式并插入软件预取指令。该Pass在Clang编译器中使用（Xeon Phi平台使用ICC编译器手动插入相同的预取指令）。
+          </p>
+          
+          <!-- 算法1：软件预取生成算法 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-code mr-2"></i>技术细节：算法1 - 软件预取生成算法
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 算法描述部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-algorithm mr-2"></i>算法概述：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>输入：</strong>SSA形式的LLVM中间表示</li>
+                  <li><strong>输出：</strong>插入软件预取指令后的IR</li>
+                  <li><strong>核心步骤：</strong>
+                    <ol class="list-decimal list-inside ml-4 mt-2 space-y-1">
+                      <li>深度优先搜索（DFS）从循环内的加载指令反向遍历数据依赖图</li>
+                      <li>识别归纳变量（induction variable）和依赖指令集</li>
+                      <li>应用过滤条件确保安全性和有效性</li>
+                      <li>计算预取偏移量并生成预取代码</li>
+                      <li>将预取代码插入到原始加载指令之前</li>
+                    </ol>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- 关键技术部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-key mr-2"></i>关键技术：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">深度优先搜索（DFS）：</strong>
+                    <p>从目标加载指令开始，反向遍历操作数依赖链，直到找到归纳变量或到达循环外部。记录路径上的所有指令，这些指令将用于生成预取地址。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">归纳变量识别：</strong>
+                    <p>识别循环中线性变化的变量，这些变量提供了内存级并行性的基础。选择最内层的归纳变量以获得最细粒度的并行性。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">安全过滤：</strong>
+                    <p>过滤掉包含函数调用、非归纳变量的phi节点以及可能引发错误的加载指令，确保生成的预取代码不会引入新的程序错误。</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 算法伪代码展示 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-code mr-2"></i>算法关键步骤（简化）：
+                </h5>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"><code>// 1. 深度优先搜索识别依赖链
+DFS(inst):
+  如果找到归纳变量:
+    返回(归纳变量, 依赖指令集)
+  否则如果操作数是循环内定义的变量:
+    递归调用DFS
+
+// 2. 收集可预取的加载指令
+prefetches = {}
+对于循环内的每个加载指令ld:
+  如果(归纳变量, 指令集) = DFS(ld) 不为空:
+    prefetches添加(ld, 归纳变量, 指令集)
+
+// 3. 过滤和安全性检查
+移除包含函数调用的prefetches
+移除可能引发错误的prefetches
+移除包含非归纳变量phi节点的prefetches
+
+// 4. 生成预取代码
+对于每个(ld, iv, 指令集) in prefetches:
+  offset = 计算偏移量(指令集, iv, ld)
+  复制指令集并调整归纳变量引用
+  将最后的加载指令替换为预取指令
+  在原始加载指令前插入新代码</code></pre>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">关键技术组件</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-red-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-shield-alt text-red-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">故障避免机制</h4>
+              </div>
+              <p class="text-sm text-gray-600 mb-3">
+                确保预取地址计算不会引发内存错误：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <li><strong>边界检查：</strong>使用<code>min(i+offset, array_size)</code>确保索引不越界</li>
+                <li><strong>存储分析：</strong>避免预取可能被同一循环内存储指令修改的数据结构</li>
+                <li><strong>控制流分析：</strong>确保预取地址计算的条件与原始程序一致</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-blue-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-clock text-blue-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">预取调度算法</h4>
+              </div>
+              <p class="text-sm text-gray-600 mb-3">
+                基于依赖负载数量计算最优预取提前量：
+              </p>
+              <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                <code class="text-sm">offset = c × (t - l) / t</code>
+                <p class="text-xs text-gray-500 mt-1">
+                  其中t=预取序列中总负载数，l=当前负载在序列中的位置，c=微架构特定常数（默认64）
+                </p>
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-green-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-arrow-up text-green-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">循环提升优化</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                对于内层循环中的加载，如果其phi节点引用外层循环的值，尝试将预取提升到外层循环。这可以减少预取指令的执行频率，降低开销。
+              </p>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-300 shadow-sm">
+              <div class="flex items-center mb-3">
+                <div class="bg-purple-100 p-3 rounded-full mr-4">
+                  <i class="fas fa-filter text-purple-600"></i>
+                </div>
+                <h4 class="font-bold text-gray-800">模式识别过滤</h4>
+              </div>
+              <p class="text-sm text-gray-600">
+                只针对硬件预取器无法处理的间接访问模式生成软件预取。对于纯步长访问，留给硬件预取器处理。这避免了不必要的指令开销。
+              </p>
+            </div>
+          </div>
+          
+          <!-- 图3：预取Pass运行示例 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-play-circle mr-2"></i>技术细节：图3 - 预取Pass在整数排序基准上的运行示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 预取Pass在整数排序基准上的运行
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 展示预取Pass在整数排序基准上的运行过程，包括原始代码、数据依赖图遍历和生成的预取代码" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 我们的Pass在整数排序基准上运行。从图7的加载指令开始，我们通过数据依赖图（DDG）进行深度优先搜索回溯。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>原始代码：</strong>包含间接访问模式<code>b[a[i]]++</code>的循环</li>
+                  <li><strong>DDG遍历：</strong>从加载指令<code>ld b[...]</code>开始，反向遍历到a数组的加载、归纳变量i、以及数组边界信息</li>
+                  <li><strong>识别结果：</strong>找到两个需要预取的加载：a[i]和b[a[i]]</li>
+                  <li><strong>偏移量计算：</strong>为原始加载计算offset=32，为中间加载计算offset=64</li>
+                  <li><strong>生成代码：</strong>创建带边界检查的预取代码，使用<code>min(i+32, a_size)</code>确保安全</li>
+                </ul>
+              </div>
+              
+              <!-- 示例代码部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-code mr-2"></i>示例代码转换：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-green-700 mb-2">原始代码：</p>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>for (i=0; i<N; i++) {
+  b[a[i]]++;  // 间接内存访问
+}</code></pre>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-green-700 mb-2">预取后代码：</p>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>for (i=0; i<N; i++) {
+  prefetch(a[min(i+64, N)]);
+  prefetch(b[a[min(i+32, N)]]);
+  b[a[i]]++;
+}</code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实现细节</h3>
+          <div class="bg-gray-50 p-5 rounded-lg border border-gray-300">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-800 mb-3">编译器集成</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                  <li><strong>实现平台：</strong>LLVM编译器框架，作为IR Pass实现</li>
+                  <li><strong>编译选项：</strong>使用Clang O3优化级别（ICC使用O1/O2/O3中最优的）</li>
+                  <li><strong>预取提示：</strong>预取到L1缓存，使用最大时间局部性提示（__builtin_prefetch的提示值3）</li>
+                </ul>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-800 mb-3">参数配置</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600">
+                  <li><strong>预取常数c：</strong>所有系统默认设置为64（基于第6.2节的评估）</li>
+                  <li><strong>目标架构：</strong>支持x86、ARM、Xeon Phi等多种指令集架构</li>
+                  <li><strong>线程支持：</strong>初始支持单线程应用，扩展到多线程基准测试的并行实现</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">测试系统（表1）</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-gray-700">
+                <thead>
+                  <tr class="bg-gray-200">
+                    <th class="p-3 text-left">系统代号</th>
+                    <th class="p-3 text-left">处理器</th>
+                    <th class="p-3 text-left">核心类型</th>
+                    <th class="p-3 text-left">关键规格</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b border-gray-300">
+                    <td class="p-3 font-medium">Kaby</td>
+                    <td class="p-3">Intel Core i5-7500</td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">乱序</span></td>
+                    <td class="p-3">3.40GHz, 32 KiB L1D, 6 MiB L3</td>
+                  </tr>
+                  <tr class="border-b border-gray-300">
+                    <td class="p-3 font-medium">Haswell</td>
+                    <td class="p-3">Intel Core i5-4570</td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">乱序</span></td>
+                    <td class="p-3">3.20GHz, 32 KiB L1D, 8 MiB L3</td>
+                  </tr>
+                  <tr class="border-b border-gray-300">
+                    <td class="p-3 font-medium">Phi KNL</td>
+                    <td class="p-3">Intel Xeon Phi 7210</td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">轻度乱序</span></td>
+                    <td class="p-3">1.30GHz, 64核心, 196 GiB DDR4</td>
+                  </tr>
+                  <tr class="border-b border-gray-300">
+                    <td class="p-3 font-medium">A57</td>
+                    <td class="p-3">ARM Cortex-A57</td>
+                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">乱序</span></td>
+                    <td class="p-3">1.9GHz, 4核心, 4 GiB内存</td>
+                  </tr>
+                  <tr class="border-b border-gray-300">
+                    <td class="p-3 font-medium">A53</td>
+                    <td class="p-3">ARM Cortex-A53</td>
+                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">顺序</span></td>
+                    <td class="p-3">2.0GHz, 4核心, 2 GiB DDR3</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-medium">Xeon Phi</td>
+                    <td class="p-3">Intel Xeon Phi 3120P</td>
+                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">顺序</span></td>
+                    <td class="p-3">1.10GHz, 57核心, 6 GiB GDDR5</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">基准测试套件</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">Integer Sort (IS)</h5>
+                <p class="text-sm text-gray-600">NAS并行基准，桶排序，代表计算流体动力学工作负载</p>
+                <div class="mt-2">
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">间接访问</span>
+                </div>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">Conjugate Gradient (CG)</h5>
+                <p class="text-sm text-gray-600">NAS并行基准，稀疏矩阵特征值估计，非结构化网格计算</p>
+                <div class="mt-2">
+                  <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">间接访问</span>
+                </div>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2">RandomAccess (RA)</h5>
+                <p class="text-sm text-gray-600">HPCC基准，随机内存访问，包含哈希函数计算</p>
+                <div class="mt-2">
+                  <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">哈希+间接</span>
+                </div>
+              </div>
+              <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h5 class="font-bold text-yellow-700 mb-2">Hash Join (HJ-2/HJ-8)</h5>
+                <p class="text-sm text-gray-600">数据库哈希连接，2或8个元素每桶，包含链表遍历</p>
+                <div class="mt-2">
+                  <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">链表+间接</span>
+                </div>
+              </div>
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h5 class="font-bold text-red-700 mb-2">Graph500 (G500)</h5>
+                <p class="text-sm text-gray-600">图计算基准，广度优先搜索，压缩稀疏行格式</p>
+                <div class="mt-2">
+                  <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">多层间接</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图4：自动化预取性能结果 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图4 - 自动化与手动软件预取性能对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 自动化软件预取Pass和最佳手动软件预取的性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: 展示在不同系统和基准测试上，自动化软件预取Pass和最佳手动软件预取的性能对比，包括Xeon Phi上ICC生成的预取性能" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 我们的自动化软件预取Pass和找到的最佳手动软件预取的性能。对于Xeon Phi，还显示了ICC生成的软件预取的性能。
+                </div>
+              </div>
+              
+              <!-- 关键发现部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>关键性能发现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-4">
+                  <div>
+                    <strong class="text-blue-700">顺序执行核心受益最大：</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1 space-y-1">
+                      <li>ARM Cortex-A53：<span class="text-green-600 font-medium">2.1×</span> 平均加速比</li>
+                      <li>第一代Intel Xeon Phi：<span class="text-green-600 font-medium">2.7×</span> 平均加速比</li>
+                      <li>原因：顺序核心无法自身重叠内存访问，预取能有效提取内存级并行性</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">乱序执行核心也有显著提升：</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1 space-y-1">
+                      <li>Intel Haswell：<span class="text-green-600 font-medium">1.3×</span> 平均加速比</li>
+                      <li>Intel Kaby Lake：<span class="text-green-600 font-medium">1.2×</span></li>
+                      <li>ARM Cortex-A72：<span class="text-green-600 font-medium">1.2×</span></li>
+                      <li>原因：预取帮助掩盖了硬件无法预测的间接访问延迟</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-blue-700">与手动预取的差距：</strong>
+                    <p>自动化Pass在大多数情况下接近手动优化的性能，但在某些复杂模式（如HJ-8的链表遍历）和输入相关模式上存在差距。</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 架构对比分析 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-microchip mr-2"></i>微架构差异分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-green-700">顺序执行核心（A53, Xeon Phi）：</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>无法重叠内存访问操作</li>
+                      <li>预提取得到了最大的内存级并行性</li>
+                      <li>对指令开销的容忍度较高</li>
+                      <li>TLB和带宽限制影响较小</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">乱序执行核心（Haswell, A57等）：</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件本身有一定能力重叠内存访问</li>
+                      <li>预取补充硬件无法处理的模式</li>
+                      <li>对指令开销更敏感</li>
+                      <li>TLB并行性和带宽可能成为瓶颈</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">关键实验结果</h3>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">1. 微架构对预取效果的影响</h4>
+            
+            <!-- 图6：提前量距离的影响 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-ruler mr-2"></i>技术细节：图6 - 不同提前量距离的性能影响
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图占位符 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 6: 不同提前量距离下的性能变化
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig6.png" alt="论文图6: 展示在不同系统和基准测试上，改变提前量距离(c)对性能的影响，包括IS、CG、RA和HJ-2基准" class="max-w-full h-auto rounded-lg">
+                  </div>
+                </div>
+                
+                <!-- 关键发现 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-bullseye mr-2"></i>关键发现：最优提前量距离的普适性
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>惊人的一致性：</strong>尽管不同微架构在指令数、内存延迟等方面差异很大，但最优提前量距离相对一致</li>
+                    <li><strong>c=64接近最优：</strong>对于大多数基准和微架构组合，c=64都接近最优值</li>
+                    <li><strong>顺序核心例外：</strong>A53和Xeon Phi在HJ-2上的最优c值略低（16-32），但c=64仍可接受</li>
+                    <li><strong>Kaby Lake例外：</strong>在IS基准上，c=128明显优于c=64，因为该基准特别简单</li>
+                    <li><strong>设计启示：</strong>可以设置一个相对慷慨的提前量距离（如64），在大多数情况下都能获得良好性能</li>
+                  </ul>
+                </div>
+                
+                <!-- 原因分析 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h6 class="font-semibold text-green-700 mb-2">原因1：内存绑定工作负载</h6>
+                    <p class="text-sm text-gray-700">
+                      对于内存绑定的工作负载，每个循环迭代的时间主要由内存延迟决定。即使内存延迟变化很大，其对最优提前量距离的影响也较小。
+                    </p>
+                  </div>
+                  <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <h6 class="font-semibold text-yellow-700 mb-2">原因2：迟到比早到更糟糕</h6>
+                    <p class="text-sm text-gray-700">
+                      预取太晚（无法掩盖内存延迟）比预取太早（缓存污染）对性能的影响更大。因此可以安全地使用较大的提前量距离。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </details>
+            
+            <div class="mb-6">
+              <h5 class="font-bold text-gray-800 mb-3">Kryo上的异常情况</h5>
+              <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p class="text-sm text-gray-700 mb-2">
+                  <strong>发现：</strong>RandomAccess在Qualcomm Kryo上是唯一一个软件预取导致显著性能下降的基准-微架构组合。
+                </p>
+                <p class="text-sm text-gray-700">
+                  <strong>异常表现：</strong>当c=4时（间接访问提前2个迭代预取），性能下降达4×；c=2时下降近10×。
+                </p>
+                <p class="text-sm text-gray-700 mt-2">
+                  <strong>可能原因：</strong>推测是由于缓存系统的某些病理性情况导致。在如此小的提前量下，数据可能在预取过程中被加载，导致MSHR（Miss Status Holding Registers）或类似硬件中的某种负面效应，引起显著的临时锁存。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">2. 预取交错深度的影响</h4>
+            
+            <!-- 图7：预取交错深度的影响 -->
+            <div class="bg-gray-50 p-5 rounded-lg border border-gray-300 mb-4">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-layer-group text-blue-500 mr-3"></i>
+                <h5 class="font-bold text-gray-800">关键发现：并非所有依赖负载都值得预取</h5>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">
+                对于HJ-8基准（包含哈希间接访问和三个链表元素遍历），预取所有四个不规则访问并不是最优策略：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li><strong>最优策略：</strong>只预取前三个访问，不预取第四个链表元素</li>
+                <li><strong>原因：</strong>计算第四个元素的地址需要访问前三个元素，这些访问必须在不同的偏移量上进行，导致O(n²)的代码增长</li>
+                <li><strong>开销收益权衡：</strong>预取第四个元素的成本超过了其带来的收益</li>
+                <li><strong>架构差异：</strong>顺序执行系统（A53, Xeon Phi）对预取第四个元素的惩罚较小，因为它们更受内存限制</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">3. 指令开销分析</h4>
+            
+            <!-- 图9：动态指令数增加 -->
+            <div class="bg-gray-50 p-5 rounded-lg border border-gray-300 mb-4">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-code text-purple-500 mr-3"></i>
+                <h5 class="font-bold text-gray-800">软件预取的指令开销</h5>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">
+                添加软件预取会显著增加动态指令数，但内存绑定工作负载仍能获得净性能提升：
+              </p>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                <div class="bg-white p-3 rounded border border-gray-200">
+                  <div class="text-lg font-bold text-red-600">IS: +70%</div>
+                  <div class="text-xs text-gray-500">指令增加</div>
+                </div>
+                <div class="bg-white p-3 rounded border border-gray-200">
+                  <div class="text-lg font-bold text-red-600">CG: +80%</div>
+                  <div class="text-xs text-gray-500">指令增加</div>
+                </div>
+                <div class="bg-white p-3 rounded border border-gray-200">
+                  <div class="text-lg font-bold text-red-600">RA: +70%</div>
+                  <div class="text-xs text-gray-500">指令增加</div>
+                </div>
+                <div class="bg-white p-3 rounded border border-gray-200">
+                  <div class="text-lg font-bold text-green-600">性能提升</div>
+                  <div class="text-xs text-gray-500">仍为正</div>
+                </div>
+              </div>
+              <p class="text-sm text-gray-700 mt-3">
+                <strong>例外：</strong>Graph500在Haswell上，内层循环的预取会降低性能，因此只在外层循环使用预取。
+              </p>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">4. 内存带宽和TLB影响</h4>
+            
+            <!-- 图10和11：带宽和TLB影响 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-gray-50 p-5 rounded-lg border border-gray-300">
+                <h5 class="font-bold text-gray-800 mb-3 flex items-center">
+                  <i class="fas fa-tachometer-alt text-blue-500 mr-2"></i>内存带宽瓶颈
+                </h5>
+                <p class="text-sm text-gray-700 mb-3">
+                  多核场景下，DRAM带宽可能成为瓶颈：
+                </p>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                  <li>Haswell上运行4个IS任务时，吞吐量低于1（比单核顺序执行还慢）</li>
+                  <li>即使共享内存系统成为瓶颈，软件预取仍能提高性能</li>
+                  <li>表明预取不会过度加剧内存带宽竞争</li>
+                </ul>
+              </div>
+              
+              <div class="bg-gray-50 p-5 rounded-lg border border-gray-300">
+                <h5 class="font-bold text-gray-800 mb-3 flex items-center">
+                  <i class="fas fa-table text-green-500 mr-2"></i>TLB支持的影响
+                </h5>
+                <p class="text-sm text-gray-700 mb-3">
+                  透明大页（Transparent Huge Pages）对预取效果的影响：
+                </p>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                  <li>对于简单基准（IS, RA）：大页略微降低了预取的相对收益</li>
+                  <li>对于页表绑定的基准（HJ-2）：大页提高了预取的性能改进</li>
+                  <li>总体趋势保持一致，无论是否启用大页</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-8">
+            <h4 class="font-bold text-gray-800 mb-3">5. 并行工作负载扩展性</h4>
+            
+            <!-- 图12：并行工作负载性能 -->
+            <div class="bg-gray-50 p-5 rounded-lg border border-gray-300">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-project-diagram text-purple-500 mr-3"></i>
+                <h5 class="font-bold text-gray-800">预取与线程级并行性的正交性</h5>
+              </div>
+              <p class="text-sm text-gray-700 mb-3">
+                软件预取和线程级并行性是正交的优化技术，可以同时应用以获得叠加收益：
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded border border-gray-200">
+                  <h6 class="font-bold text-gray-800 text-sm mb-2">Hash Join (HJ-2)</h6>
+                  <p class="text-xs text-gray-600">所有系统都从预取和线程并行性中受益，预取的加速比与运行的线程数基本无关</p>
+                </div>
+                <div class="bg-white p-4 rounded border border-gray-200">
+                  <h6 class="font-bold text-gray-800 text-sm mb-2">Conjugate Gradient (CG)</h6>
+                  <p class="text-xs text-gray-600">Haswell和A57上预取收益有限（数据适合末级缓存），但A53上预取始终提供加速</p>
+                </div>
+                <div class="bg-white p-4 rounded border border-gray-200">
+                  <h6 class="font-bold text-gray-800 text-sm mb-2">Integer Sort (IS)</h6>
+                  <p class="text-xs text-gray-600">预取总是最佳选择，但线程级并行性在Haswell上不是最优的（内存系统瓶颈）</p>
+                </div>
+              </div>
+              <p class="text-sm text-gray-700 mt-3">
+                <strong>关键结论：</strong>单线程性能改进是多线程性能改进的良好预测指标。预取可以在线程级优化无效时提高性能，反之亦然。
+              </p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">可配置基准测试探索</h3>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-800 mb-3">Kangaroo基准测试</h4>
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <p class="text-sm text-gray-700 mb-3">
+                Kangaroo是基于整数排序的可配置基准，用于系统性地探索间接访问模式的空间：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li><strong>可配置数组数量：</strong>1-10个间接访问数组</li>
+                <li><strong>哈希函数选项：</strong>每个数组访问可选择是否应用哈希函数</li>
+                <li><strong>数据大小变化：</strong>0.5MiB到1GiB的不同数组大小</li>
+                <li><strong>预取数量控制：</strong>可控制预取多少个数组</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- 图13：Kangaroo性能结果 -->
+          <div class="mb-6">
+            <h5 class="font-bold text-gray-800 mb-3">关键发现1：乱序与顺序核心的差异</h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h6 class="font-bold text-green-700 text-sm mb-2">顺序执行核心（A53）</h6>
+                <ul class="list-disc list-inside text-xs text-gray-700 space-y-1">
+                  <li>预取收益随数组数量增加而减少</li>
+                  <li>原因是预取代码的O(n²)增长带来的开销</li>
+                  <li>简单模式获得最大收益</li>
+                </ul>
+              </div>
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h6 class="font-bold text-blue-700 text-sm mb-2">乱序执行核心（Haswell）</h6>
+                <ul class="list-disc list-inside text-xs text-gray-700 space-y-1">
+                  <li>预取收益随数组数量先减后增</li>
+                  <li>5个数组后收益开始增加，10个数组时达1.5×以上</li>
+                  <li>内循环大小增加7×，但仍有显著收益</li>
+                  <li>原因：重排序缓冲区限制导致硬件无法充分利用内存级并行性</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <h5 class="font-bold text-gray-800 mb-3">关键发现2：计算密集型循环的意外收益</h5>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <p class="text-sm text-gray-700">
+                <strong>反直觉现象：</strong>对于乱序执行核心，增加循环内的计算量（哈希函数）反而提高了软件预取的相对收益。
+              </p>
+              <p class="text-sm text-gray-700 mt-2">
+                <strong>原因：</strong>计算密集型循环会填满处理器的重排序缓冲区，限制硬件自身提取内存级并行性的能力，从而为软件预取创造了更多机会。预取指令本身提交很快（不引起停顿），使指令窗口能够更快前进。
+              </p>
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-800 mb-3">Camel基准测试</h4>
+            <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <p class="text-sm text-gray-700 mb-3">
+                Camel基准测试探索计算量与内存访问比的影响：
+              </p>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                <li>最简单的间接访问模式（指针数组）</li>
+                <li>可配置的哈希计算轮数（0-30轮）</li>
+                <li>用于量化计算密集型循环中预取的收益</li>
+              </ul>
+              <div class="mt-3 p-3 bg-white rounded border border-purple-300">
+                <p class="text-sm font-medium text-purple-700">惊人结果：</p>
+                <p class="text-sm text-gray-700">
+                  对于Haswell（乱序），6轮哈希计算时预取可获得超过<span class="text-green-600 font-bold">6×</span>的加速比。即使有30个哈希函数，预取仍能提供近<span class="text-green-600 font-bold">2×</span>的加速。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+            <h3 class="font-bold text-green-700 mb-4 text-xl">主要贡献总结</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-bold text-gray-800 mb-3">技术贡献</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li><strong>首个自动化编译器Pass：</strong>为间接内存访问自动生成软件预取指令</li>
+                  <li><strong>安全性保证：</strong>通过边界检查和故障避免技术确保正确性</li>
+                  <li><strong>智能调度：</strong>基于依赖负载数量的预取提前量计算</li>
+                  <li><strong>全面评估：</strong>在8种不同微架构上验证有效性</li>
+                </ul>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-800 mb-3">实验发现</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li><strong>跨架构有效性：</strong>所有测试系统都获得了净性能收益</li>
+                  <li><strong>顺序核心最大收益：</strong>A53（2.1×）和第一代Xeon Phi（2.7×）</li>
+                  <li><strong>参数普适性：</strong>c=64在大多数情况下接近最优</li>
+                  <li><strong>正交优化：</strong>预取与线程级并行性可叠加收益</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">核心发现</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-sort-amount-down mr-2"></i>顺序执行核心
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>最大受益者：</strong>软件预取对顺序执行核心最有效</li>
+                <li><strong>原因：</strong>顺序核心无法自身重叠内存访问，预取提供了唯一的内存级并行性提取机制</li>
+                <li><strong>最佳场景：</strong>简单的间接访问模式，高内存访问与计算比</li>
+                <li><strong>性能提升：</strong>通常能达到2×以上的加速比</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-sort-amount-up mr-2"></i>乱序执行核心
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>反直觉现象：</strong>更复杂的代码（多层间接或大量计算）预取收益更大</li>
+                <li><strong>原因：</strong>复杂代码填满重排序缓冲区，限制硬件自身的内存级并行性提取</li>
+                <li><strong>最佳场景：</strong>计算密集型循环中的间接访问，或多层间接访问</li>
+                <li><strong>极端案例：</strong>Camel基准中，6轮哈希计算时预取可获得6×加速</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">局限性分析</h3>
+          
+          <div class="bg-red-50 p-5 rounded-lg border border-red-200 mb-8">
+            <h4 class="font-bold text-red-700 mb-3">本文方法的局限性</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-bold text-gray-800 mb-2">技术限制</h5>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li><strong>输入依赖模式：</strong>无法处理HJ-8中链表长度这样的运行时属性</li>
+                  <li><strong>复杂控制流：</strong>对于非常复杂的控制流模式识别有限</li>
+                  <li><strong>静态分析局限：</strong>无法基于运行时信息（如循环大小、数据尺寸）动态调整预取策略</li>
+                  <li><strong>非归纳变量模式：</strong>无法处理链表等没有归纳变量的数据结构</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-bold text-gray-800 mb-2">性能限制</h5>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-800">
+                  <li><strong>指令开销：</strong>某些情况下预取代码增长达8.5×，可能抵消收益</li>
+                  <li><strong>缓存友好数据：</strong>数据适合缓存时，预取只有开销没有收益</li>
+                  <li><strong>病理性情况：</strong>Kryo上RA基准的异常性能下降</li>
+                  <li><strong>架构特定优化：</strong>通用策略可能不是每个架构的最优策略</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">未来工作方向</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-300">
+              <h5 class="font-bold text-gray-800 mb-2">运行时自适应</h5>
+              <p class="text-sm text-gray-600">基于运行时信息（循环迭代数、数据尺寸）动态启用/调整预取策略</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-300">
+              <h5 class="font-bold text-gray-800 mb-2">更复杂模式支持</h5>
+              <p class="text-sm text-gray-600">扩展以支持链表、树等递归数据结构，以及更复杂的控制流模式</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-300">
+              <h5 class="font-bold text-gray-800 mb-2">架构特定优化</h5>
+              <p class="text-sm text-gray-600">基于目标微架构特性（如TLB并行性、内存带宽）调整预取策略</p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-300">
+            <h4 class="font-bold text-blue-700 mb-3 text-lg">最终结论</h4>
+            <p class="text-gray-700 mb-3">
+              本文展示了为间接内存访问自动化生成软件预取指令的可行性。通过一个相对简单的编译器Pass，作者在多种不同的微架构上获得了显著的性能提升，证明了软件预取在现代内存绑定工作负载中的价值。
+            </p>
+            <p class="text-gray-700">
+              更重要的是，本文揭示了软件预取在不同微架构上的不同行为模式：对于顺序执行核心，预取是对硬件限制的直接补偿；对于乱序执行核心，预取在复杂计算密集型场景中表现出意想不到的高价值。这些发现为未来的编译器优化和体系结构设计提供了重要启示。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 致谢 -->
+      <div class="mt-12 pt-8 border-t border-gray-300">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">致谢</h3>
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-300">
+          <p class="text-gray-700">
+            本工作得到了工程和物理科学研究委员会（EPSRC）的支持，资助编号为EP/K026399/1和EP/M506485/1，以及ARM有限公司的支持。
+          </p>
+          <p class="text-gray-700 mt-3">
+            与本出版物相关的额外数据可在以下数据仓库获取：<br>
+            <a href="https://doi.org/10.17863/CAM.37731" class="text-blue-600 hover:underline">https://doi.org/10.17863/CAM.37731</a><br>
+            <a href="https://github.com/SamAinsworth/reproduce-tocs2019-paper" class="text-blue-600 hover:underline">https://github.com/SamAinsworth/reproduce-tocs2019-paper</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

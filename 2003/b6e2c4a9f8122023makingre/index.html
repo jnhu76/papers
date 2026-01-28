@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Making reliable distributed systems in the presence of software errors</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    /* 代码块样式 */
+    code {
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+      background-color: #f3f4f6;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      color: #e11d48;
+    }
+    pre code {
+      background-color: transparent;
+      color: inherit;
+      padding: 0;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200 shadow-sm">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar items-center">
+        <span class="font-bold text-gray-800 mr-4 hidden md:block"><i class="fas fa-book-open mr-2"></i>Thesis Nav</span>
+        <a href="#abstract" class="nav-item whitespace-nowrap"><i class="fas fa-file-alt mr-1"></i>摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap"><i class="fas fa-layer-group mr-1"></i>背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap"><i class="fas fa-exclamation-triangle mr-1"></i>问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap"><i class="fas fa-cogs mr-1"></i>设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap"><i class="fas fa-chart-line mr-1"></i>测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap"><i class="fas fa-flag-checkered mr-1"></i>结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left leading-tight">
+          Making reliable distributed systems in the presence of software errors
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg shadow-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1 text-sm uppercase tracking-wider">作者信息</strong>
+                <div class="text-xl font-semibold">Joe Armstrong</div>
+                <div class="text-sm text-gray-600 mt-1">Royal Institute of Technology (KTH), Stockholm</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1 text-sm uppercase tracking-wider">发表信息</strong>
+                <div class="flex items-center">
+                  <span class="bg-gray-100 px-2 py-1 rounded text-sm font-mono mr-2">2003</span>
+                  <span>Doctoral Dissertation</span>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1 text-sm uppercase tracking-wider">技术领域</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border border-gray-200">
+                  Distributed Systems, Fault Tolerance, Programming Languages
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1 text-sm uppercase tracking-wider">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Erlang</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">OTP</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">Fault Tolerance</span>
+                  <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-semibold">Concurrency</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <p class="text-gray-700 leading-relaxed mb-6 text-lg">
+          本论文解决了在假设软件必然包含错误的前提下，如何构建可靠系统这一核心问题。作者通过开发 <strong>Erlang 编程语言</strong> 及其标准库 <strong>OTP (Open Telecom Platform)</strong>，提出了一套构建容错系统的设计方法论。
+        </p>
+
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-5 rounded-r-lg shadow-sm">
+          <h4 class="font-bold text-green-700 mb-3 flex items-center text-lg">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="space-y-2 text-gray-700">
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span><strong>并发导向编程 (COP)</strong>：提出了一种通过隔离进程和消息传递来构建系统的架构模型。</span>
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span><strong>Erlang 语言设计</strong>：满足容错系统对强隔离性、并发处理和动态代码更新的语言级需求。</span>
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span><strong>OTP 框架</strong>：通过通用行为（Behaviours）和监督树（Supervision Trees）将容错逻辑从业务逻辑中抽象出来。</span>
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span><strong>工业级验证</strong>：通过爱立信 AXD301 交换机（170万行代码）验证了方法的有效性，实现了极高的可靠性。</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">电信系统的苛刻需求</h3>
+            <p class="text-gray-700 mb-4">
+              电信交换系统需要处理成千上万的并发活动，并在面临硬件故障和软件错误时保持持续运行。传统的顺序编程语言（如 C++）和基于线程的并发模型（共享状态）无法提供足够的<strong>故障隔离</strong>。
+            </p>
+            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+              <h4 class="font-bold text-yellow-800 mb-2 text-sm uppercase">关键洞察</h4>
+              <p class="text-sm text-gray-700">
+                如果两个进程共享内存，其中一个进程的错误可能破坏另一个进程的数据。为了构建可靠系统，必须消除共享状态，实现强隔离。
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-3 text-center">系统需求演变</h3>
+            <div class="space-y-3">
+              <div class="flex items-center p-3 bg-white rounded shadow-sm border-l-4 border-gray-400">
+                <i class="fas fa-microchip text-gray-500 mr-3 text-xl"></i>
+                <div>
+                  <div class="font-bold text-gray-800">硬件容错</div>
+                  <div class="text-xs text-gray-500">传统的物理冗余</div>
+                </div>
+              </div>
+              <div class="flex justify-center text-gray-400"><i class="fas fa-arrow-down"></i></div>
+              <div class="flex items-center p-3 bg-white rounded shadow-sm border-l-4 border-blue-500">
+                <i class="fas fa-code text-blue-500 mr-3 text-xl"></i>
+                <div>
+                  <div class="font-bold text-gray-800">软件容错</div>
+                  <div class="text-xs text-gray-500">进程隔离与错误恢复机制</div>
+                </div>
+              </div>
+              <div class="flex justify-center text-gray-400"><i class="fas fa-arrow-down"></i></div>
+              <div class="flex items-center p-3 bg-white rounded shadow-sm border-l-4 border-green-500">
+                <i class="fas fa-network-wired text-green-500 mr-3 text-xl"></i>
+                <div>
+                  <div class="font-bold text-gray-800">分布式可靠性</div>
+                  <div class="text-xs text-gray-500">位置透明与动态代码更新</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <p class="text-gray-700 mb-6">
+          作者识别出构建容错软件系统必须满足的六个核心要求（R1-R6），这些要求直接导向了 Erlang 的设计决策：
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R1</span>
+              <h4 class="font-bold text-gray-800">并发性</h4>
+            </div>
+            <p class="text-sm text-gray-600">系统必须支持轻量级进程，创建和销毁的开销必须极低。</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R2</span>
+              <h4 class="font-bold text-gray-800">错误封装</h4>
+            </div>
+            <p class="text-sm text-gray-600">一个进程中的错误绝不能损坏其他进程（强隔离）。</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R3</span>
+              <h4 class="font-bold text-gray-800">故障检测</h4>
+            </div>
+            <p class="text-sm text-gray-600">必须能够检测本地和远程进程的故障。</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R4</span>
+              <h4 class="font-bold text-gray-800">故障识别</h4>
+            </div>
+            <p class="text-sm text-gray-600">必须能够识别异常发生的原因。</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R5</span>
+              <h4 class="font-bold text-gray-800">代码热更</h4>
+            </div>
+            <p class="text-sm text-gray-600">必须在不停止系统的情况下更改代码。</p>
+          </div>
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center mb-2">
+              <span class="bg-red-100 text-red-800 font-bold px-2 py-1 rounded text-xs mr-2">R6</span>
+              <h4 class="font-bold text-gray-800">稳定存储</h4>
+            </div>
+            <p class="text-sm text-gray-600">数据必须能在系统崩溃后存活。</p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现：Erlang 与 OTP
+        </h2>
+        
+        <div class="mb-10">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">1. 核心哲学：Let It Crash</h3>
+          <p class="text-gray-700 mb-4">
+            作者提出了一种激进的错误处理哲学：<strong>不要防御性编程，让进程崩溃</strong>。如果进程无法完成其任务，它应立即终止，并让另一个独立的进程（监督者）来处理错误。这需要将代码分为"执行任务的代码"（Worker）和"处理错误的代码"（Supervisor）。
+          </p>
+        </div>
+
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6" open>
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：监督树架构 (Supervision Trees)
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <div class="architecture-placeholder">
+              <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-sitemap text-3xl text-blue-500 mr-3"></i>
+                <h6 class="font-semibold text-gray-700">Erlang 监督树结构</h6>
+              </div>
+              
+              <div class="flex flex-col items-center">
+                <div class="bg-purple-100 border-2 border-purple-300 p-3 rounded-lg w-48 text-center shadow-sm relative mb-8">
+                  <div class="font-bold text-purple-800">Top Supervisor</div>
+                  <div class="text-xs text-purple-600">Strategy: One-for-One</div>
+                  <div class="absolute -bottom-8 left-1/2 w-0.5 h-8 bg-gray-400 transform -translate-x-1/2"></div>
+                </div>
+                
+                <div class="relative w-full max-w-lg h-0.5 bg-gray-400 mb-8">
+                  <div class="absolute -top-0.5 left-0 w-0.5 h-4 bg-gray-400"></div>
+                  <div class="absolute -top-0.5 right-0 w-0.5 h-4 bg-gray-400"></div>
+                  <div class="absolute -top-0.5 left-1/2 w-0.5 h-4 bg-gray-400"></div>
+                </div>
+
+                <div class="flex justify-between w-full max-w-lg gap-2">
+                  <div class="bg-purple-50 border border-purple-200 p-2 rounded w-32 text-center text-sm">
+                    <div class="font-bold text-purple-700">Sub-Sup A</div>
+                    <div class="text-xs text-gray-500">Restart Logic</div>
+                  </div>
+                  <div class="bg-blue-50 border border-blue-200 p-2 rounded w-32 text-center text-sm">
+                    <div class="font-bold text-blue-700">Worker 1</div>
+                    <div class="text-xs text-gray-500">Business Logic</div>
+                  </div>
+                  <div class="bg-blue-50 border border-blue-200 p-2 rounded w-32 text-center text-sm">
+                    <div class="font-bold text-blue-700">Worker 2</div>
+                    <div class="text-xs text-gray-500">Business Logic</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex justify-center items-center text-gray-500 text-sm mt-6 bg-yellow-50 p-2 rounded border border-yellow-100">
+                <i class="fas fa-bolt text-red-500 mr-2"></i>
+                <span>Worker 崩溃发送退出信号 (Exit Signal) →</span>
+                <i class="fas fa-undo mx-2 text-purple-500"></i>
+                <span>Supervisor 捕获并按策略重启</span>
+              </div>
+            </div>
+            
+            <div class="original-figure-container bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-4">
+              <div class="flex items-center justify-between mb-3">
+                <h5 class="font-semibold text-gray-700">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  参考原图: Supervision hierarchies
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文原图</span>
+              </div>
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig5.3.png" alt="论文图5.3: An AND/OR hierarchy" class="max-w-full h-auto rounded-lg mx-auto">
+              </div>
+              <div class="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>技术解释:</strong> 监督树是构建容错系统的核心架构。节点分为 Workers（执行任务）和 Supervisors（监控）。当 Worker 失败时，Supervisor 根据预定义策略（如 One-for-One, One-for-All）重启它，从而实现自我修复。
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="mb-10">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">2. OTP 抽象层</h3>
+          <p class="text-gray-700 mb-4">
+            作者介绍了 OTP 库如何通过 <strong>Behaviours（行为）</strong> 模式封装通用的并发模式。程序员只需编写回调模块（Callback Module），复杂的并发控制由 OTP 框架处理。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg border-t-4 border-blue-500">
+              <h4 class="font-bold text-gray-800 mb-2">gen_server</h4>
+              <p class="text-sm text-gray-600">实现了通用的客户端-服务器模型。处理同步/异步调用、状态维护和热更新。</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border-t-4 border-green-500">
+              <h4 class="font-bold text-gray-800 mb-2">gen_fsm</h4>
+              <p class="text-sm text-gray-600">有限状态机行为。适用于实现协议栈（如 TCP/IP, Telecom 协议）。</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border-t-4 border-purple-500">
+              <h4 class="font-bold text-gray-800 mb-2">gen_event</h4>
+              <p class="text-sm text-gray-600">事件处理行为。用于日志记录、告警系统等事件流处理。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">3. 进程隔离机制</h3>
+          <p class="text-gray-700 mb-4">
+            Erlang 进程不共享内存，仅通过异步消息传递通信。这确保了故障隔离。
+          </p>
+          <div class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
+<pre><code class="language-erlang text-gray-100 text-sm">
+% 简单的 Erlang 服务器进程示例
+loop(State) ->
+    receive
+        {From, {store, Key, Value}} ->
+            NewState = put(Key, Value, State),
+            From ! {self(), ok},
+            loop(NewState);  % 尾递归维持状态
+        {From, {lookup, Key}} ->
+            From ! {self(), get(Key, State)},
+            loop(State);
+        {'EXIT', Reason} ->  % 故障处理
+            log_error(Reason),
+            exit(Reason)
+    end.
+</code></pre>
+          </div>
+          <p class="text-xs text-gray-500 mt-2 text-right">注：示例代码展示了 Erlang 的消息接收循环模式</p>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估：AXD301 案例研究
+        </h2>
+        
+        <p class="text-gray-700 mb-6">
+          论文通过分析爱立信开发的 <strong>AXD301 ATM 交换机</strong> 来验证 Erlang/OTP 的有效性。这是一个拥有超过 100 万行 Erlang 代码的大型系统。
+        </p>
+
+        <div class="performance-chart-placeholder bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-center mb-6">
+            <i class="fas fa-server text-3xl text-green-500 mr-3"></i>
+            <h6 class="font-semibold text-gray-700 text-lg">AXD301 系统规模与可靠性分析</h6>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+              <h4 class="font-bold text-gray-600 border-b pb-2">代码规模统计</h4>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Erlang 模块数</span>
+                <span class="font-mono font-bold text-blue-600">2,248</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">总代码行数</span>
+                <span class="font-mono font-bold text-blue-600">1,136,150</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Gen_Server 实例</span>
+                <span class="font-mono font-bold text-purple-600">122</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                <div class="bg-blue-600 h-2.5 rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-lg flex flex-col justify-center items-center">
+              <div class="text-5xl font-bold text-green-600 mb-2">99.999...%</div>
+              <div class="text-sm text-gray-600 text-center">系统可靠性 (Nines)</div>
+              <div class="mt-4 text-xs text-gray-500 text-center">
+                <i class="fas fa-info-circle mr-1"></i>
+                著名的"九个9"可靠性声明，证明了软件容错架构的有效性。
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 pt-4 border-t border-gray-100 text-sm text-gray-600">
+            <strong class="text-gray-800">关键发现：</strong> 代码分析显示，系统被清晰地划分为"干净"代码（函数式，无副作用）和"脏"代码（处理硬件、I/O）。虽然没有强制规定，但开发者的自然编程风格使得只有约 1% 的模块包含大量副作用，极大地提高了系统的可维护性和稳定性。
+          </div>
+        </div>
+
+        <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 mb-6">
+          <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-search mr-2"></i>故障恢复证据</h4>
+          <p class="text-sm text-gray-700 leading-relaxed">
+            作者检查了系统的故障日志（Trouble Reports），发现了多个运行时错误的实例。证据表明，在错误发生时，监督树正确地捕获了异常并重启了组件，而并未影响系统的整体流量处理能力。这证实了<strong>"让它崩溃"</strong>策略在实际工业环境中的可行性。
+          </p>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center border-b pb-3">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200">
+          <p class="text-gray-700 mb-4 text-lg leading-relaxed">
+            本论文不仅证明了使用 Erlang 和 OTP 构建大规模、高可靠性系统的可行性，还确立了一种新的编程范式——<strong>并发导向编程 (COP)</strong>。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <h4 class="font-bold text-gray-800 mb-2">已实现目标</h4>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-2">
+                <li>证明了基于轻量级进程和消息传递的架构可以扩展到工业级应用。</li>
+                <li>验证了软件隔离是构建容错系统的关键。</li>
+                <li>建立了一套完整的通用行为库（OTP），极大地简化了可靠系统的开发。</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-bold text-gray-800 mb-2">未来展望</h4>
+              <ul class="list-disc list-inside text-sm text-gray-600 space-y-2">
+                <li>进一步强化"一切皆进程"的概念完整性。</li>
+                <li>改进内核以提供更强的安全性隔离（防止恶意攻击）。</li>
+                <li>探索跨语言组件通信的标准化协议（如论文附录中提出的 UBF）。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+    </div>
+  </div>
+  
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span><span>AI生成</span>
+    </div>
+  </div>
+
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      // 滚动监听高亮
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 150)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动点击
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 100,
+            behavior: 'smooth'
+          });
+        });
+      });
+
+      // AI Badge Logic
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      badge.addEventListener('click', function(){
+        if(!expanded){
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:250px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;z-index:10000;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">费曼教授助手</div><div style="color:#666">本页面内容基于 Joe Armstrong 的博士论文通过 AI 自动生成，旨在通过可视化手段解释计算机科学概念。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if(details) details.remove();
+          expanded = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+    "id": "d7a3c9f8e12b2025ASE",
+    "title": "A.S.E: A Repository-Level Benchmark for Evaluating Security in AI-Generated Code",
+    "authors": ["Keke Lian", "Bing Wang", "Lei Zhang", "Libo Chen", "Junjie Wang", "Ziming Zhao", "Yujiu Yang", "Miaoqian Lin", "Haotong Duan", "Haoran Zhao", "Shuang Liao", "Mingda Guo", "Jiazheng Quan", "Yilu Zhong", "Chenhao He", "Zichuan Chen", "Jie Wu", "Haoling Li", "Zhaoxuan Li", "Jiongchi Yu", "Hui Li", "Dong Zhang"],
+    "year": 2025,
+    "conference": "arXiv",
+    "category": "软件工程与人工智能安全",
+    "keywords": ["AI-Generated Code Security", "Repository-Level Benchmark", "Static Application Security Testing (SAST)", "Large Language Models (LLMs)", "Secure Code Generation", "Web Vulnerabilities", "CWE"],
+    "abstract": "The increasing adoption of large language models (LLMs) in software engineering necessitates rigorous security evaluation of their generated code. However, existing benchmarks often lack relevance to real-world AI-assisted programming scenarios, making them inadequate for assessing the practical security risks associated with AI-generated code in production environments. To address this gap, we introduce A.S.E (AI Code Generation Security Evaluation), a repository-level evaluation benchmark designed to closely mirror real-world AI programming tasks, offering a comprehensive and reliable framework for assessing the security of AI-generated code.\n\nOur evaluation of leading LLMs on A.S.E reveals several key findings. In particular, current LLMs still struggle with secure coding. The complexity in repository-level scenarios presents challenges for LLMs that typically perform well on snippet-level tasks. Moreover, a larger reasoning budget does not necessarily lead to better code generation. These observations offer valuable insights into the current state of AI code generation and help developers identify the most suitable models for practical tasks. They also lay the groundwork for refining LLMs to generate secure and efficient code in real-world applications."
+}

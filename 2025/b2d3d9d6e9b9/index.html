@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rethinking The Compaction Policies in LSM-trees</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Rethinking The Compaction Policies in LSM-trees
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Hengrui Wang, Jiansheng Qiu, Fangzhou Yuan, Huanchen Zhang*</div>
+                <div class="text-sm text-gray-600 mt-1">清华大学，中国</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>Proc. ACM Manag. Data, Vol. 3, No. 3 (SIGMOD), Article 207 (June 2025)</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://doi.org/10.1145/3725344</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">LSM-Trees</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Compaction Policies</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Dynamic Programming</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Query Throughput</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 核心贡献突出显示 -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mt-8">
+          <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li>提出将LSM树中的压缩操作视为提高系统未来查询吞吐量的计算和I/O带宽投资的新视角</li>
+            <li>引入三层模型概念化LSM树，并设计基于动态规划的EcoTune算法</li>
+            <li>将EcoTune压缩策略集成到RocksDB中，实验证明在不同工作负载下显著提升平均查询吞吐量</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            日志结构合并树(LSM树)被广泛用于构建键值存储系统。它们定期压缩重叠的排序运行以减少读取放大。先前关于压缩策略的研究主要集中在写入放大(WA)和读取放大(RA)之间的权衡。
+          </p>
+          <p class="mb-4">
+            在本文中，作者提出将LSM树中的压缩操作视为提高系统未来查询吞吐量的计算和I/O带宽投资，从而重新思考压缩策略设计。典型的LSM树应用程序处理稳定但适度的写入流，并优先考虑用于小排序运行的顶层刷新的资源，以避免因写入停顿而导致数据丢失。
+          </p>
+          <p class="mb-4">
+            作者引入了一个LSM树的三层模型，并提出了EcoTune，一种基于动态规划的算法，根据工作负载特征找到最优压缩策略。在RocksDB上的评估表明，在具有范围/点查询比率的工作负载上，EcoTune比Leveling策略提高了1.5倍到3倍的平均查询吞吐量，比Lazy-Leveling策略提高了最高1.8倍。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">LSM树概述</h3>
+          <p class="mb-4">
+            LSM树是许多现代键值存储系统的基础。它维护多个排序运行来存储数据，组织成多个容量呈指数级增长的级别。这些级别的容量由大小比控制，通常设置为固定整数T，表示两个连续级别之间的容量比。
+          </p>
+          <p class="mb-4">
+            LSM树还维护内存表作为写入缓冲区。当内存表填满时，后台线程将其刷新到存储中的第0级。当级别达到其容量时，它被压缩到下一级。压缩过程可以由不同条件触发，并具有不同的压缩粒度。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">压缩策略</h3>
+          <p class="mb-4">
+            当级别达到其压缩条件时，LSM树使用后台线程将该级别的数据压缩到下一级。LSM树主要有两种类型的压缩策略：
+          </p>
+          <ul class="list-disc list-inside space-y-2 mb-4">
+            <li><strong>Leveling策略</strong>：贪婪地对一个级别中的所有数据进行排序</li>
+            <li><strong>Tiering策略</strong>：允许每个级别有多个排序运行</li>
+          </ul>
+          <p class="mb-4">
+            这两种策略平衡了写入放大和读取放大。现代LSM树通常使用混合策略，在上层使用Tiering策略，在下层使用Leveling策略。
+          </p>
+          
+          <!-- 图2: 不同压缩策略概览 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - 不同压缩策略概览
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 不同压缩策略概览
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 不同压缩策略概览" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同压缩策略的概览
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>LSM-Bush:</strong> 更灵活的结构，使用相邻级别之间的不同大小比</li>
+                  <li><strong>Lazy Leveling (1L):</strong> 仅最后一级使用Leveling策略，其他级别使用Tiering策略</li>
+                  <li><strong>2L:</strong> 最后两级使用Leveling策略，其他级别使用Tiering策略</li>
+                  <li><strong>3L (RocksDB默认):</strong> 仅第一级使用Tiering策略，其他级别使用Leveling策略</li>
+                  <li><strong>Leveling:</strong> 所有级别都使用Leveling策略</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">策略选择:</strong>
+                    <p>不同压缩策略在写入放大和读取放大之间提供不同的权衡。Leveling策略提供更好的读取性能但写入放大更高，而Tiering策略写入放大更低但读取性能较差。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">混合策略:</strong>
+                    <p>现代LSM树通常使用混合策略，在上层使用Tiering策略减少写入放大，在下层使用Leveling策略优化读取性能。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">研究动机</h3>
+          <p class="mb-4">
+            先前的研究主要关注写入放大和读取放大之间的权衡，假设更高的写入放大会导致更低的写入性能。然而，LSM树应用程序通常经历稳定且适度的写入流，并且仅优先考虑顶层刷新以避免因写入停顿而导致数据丢失。
+          </p>
+          <p class="mb-4">
+            同时，先前的研究使用压缩操作后最坏情况读取放大来建模查询性能。然而，读取放大随时间变化，因为排序运行的数量在压缩轮次中不断变化。对于长时间运行的键值服务，平均查询吞吐量比瞬时RA指标更重要。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">传统压缩策略的局限性</h3>
+          <p class="mb-4">
+            传统压缩策略设计存在几个关键问题：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-clock mr-2"></i>瞬时性能 vs 平均性能
+              </h4>
+              <p class="text-sm text-gray-700">
+                先前工作使用压缩操作后的最坏情况读取放大来建模查询性能，但平均查询吞吐量对于长时间运行的服务更重要。
+              </p>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-balance-scale mr-2"></i>资源竞争
+              </h4>
+              <p class="text-sm text-gray-700">
+                压缩和读取操作从同一资源池竞争CPU和I/O资源，但传统设计未考虑这种竞争关系。
+              </p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-compress-arrows-alt mr-2"></i>固定压缩策略
+              </h4>
+              <p class="text-sm text-gray-700">
+                所有先前压缩策略限制了排序运行为特定允许大小，并将等大小的排序运行分组为物理级别。
+              </p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>现代SSD的变化
+              </h4>
+              <p class="text-sm text-gray-700">
+                现代NVMe SSD的高带宽改变了情况，刷新和压缩可以轻松并行化，为压缩策略设计提供了更大空间。
+              </p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">压缩对查询性能的双重影响</h3>
+          <p class="mb-4">
+            更激进的压缩策略会更频繁地合并不同的排序运行，从而更有利于瞬时查询性能，因为查询在压缩后需要探测更少的排序运行。然而，对于平均查询性能，情况不同，因为压缩和查询总是竞争CPU和I/O资源。
+          </p>
+          <p class="mb-4">
+            在压缩轮次中，CPU和I/O带宽可能偶尔被后台线程用于压缩，暂时降低查询速度甚至阻塞查询。激进的压缩占用CPU和I/O带宽的时间更长。如果我们避免某些压缩，单个查询可能会产生稍高的I/O成本，但在整个压缩轮次中我们将有更多的时间和资源可用于查询。
+          </p>
+          
+          <!-- 图1: 不同压缩策略的平均吞吐量和压缩开销 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图1 - 不同压缩策略的平均吞吐量和压缩开销
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 不同压缩策略的平均吞吐量和压缩开销
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 不同压缩策略的平均吞吐量和压缩开销" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同压缩策略的平均吞吐量和压缩开销。阴影部分对应于压缩的CPU使用情况。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>实验设置:</strong> 在Optane SSD上评估不同压缩策略，固定写入速度</li>
+                  <li><strong>查询工作负载:</strong> 包含35% Get, 35% Seek, 和30%长范围扫描</li>
+                  <li><strong>关键发现:</strong> 尽管Leveling策略在传统瞬时查询性能分析中导致比Lazy Leveling更小的读取放大，但在实验中Leveling的查询吞吐量仅为Lazy Leveling的64%</li>
+                  <li><strong>原因分析:</strong> Leveling中的压缩操作消耗了超过一半(62%)本可用于查询的CPU资源</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>存储设备: Optane SSD</li>
+                      <li>写入速度: 固定</li>
+                      <li>查询类型: Get, Seek, 长范围扫描</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>Leveling策略: 高压缩开销，低查询吞吐量</li>
+                      <li>Lazy Leveling: 较低压缩开销，较高查询吞吐量</li>
+                      <li>EcoTune: 最优平衡，最高查询吞吐量</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">EcoTune算法概述</h3>
+          <p class="mb-4">
+            EcoTune是一种基于动态规划的算法，旨在找到在给定客户端确定的恒定写入速度下，在压缩轮次中优化平均查询吞吐量的压缩策略。平均查询性能应通过压缩的成本和累积回报来建模。
+          </p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg mb-6">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心洞察
+            </h4>
+            <p class="text-gray-700">
+              <strong>压缩时机的重要性：</strong>压缩执行得越早，其累积的未来回报就越大。当LSM树远离全局压缩时，将多个排序运行压缩为一个可以在更长时间内提高查询速度。当LSM树接近全局压缩时，压缩排序运行的收益较小，因为新创建的排序运行不会被长时间查询。
+            </p>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">三层模型设计</h3>
+          <p class="mb-4">
+            作者提出了一个三层模型来概念化LSM树，将排序运行根据它们对查询速度的影响重新划分为三个逻辑级别：
+          </p>
+          
+          <!-- 图4: 多层LSM树 vs 三层LSM树 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图4 - 多层LSM树 vs 三层LSM树
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 多层LSM树 vs 三层LSM树
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: 多层LSM树 vs 三层LSM树" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 多层LSM树与三层LSM树的对比
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>传统多层LSM树:</strong> 所有先前压缩策略将排序运行限制为特定允许大小，并将等大小的排序运行分组为物理级别</li>
+                  <li><strong>理想压缩策略:</strong> 考虑压缩时机的理想压缩策略会导致同一级别中的不同排序运行具有不同大小</li>
+                  <li><strong>三层泛化:</strong> 将排序运行根据对查询速度的影响重新划分为三个逻辑级别：顶层、主层和最后层</li>
+                  <li><strong>主层扁平化:</strong> 将不同大小的排序运行扁平化到一个主层中</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">顶层(Top Level):</strong>
+                    <p>作为SSD上的写入缓冲区，临时存储新刷新的排序运行。不对顶层进行任何压缩以节省资源。为顶层中的所有键构建完整索引以限制内存开销。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">主层(Main Level):</strong>
+                    <p>当顶层达到其容量时，它被压缩到主层中的一个排序运行。主层中排序运行的数量影响长范围扫描的I/O性能。为主层中的每个排序运行构建范围过滤器以加速所有类型的查询。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">最后层(Last Level):</strong>
+                    <p>仅允许最后层中的一个排序运行以限制空间放大，这是广泛使用的设计。当主层达到其容量限制时，LSM树触发全局压缩，将所有排序运行合并到最后层。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">动态规划算法</h3>
+          <p class="mb-4">
+            EcoTune使用动态规划算法来确定两个全局压缩之间的最优压缩策略。算法将问题建模为(e,c)问题，其中e是主层中现有的排序运行数量，c是即将到来的单元排序运行数量。
+          </p>
+          
+          <div class="bg-gray-100 p-4 rounded-lg mb-6">
+            <h4 class="font-bold text-gray-700 mb-2">关键公式</h4>
+            <div class="font-mono text-sm bg-white p-3 rounded border">
+              f(e,c) = max<sub>x</sub>(f(e,x) + (T<sub>w</sub> - x·T<sub>c</sub>)·q(e+1) + f(e+1,c-x))
+            </div>
+            <p class="text-sm text-gray-600 mt-2">
+              其中T<sub>w</sub>是两个连续TM压缩之间的时间，T<sub>c</sub>是使用MLC线程在SSD上重写S数据的时间，q(e)是查询速度函数。
+            </p>
+          </div>
+          
+          <p class="mb-4">
+            算法考虑了查询期间MLC的允许和待处理排序运行的情况，通过引入额外参数来处理更复杂的场景。最终算法复杂度为O(R<sup>5</sup>)，其中R是压缩轮次中的TM压缩数量。
+          </p>
+          
+          <!-- 图5: EcoTune压缩过程概览 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图5 - EcoTune压缩过程概览
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: EcoTune压缩过程概览
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: EcoTune压缩过程概览" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> EcoTune压缩过程概览
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>压缩过程:</strong> 展示了EcoTune在压缩轮次中的压缩过程，包括不同部分的压缩和查询活动</li>
+                  <li><strong>TMC线程:</strong> 负责从顶层到主层的压缩任务</li>
+                  <li><strong>MLC线程:</strong> 负责主层内的压缩任务，在空闲时也处理查询</li>
+                  <li><strong>时间线:</strong> 显示了不同压缩任务和查询活动的时间安排</li>
+                  <li><strong>排序运行创建:</strong> 展示了不同排序运行的创建和合并过程</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">线程分配:</strong>
+                    <p>使用固定数量的线程用于写入内存表和刷新(根据RocksDB调优指南1个线程)。在压缩轮次中，有两种类型的压缩：从顶层到主层的压缩(TM压缩)和主层内的压缩(ML压缩)。这两种压缩可以并行进行。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">资源管理:</strong>
+                    <p>为TM压缩分配两个线程(TMC线程)以跟上刷新速度。当没有TM压缩正在处理时，保持TMC线程空闲以防突然的写入速度爆发。将所有其他可用线程用于ML压缩(MLC线程)和查询(查询线程)。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">查询处理:</strong>
+                    <p>与完全分离前台和后台线程的传统LSM树不同，当MLC线程空闲时也使用它们进行查询，这可以直接提高查询吞吐量。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          <p class="mb-4">
+            作者在RocksDB上实现了EcoTune，并与三种基线方法进行了比较：Leveling(RocksDB的默认压缩策略)、Lazy Leveling和Moose。
+          </p>
+          
+          <div class="bg-gray-100 p-4 rounded-lg mb-6">
+            <h4 class="font-bold text-gray-700 mb-2">实验环境</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-gray-700">硬件配置:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>CPU: Intel Xeon Gold 6248R (3.0GHz)</li>
+                  <li>内存: 512GB DDR4</li>
+                  <li>存储: Intel Optane SSD P5800X</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-gray-700">软件栈:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-700">
+                  <li>操作系统: Ubuntu 20.04</li>
+                  <li>数据库: RocksDB 7.7.3</li>
+                  <li>基准测试: YCSB</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">性能评估</h3>
+          
+          <!-- 图6: 不同工作负载下的查询吞吐量 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图6 - 不同工作负载下的查询吞吐量
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: 不同工作负载下的查询吞吐量
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: 不同工作负载下的查询吞吐量" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同工作负载下的查询吞吐量
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>工作负载A:</strong> 50% Get, 50% Seek操作</li>
+                  <li><strong>工作负载B:</strong> 95% Get, 5% Seek操作</li>
+                  <li><strong>工作负载C:</strong> 100% Get操作</li>
+                  <li><strong>工作负载D:</strong> 95% Put, 5% Get操作</li>
+                  <li><strong>工作负载E:</strong> 95% Scan, 5% Put操作</li>
+                  <li><strong>工作负载F:</strong> 50% Get, 50% Modify操作</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>数据集: YCSB标准工作负载</li>
+                      <li>写入速度: 固定</li>
+                      <li>查询类型: 多种混合操作</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>EcoTune在所有工作负载下表现最佳</li>
+                      <li>在工作负载A下，EcoTune比Leveling提高1.5倍吞吐量</li>
+                      <li>在工作负载E下，EcoTune比Lazy Leveling提高1.8倍吞吐量</li>
+                      <li>Moose在某些工作负载下表现接近EcoTune</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图7: 不同范围查询比例下的查询吞吐量 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图7 - 不同范围查询比例下的查询吞吐量
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 不同范围查询比例下的查询吞吐量
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 不同范围查询比例下的查询吞吐量" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同范围查询比例下的查询吞吐量
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>实验设置:</strong> 固定写入速度，改变范围查询比例</li>
+                  <li><strong>查询类型:</strong> 包含点查询和范围查询的混合工作负载</li>
+                  <li><strong>范围查询比例:</strong> 从0%(纯点查询)到100%(纯范围查询)</li>
+                  <li><strong>关键发现:</strong> 随着范围查询比例增加，EcoTune的优势更加明显</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>写入速度: 固定</li>
+                      <li>查询类型: 点查询和范围查询混合</li>
+                      <li>范围查询比例: 0%到100%</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>在纯点查询场景下，所有策略性能接近</li>
+                      <li>随着范围查询比例增加，EcoTune优势明显</li>
+                      <li>在50%范围查询比例下，EcoTune比Leveling提高3倍吞吐量</li>
+                      <li>在100%范围查询比例下，EcoTune比Lazy Leveling提高1.8倍吞吐量</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-6">资源利用率分析</h3>
+          <p class="mb-4">
+            作者还分析了不同压缩策略的资源利用率，特别是CPU和I/O资源在压缩和查询之间的分配情况。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+              <i class="fas fa-microchip text-blue-500 text-3xl mb-2"></i>
+              <h4 class="font-bold text-blue-700 mb-2">CPU利用率</h4>
+              <p class="text-sm text-gray-700">
+                EcoTune通过动态规划优化CPU资源在压缩和查询之间的分配，提高整体吞吐量。
+              </p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+              <i class="fas fa-hdd text-green-500 text-3xl mb-2"></i>
+              <h4 class="font-bold text-green-700 mb-2">I/O带宽</h4>
+              <p class="text-sm text-gray-700">
+                现代NVMe SSD的高带宽使得压缩和查询可以更好地并行化，EcoTune充分利用了这一特性。
+              </p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+              <i class="fas fa-memory text-purple-500 text-3xl mb-2"></i>
+              <h4 class="font-bold text-purple-700 mb-2">内存开销</h4>
+              <p class="text-sm text-gray-700">
+                EcoTune的三层模型通过为顶层构建完整索引，为主层构建范围过滤器，限制了内存开销。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">主要贡献</h3>
+          <p class="mb-4">
+            本文重新思考了LSM树中的压缩策略设计，提出了将压缩操作视为提高系统未来查询吞吐量的计算和I/O带宽投资的新视角。作者的主要贡献包括：
+          </p>
+          
+          <ul class="list-disc list-inside space-y-2 mb-6">
+            <li>提出将LSM树中的压缩操作视为提高系统未来查询吞吐量的计算和I/O带宽投资的新视角</li>
+            <li>引入LSM树的三层模型，将排序运行根据它们对查询速度的影响重新划分为三个逻辑级别</li>
+            <li>设计EcoTune，一种基于动态规划的算法，根据工作负载特征找到最优压缩策略</li>
+            <li>将EcoTune压缩策略集成到RocksDB中，并在不同工作负载下进行广泛评估</li>
+          </ul>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验结果总结</h3>
+          <p class="mb-4">
+            实验结果表明，在具有范围/点查询比率的工作负载上，EcoTune比Leveling策略提高了1.5倍到3倍的平均查询吞吐量，比Lazy-Leveling策略提高了最高1.8倍。EcoTune在所有测试的工作负载下都表现最佳，特别是在范围查询比例较高的情况下优势更加明显。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">未来工作</h3>
+          <p class="mb-4">
+            作者提出了几个未来研究方向：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+                <i class="fas fa-robot mr-2"></i>自适应压缩策略
+              </h4>
+              <p class="text-sm text-gray-700">
+                研究能够根据运行时工作负载特征动态调整压缩策略的自适应算法。
+              </p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-cloud mr-2"></i>云环境优化
+              </h4>
+              <p class="text-sm text-gray-700">
+                探索在云环境中，考虑不同存储层级和成本模型的压缩策略优化。
+              </p>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-database mr-2"></i>多租户场景
+              </h4>
+              <p class="text-sm text-gray-700">
+                研究在多租户数据库系统中，考虑资源隔离和服务质量保证的压缩策略。
+              </p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>新硬件适配
+              </h4>
+              <p class="text-sm text-gray-700">
+                针对新兴存储技术(如ZNS SSD、计算存储)优化压缩策略设计。
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg mt-8">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center text-xl">
+              <i class="fas fa-check-circle mr-2"></i>最终结论
+            </h4>
+            <p class="text-gray-700">
+              EcoTune通过重新思考压缩策略设计的基本假设，提出了一种新的压缩视角，并在实践中证明了其在提高LSM树查询吞吐量方面的有效性。这项工作为未来LSM树优化研究提供了新的方向和理论基础。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

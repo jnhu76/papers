@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tiered Memory Management Beyond Hotness</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Tiered Memory Management Beyond Hotness
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Jinshu Liu, Hamid Hadian, Hanchen Xu, Huaicheng Li</div>
+                <div class="text-sm text-gray-600 mt-1">Virginia Tech</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>19th USENIX Symposium on Operating Systems Design and Implementation (OSDI), July 7-9, 2025, Boston, MA, USA</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">ISBN 978-1-939133-47-2</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分层内存</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">内存管理</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">CXL</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">性能优化</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>提出了<strong>摊销外核延迟(AOL)</strong>这一新型性能指标，通过结合内存访问延迟和内存级并行性(MLP)来准确量化内存访问的性能影响</li>
+          <li>开发了<strong>Soar</strong>：基于性能贡献的静态对象分配策略，实现近乎最优的数据放置</li>
+          <li>开发了<strong>Atro</strong>：轻量级页面迁移调节策略，消除不必要的迁移开销</li>
+          <li>在多种工作负载上，Soar和Atro比四种最先进的分层设计性能提升高达12.4倍</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            分层内存系统通常依赖访问频率("热度")来指导数据放置。然而，热数据并不总是性能关键的，这限制了基于热度的策略的有效性。
+          </p>
+          <p class="mb-4">
+            作者引入了<strong>摊销外核延迟(AOL)</strong>，这是一种新颖的指标，通过考虑内存访问延迟和内存级并行性(MLP)来精确捕捉内存访问的真实性能影响。
+          </p>
+          <p class="mb-4">
+            利用AOL，作者提出了两种强大的分层机制：<strong>Soar</strong>，一种基于性能贡献放置对象的配置文件引导分配策略；以及<strong>Atro</strong>，一种轻量级页面迁移调节策略，用于消除不必要的迁移。
+          </p>
+          <p>
+            Soar和Atro在多种工作负载上优于四种最先进的分层设计，性能提升高达12.4倍，而在少数情况下性能下降不超过3%。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">分层内存架构</h3>
+          <p class="mb-4">
+            随着图处理和机器学习等内存密集型工作负载的需求增长，集成<strong>快速层</strong>(如DRAM)和<strong>慢速层</strong>(如CXL内存)的分层内存架构正在成为云数据中心的标准。
+          </p>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有方法的局限性</h3>
+          <p class="mb-4">
+            现有的分层设计基于一个假设：频繁访问的("热")数据比冷数据更性能关键，应该驻留在快速层。因此，分层内存管理主要关注热度跟踪、内存分配和迁移策略，以高效地检测、分配和重新定位跨层的热数据。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>关键问题
+            </h4>
+            <p class="text-gray-700">
+              热数据并不总是性能关键的，并且可以驻留在慢速层而不会降低性能。在现代乱序CPU设计中，内存级并行性(MLP)等延迟缓解技术掩盖了内存访问的真实成本。
+            </p>
+          </div>
+          
+          <!-- 图1技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图1 - 基于热度的分层局限性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 基于热度的分层局限性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 基于热度的分层局限性" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 展示基于热度的分层策略的局限性，比较不同数据放置策略的性能表现。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>微基准测试:</strong> 包含两种内存访问模式：顺序读取(高MLP，"热")和指针追逐(低MLP，"冷")</li>
+                  <li><strong>性能对比:</strong> 将热数据放在快速层而冷数据放在慢速层(Hot-on-DRAM)的性能比全DRAM配置差47.6%</li>
+                  <li><strong>关键发现:</strong> 将冷数据放在快速层而热数据放在慢速层(Cold-on-DRAM)比理想的热度放置性能提升34%</li>
+                  <li><strong>结论:</strong> 尽管访问频率较低，但指针追逐访问的序列化性质主导了工作负载性能</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">测试配置:</strong>
+                    <p>每个线程操作专用的2GB缓冲区，"pc"线程发出40亿条加载指令，"seq"线程发出260亿条加载指令</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">性能度量:</strong>
+                    <p>两个线程的总运行时间作为应用程序的性能指标</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">MLP测量:</strong>
+                    <p>顺序区域的MLP=7(高并行性)，指针追逐区域的MLP=1(序列化)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">内存级并行性(MLP)的作用</h3>
+          <p class="mb-4">
+            MLP量化了内存控制器等待完成的未完成内存请求数量。它在减少CPU停顿时间方面起着关键作用。在高MLP访问模式下，CPU可以发出许多并发请求以最小化停顿。相反，序列化访问模式表现出低MLP并更直接地暴露延迟，导致更大的减速。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-bolt mr-2"></i>高MLP模式
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>数组遍历等访问模式</li>
+                <li>CPU可以发出并发请求</li>
+                <li>内存延迟被掩盖</li>
+                <li>对慢速层访问不敏感</li>
+              </ul>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-hourglass-half mr-2"></i>低MLP模式
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>指针追逐等访问模式</li>
+                <li>序列化访问</li>
+                <li>内存延迟直接暴露</li>
+                <li>对慢速层访问敏感</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有分层系统的局限性</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-times-circle mr-2"></i>次优数据放置
+              </h4>
+              <p class="text-sm text-gray-700">
+                现有的粗粒度分配策略优先为新分配的数据放置快速层，但在快速层压力下，性能关键数据经常被置换到慢速层，需要后期昂贵的迁移来纠正放置错误。
+              </p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-weight-hanging mr-2"></i>过度迁移开销
+              </h4>
+              <p class="text-sm text-gray-700">
+                现有系统通常采用激进的迁移策略，通过频繁重新定位非关键页面产生大量开销。这种开销可能侵蚀或抵消分层带来的性能优势。
+              </p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">MLP建模的挑战</h3>
+          <p class="mb-4">
+            虽然MLP在架构社区中是一个成熟的概念，但其对分层内存管理的影响在很大程度上被忽视了。先前跨对象、页面和数据结构的分类工作通常通过粗略启发式或内存访问成本的间接指标隐式反映MLP的影响。然而，它们没有明确建模或量化MLP影响。
+          </p>
+          
+          <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+              <i class="fas fa-question-circle mr-2"></i>缺失的关键要素
+            </h4>
+            <p class="text-gray-700">
+              缺少的是一个原则性的、准确的和MLP感知的性能指标，能够在在线和离线场景中实现更有效的、性能驱动的分层策略，并泛化到各种工作负载。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">摊销外核延迟(AOL)</h3>
+          <p class="mb-4">
+            作者提出了<strong>摊销外核延迟(AOL)</strong>，这是一种新颖的性能指标，通过整合内存延迟和MLP来准确量化内存访问的性能影响。
+          </p>
+          
+          <!-- 图2技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图2 - AOL性能预测
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: AOL性能预测
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: AOL性能预测" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AOL性能预测的准确性和有效性验证。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>LLC-Stall准确性:</strong> LLC-Stall有效捕捉了工作负载在慢速层上的性能减速</li>
+                  <li><strong>基础预测器:</strong> 基于LLC-Stall的基础预测器(P)倾向于高估高MLP工作负载的减速</li>
+                  <li><strong>MLP影响:</strong> 每个LLC-miss的平均stall在不同工作负载间变化可达4倍</li>
+                  <li><strong>AOL模型:</strong> 工作负载特定的修正因子K与AOL呈双曲线关系</li>
+                  <li><strong>预测精度:</strong> 集成K的基础预测器显著提高了预测精度</li>
+                  <li><strong>时间序列预测:</strong> AOL预测器泛化到细粒度时间序列预测</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">AOL定义:</strong>
+                    <p>AOL = Latency / MLP，其中Latency = A₁/A₃，MLP = A₂/A₁</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">基础预测器:</strong>
+                    <p>P = s<sub>LLC</sub> / c，其中s<sub>LLC</sub>是LLC停顿周期数，c是CPU周期数</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">修正因子:</strong>
+                    <p>K = f(AOL) = 1 / (a + b/AOL)，其中a和b是硬件相关常数</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">最终预测器:</strong>
+                    <p>S = P × K ≈ (s<sub>LLC</sub> / c) × (1 / (a + b/AOL))</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>工作负载: 56个来自SPEC CPU 2017和GAPBS的工作负载</li>
+                      <li>硬件: Intel PMU计数器</li>
+                      <li>度量: LLC停顿周期、CPU周期、未完成请求</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>预测精度: Pearson相关系数从0.869提高到0.951</li>
+                      <li>时间序列: 有效捕捉动态性能变化</li>
+                      <li>轻量测量: 仅需4个硬件计数器</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Soar: 基于排名的静态对象分配</h3>
+          <p class="mb-4">
+            Soar是一种AOL驱动的配置文件引导内存分配策略，基于对象对工作负载性能的累积贡献进行排名。
+          </p>
+          
+          <!-- 图3技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图3 - Soar分析流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: Soar分析流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: Soar分析流程" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Soar跟踪多个信息流以基于性能影响推导对象排名。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>对象跟踪:</strong> 通过LD_PRELOAD拦截malloc()/free()和mmap()/mummap()，记录对象元数据</li>
+                  <li><strong>内存访问跟踪:</strong> 使用Intel PEBS采样LLC缺失，记录时间戳和虚拟地址</li>
+                  <li><strong>性能分析:</strong> 利用AOL预测估计内存访问性能影响</li>
+                  <li><strong>流统一:</strong> 合并三个数据流构建全面的时间序列对象配置文件</li>
+                  <li><strong>对象排名:</strong> 基于MLP和访问频率估计相对对象贡献</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">对象分组:</strong>
+                    <p>通过调用栈(call chain)分组对象，相同代码路径的对象视为同一类型</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">采样策略:</strong>
+                    <p>低采样率(如3000)足够，施加可忽略的开销并避免时序偏差</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">内存访问比率:</strong>
+                    <p>R = c / Σc<sub>i</sub>，表示对象内存访问相对于总内存访问的权重</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">分配决策:</strong>
+                    <p>基于对象单位分数排名，将前N个对象放置在快速层</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Atro: 基于AOL的自适应页面迁移</h3>
+          <p class="mb-4">
+            Atro是一种自适应分层编排策略，动态调节页面迁移强度。Atro利用AOL指标检测内存访问重叠高的时期，在这些时期慢速层访问的性能影响最小。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-arrow-down mr-2"></i>低AOL情况
+              </h4>
+              <p class="text-sm text-gray-700">
+                低AOL表示高MLP，意味着内存延迟大部分被掩盖，潜在减速最小。Atro限制热页面检测、页面迁移或两者的速率，以减少不必要的开销。
+              </p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-2 flex items-center">
+                <i class="fas fa-arrow-up mr-2"></i>高AOL情况
+              </h4>
+              <p class="text-sm text-gray-700">
+                高AOL表示序列化、延迟敏感的内存访问，正确的页面迁移可以产生显著的性能增益。Atro通过启用更积极的页面检测和迁移来响应。
+              </p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">与现有系统的集成</h3>
+          <p class="mb-4">
+            Atro可以无缝集成到现有的分层系统中，如TPP、NBT、Nomad和Colloid，以增强其效率并减少开销。
+          </p>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="py-2 px-4 border-b text-left">系统</th>
+                  <th class="py-2 px-4 border-b text-left">集成方式</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">Atro+TPP</td>
+                  <td class="py-2 px-4 border-b">基于离线分析阈值按比例限制页面迁移速率</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Atro+NBT</td>
+                  <td class="py-2 px-4 border-b">在内存访问重叠显著时期限制设置为PAGE_NONE的页面数量</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Atro+Nomad</td>
+                  <td class="py-2 px-4 border-b">调节从慢速层到快速层的页面迁移</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Atro+Colloid</td>
+                  <td class="py-2 px-4 border-b">仅调节从慢速层到快速层的页面迁移</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-server mr-2"></i>测试平台
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li><strong>SKX平台:</strong> CloudLab双路Intel Skylake服务器，快速/慢速层延迟90/190ns，带宽49/17 GB/s</li>
+                <li><strong>SPR平台:</strong> Intel Sapphire Rapids服务器，快速/慢速层延迟114/271ns，带宽218/26 GB/s</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-tasks mr-2"></i>工作负载
+              </h4>
+              <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li>图分析(GAPBS)</li>
+                <li>机器学习(GPT-2)</li>
+                <li>缓存(Redis)</li>
+                <li>高性能计算(SPEC CPU 2017)</li>
+              </ul>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Soar性能评估</h3>
+          
+          <!-- 图4技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图4 - Soar性能比较
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: Soar性能比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: Soar性能比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Soar与现有分层策略的性能比较。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>基准系统:</strong> 比较了TPP、NBT、Nomad和Colloid四种最先进的分层系统</li>
+                  <li><strong>性能指标:</strong> 标准化运行时间，越低越好</li>
+                  <li><strong>工作负载:</strong> 包含图分析、机器学习和缓存工作负载</li>
+                  <li><strong>Soar优势:</strong> 在大多数工作负载上表现最佳或接近最佳</li>
+                  <li><strong>性能提升:</strong> 相比次优系统，性能提升高达12.4倍</li>
+                  <li><strong>稳定性:</strong> 在少数情况下性能下降不超过3%</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>平台: SKX和SPR</li>
+                      <li>工作负载: GAPBS、GPT-2、Redis</li>
+                      <li>快速层容量: 25%总内存</li>
+                      <li>比较基准: TPP、NBT、Nomad、Colloid</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>平均性能: Soar在所有工作负载上表现最佳</li>
+                      <li>最大提升: 相比次优系统提升12.4倍</li>
+                      <li>稳定性: 性能下降不超过3%</li>
+                      <li>泛化性: 在两个平台上均表现优异</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Atro性能评估</h3>
+          
+          <!-- 图5技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图5 - Atro迁移开销减少
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: Atro迁移开销减少
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: Atro迁移开销减少" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Atro减少迁移开销的效果分析。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>迁移开销:</strong> 现有系统产生大量不必要的迁移开销</li>
+                  <li><strong>Atro效果:</strong> Atro显著减少了迁移开销</li>
+                  <li><strong>性能提升:</strong> 迁移开销减少直接转化为性能提升</li>
+                  <li><strong>系统集成:</strong> Atro与现有系统无缝集成</li>
+                  <li><strong>开销减少:</strong> 迁移开销减少可达70%以上</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>系统: TPP、NBT、Nomad、Colloid</li>
+                      <li>工作负载: 图分析、机器学习、缓存</li>
+                      <li>度量: 迁移页面数量、迁移开销</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>迁移减少: 平均减少50-70%的迁移</li>
+                      <li>性能提升: 迁移减少直接转化为性能提升</li>
+                      <li>系统兼容: 与所有测试系统兼容</li>
+                      <li>开销最小: Atro自身开销可忽略</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">AOL预测准确性验证</h3>
+          
+          <!-- 图6技术细节 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：图6 - AOL预测准确性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: AOL预测准确性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: AOL预测准确性" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AOL预测准确性的定量评估。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>预测精度:</strong> AOL预测器显著提高了性能预测精度</li>
+                  <li><strong>相关性:</strong> Pearson相关系数从0.869提高到0.951</li>
+                  <li><strong>时间序列:</strong> 有效捕捉动态性能变化</li>
+                  <li><strong>轻量测量:</strong> 仅需4个硬件计数器</li>
+                  <li><strong>泛化性:</strong> 在两个平台上均表现优异</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>工作负载: 56个来自SPEC CPU 2017和GAPBS的工作负载</li>
+                      <li>硬件: Intel PMU计数器</li>
+                      <li>度量: LLC停顿周期、CPU周期、未完成请求</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>精度提升: Pearson相关系数从0.869提高到0.951</li>
+                      <li>时间序列: 有效捕捉动态性能变化</li>
+                      <li>轻量测量: 仅需4个硬件计数器</li>
+                      <li>平台兼容: 在两个Intel平台上均表现优异</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者提出了<strong>摊销外核延迟(AOL)</strong>，这是一种新颖的性能指标，通过整合内存访问延迟和内存级并行性(MLP)来准确量化内存访问的性能影响。
+          </p>
+          
+          <p class="mb-4">
+            基于AOL，作者开发了两种强大的分层机制：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-rocket mr-2"></i>Soar
+              </h4>
+              <p class="text-sm text-gray-700">
+                基于性能贡献的静态对象分配策略，实现近乎最优的数据放置
+              </p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-sliders-h mr-2"></i>Atro
+              </h4>
+              <p class="text-sm text-gray-700">
+                轻量级页面迁移调节策略，消除不必要的迁移开销
+              </p>
+            </div>
+          </div>
+          
+          <p class="mb-4">
+            在多种工作负载上，Soar和Atro比四种最先进的分层设计性能提升高达12.4倍，而在少数情况下性能下降不超过3%。
+          </p>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>未来工作方向
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>探索AOL在其他内存架构中的应用</li>
+              <li>研究AOL在异构计算环境中的适用性</li>
+              <li>开发更高效的AOL在线测量技术</li>
+              <li>扩展AOL到更广泛的内存层次结构</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

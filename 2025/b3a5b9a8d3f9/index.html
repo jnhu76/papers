@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eBPF Misbehavior Detection: Fuzzing with a Specification-Based Oracle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      @apply bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          eBPF Misbehavior Detection: Fuzzing with a Specification-Based Oracle
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Tao Lyu, Kumar Kartikeya Dwivedi, Thomas Bourgeat, Mathias Payer, Meng Xu, Sanidhya Kashyap</div>
+                <div class="text-sm text-gray-600 mt-1">EPFL, University of Waterloo</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>计算机系统领域顶级会议</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">项目地址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">https://github.com/rs3lab/veritas</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">eBPF</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Fuzzing</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Verification</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">SMT</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>eBPF指令语义和安全属性的规范定义</strong>：系统分析了eBPF虚拟机，指定了其指令语义（特别是类型系统）和保证的安全属性</li>
+          <li><strong>基于规范的检测器SpecCheck</strong>：提出了基于规范的检查器SpecCheck，并集成到模糊测试框架Vertas中，实现了对eBPF验证器各类错误的自动全面检测</li>
+          <li><strong>发现严重漏洞</strong>：Vertas发现了可导致权限提升和信息泄露的严重安全漏洞，以及给开发者带来显著可用性问题的错误</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            Linux eBPF验证器中的错误可能导致其错误地接受不安全的eBPF程序或拒绝安全的程序，从而引发安全或可用性问题。虽然之前针对eBPF验证器的模糊测试工作已经取得了一定效果，但它们的错误预言只能间接提示错误的存在（例如，当下游执行发生内存错误时），而无法显示根本原因，这限制了它们只能发现狭窄范围的安全错误，无法检测可用性问题。
+          </p>
+          <p class="mb-4">
+            本文提出了SpecCheck，一种基于规范的预言机制，集成到我们的模糊测试框架Vertas中，用于检测eBPF验证器中的广泛错误。SpecCheck将eBPF指令语义和安全属性编码为规范，并将判断具体eBPF程序是否安全的问题转化为检查相应安全约束的可满足性，这可以在无需抽象的情况下自动推理。预言的输出将与eBPF验证器的结果进行交叉检查，以发现任何差异。
+          </p>
+          <p>
+            使用SpecCheck，Vertas在Linux eBPF验证器中发现了13个错误，包括可导致权限提升或信息泄露的严重错误，以及即使经验丰富的内核开发人员也会感到沮丧的错误。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">eBPF虚拟机和验证器</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-cube mr-2"></i>eBPF虚拟机
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>基于寄存器的架构，专用eBPF指令集架构(ISA)</li>
+                <li>10个通用64位寄存器(R0-R9)和1个只读栈帧指针寄存器(R10)</li>
+                <li>固定大小的私有栈内存区域</li>
+                <li>提供与其他类型内存区域的交互能力</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>Linux eBPF验证器
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>确保不受信任的eBPF程序在内核空间"安全"执行</li>
+                <li>结合抽象解释和执行路径枚举的算法</li>
+                <li>验证控制流图以防止无限循环和递归</li>
+                <li>模拟每条指令的执行，跟踪寄存器和内存区域的状态变化</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">eBPF验证器的问题根源</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>安全程序被拒绝
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>RC1</strong>: 状态抽象导致的不精确性</li>
+                <li><strong>RC2</strong>: 不一致的安全规则</li>
+                <li><strong>RC3</strong>: 错误的实现</li>
+              </ul>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-bug mr-2"></i>不安全程序被接受
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>RC3</strong>: 错误的实现</li>
+                <li><strong>RC4</strong>: 错误的优化</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 技术细节：图1 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>技术细节：图1 - 抽象解释不精确导致的错误
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: 抽象解释不精确导致的错误
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 - 使用img标签并直接设置src属性 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: 抽象解释不精确导致的错误示例" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 由于不精确的抽象解释导致的错误，Vertas发现的一个sched-ext开发者花费数小时调试的bug。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>问题根源:</strong> eBPF验证器的抽象解释设计不将数值范围状态从寄存器传播到非8字节对齐的内存区域</li>
+                <li><strong>错误机制:</strong> 当变量x从内存加载到寄存器r1并进行边界检查时，验证器不会将范围信息传播到4字节对齐的栈数据。当r1及其维护的范围信息在计算res时被覆盖后，重新加载x时验证器没有之前建立的边界记录</li>
+                <li><strong>后果:</strong> 验证器保守地假设x可能越界，错误地拒绝程序</li>
+              </ul>
+            </div>
+            
+            <!-- 代码示例 -->
+            <div class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto">
+              <pre class="font-mono text-sm">
+uint32_t array[11];
+// x对齐到4字节
+// x初始化为从上下文字段加载的值
+uint32_t x = ctx_value;
+uint32_t res;
+// 限制x的范围
+if (x >= 0 && x < 11) {
+  res = compute_value();
+  array[x] = res; // 被错误拒绝
+}</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- 技术细节：图2 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-balance-scale mr-2"></i>技术细节：图2 - 不一致的安全约束
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 不一致的安全约束
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 位运算中不一致的安全约束" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 常规位与操作和原子与操作在指针上产生不一致的验证结果，混淆eBPF应用开发者。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>问题描述:</strong> 常规位与操作和原子与操作在指针上产生不一致的验证结果</li>
+                <li><strong>安全风险:</strong> 两种操作都带来相同的安全风险（潜在指针泄漏），没有额外的安全考虑</li>
+                <li><strong>期望行为:</strong> 应该一致对待这两种操作，对于允许泄漏指针的特权用户，两种变体都应该被允许以最大化编程灵活性</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">现有方法的局限性</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 text-center">
+                <i class="fas fa-check-circle mr-2"></i>形式化验证
+              </h4>
+              <p class="text-sm text-gray-700">高保证性但难以扩展到大型、快速演进的代码库</p>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 text-center">
+                <i class="fas fa-redo-alt mr-2"></i>替代设计
+              </h4>
+              <p class="text-sm text-gray-700">理论基础扎实但难以跟上eBPF验证器的快速演进</p>
+            </div>
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 text-center">
+                <i class="fas fa-bug mr-2"></i>模糊测试
+              </h4>
+              <p class="text-sm text-gray-700">现有预言只能检测RC3和RC4的部分错误，无法发现RC1和RC2的问题</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">现有模糊测试预言的局限性</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">预言类型</th>
+                  <th class="py-2 px-4 border-b text-left">检测能力</th>
+                  <th class="py-2 px-4 border-b text-left">局限性</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">内存清理器(KASAN)</td>
+                  <td class="py-2 px-4 border-b">内存错误</td>
+                  <td class="py-2 px-4 border-b">无法检测信息泄露或类型混淆等非内存错误</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">标量范围不一致</td>
+                  <td class="py-2 px-4 border-b">验证器状态与运行时状态的不一致</td>
+                  <td class="py-2 px-4 border-b">无法检测验证失败的程序的错误</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Vertas系统架构</h3>
+          
+          <!-- 技术细节：图7 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图7 - Vertas系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: Vertas系统架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: Vertas系统架构图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Vertas系统架构图，展示了测试用例生成、eBPF验证器验证、SpecCheck嵌入和验证以及结果比较的完整流程。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>步骤1:</strong> 生成器产生语法有效的eBPF程序作为测试用例，eBPF验证器验证其安全性</li>
+                  <li><strong>步骤2:</strong> SpecCheck基于规范将这些测试用例嵌入到Dafny程序中</li>
+                  <li><strong>步骤3:</strong> 通过Dafny验证器检查它们是否符合规范，作为预言</li>
+                  <li><strong>步骤4:</strong> eBPF验证器结果与SpecCheck预言之间的差异表明eBPF验证器存在错误</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">SpecCheck设计目标</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-bullseye mr-2"></i>精确性
+              </h4>
+              <p class="text-gray-700">准确描述安全eBPF程序集合，精确指定程序状态和安全约束</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-search mr-2"></i>可追踪性
+              </h4>
+              <p class="text-gray-700">能够定位安全违规的根本原因，指出违反预期eBPF安全保证的具体指令</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-expand-arrows-alt mr-2"></i>可扩展性
+              </h4>
+              <p class="text-gray-700">易于扩展以建模新特性，无需对框架进行重大更改</p>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-brain mr-2"></i>可推理性
+              </h4>
+              <p class="text-gray-700">规范必须适合形式推理，能够证明规范应强制执行的高级属性</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">eBPF语义规范</h3>
+          <div class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
+            <pre class="font-mono text-sm">
+datatype ETYPEV = 
+  | Uninit
+  | Scalar(kind: Kinds, val: bv64)
+  | PtrType(r: MemRegion, memid: nat, off: bv64)
+  | PtrOrNullType(r: MemRegion, memid: nat, off: bv64)</pre>
+          </div>
+          <p class="text-gray-700 mb-4">
+            SpecCheck定义了一个动态类型系统，将数据类型与其值关联。Uninit表示未初始化数据。初始化后，数据可以以三种形式存在：Scalar表示整数值；非空指针PtrType；或可能为空的指针PtrOrNullType。
+          </p>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">eBPF安全规范</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3">可用性</h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>SP1:</strong> 控制流安全</li>
+                <li><strong>SP2:</strong> 内存安全</li>
+                <li><strong>SP3:</strong> 资源安全</li>
+              </ul>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">完整性</h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>SP2:</strong> 内存安全</li>
+                <li><strong>SP4:</strong> VM完整性</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 md:col-span-2">
+              <h4 class="font-bold text-green-700 mb-3">机密性</h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li><strong>SP5:</strong> VM数据安全</li>
+                <li>防止敏感信息泄露到非特权用户</li>
+                <li>基于能力模型实施数据安全属性</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 技术细节：图5 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-code mr-2"></i>技术细节：图5 - neg32指令的规范编码
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 5: neg32指令的规范编码
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig5.png" alt="论文图5: neg32指令的规范编码示例" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 指令neg32的编码规范，该指令翻转寄存器dst中的32位值。安全属性被指定为前置条件，而指令语义在函数体内定义。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>前置条件:</strong> 第3行检查指令是否为neg32；安全属性SP4和SP5作为前置条件</li>
+                <li><strong>SP4要求:</strong> 修改的寄存器(dst)不能是只读寄存器R10</li>
+                <li><strong>SP5强制:</strong> 如果缺少权限，此指令必须在标量数据上计算，避免泄露指针或未初始化值</li>
+                <li><strong>类型规则:</strong> 如果安全属性成立，根据类型规则，目标寄存器的类型转换为标量</li>
+                <li><strong>指令语义:</strong> 关于数据值的指令语义使用输入值的否定操作编码</li>
+              </ul>
+            </div>
+            
+            <!-- 代码示例 -->
+            <div class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto">
+              <pre class="font-mono text-sm">
+method {:inline true} insn_neg32(s: State, dst: REG): (s': State)
+  requires s'.R10.T == s.R10.T
+  requires s'.cfg == s.cfg
+  requires s'.mems == s.mems
+  requires s'.maps_meta == s.maps_meta
+  requires dst != R10
+  requires if !s.cfg.cap_leak then s.R[dst].T == Scalar(_) else true
+  ensures s'.R[dst].T == Scalar(_)
+  ensures s'.R[dst].V == bvnot32(s.R[dst].V)
+{
+  // 实现细节
+}</pre>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">漏洞发现结果</h3>
+          
+          <!-- 技术细节：表1 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-table mr-2"></i>技术细节：表1 - Vertas检测到的错误列表
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-table mr-2 text-blue-500"></i>
+                    原表 1: Vertas检测到的错误列表
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原表</span>
+                </div>
+                
+                <!-- 表格内容 -->
+                <div class="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                  <table class="min-w-full">
+                    <thead class="bg-gray-100">
+                      <tr>
+                        <th class="py-2 px-4 border-b text-left">根源</th>
+                        <th class="py-2 px-4 border-b text-left">编号</th>
+                        <th class="py-2 px-4 border-b text-left">指令</th>
+                        <th class="py-2 px-4 border-b text-left">状态</th>
+                        <th class="py-2 px-4 border-b text-left">描述和后果</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC4</td>
+                        <td class="py-2 px-4 border-b">1</td>
+                        <td class="py-2 px-4 border-b">mov</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">未能跟踪栈上的非r10精度，导致权限提升</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC3</td>
+                        <td class="py-2 px-4 border-b">2</td>
+                        <td class="py-2 px-4 border-b">kfunc call</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少参数类型检查，导致拒绝服务</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC4</td>
+                        <td class="py-2 px-4 border-b">3</td>
+                        <td class="py-2 px-4 border-b">store</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">错误标记栈槽类型，导致ASLR绕过</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC3</td>
+                        <td class="py-2 px-4 border-b">4</td>
+                        <td class="py-2 px-4 border-b">atomic*</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少向原子指令使用的栈槽传播精度</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC3</td>
+                        <td class="py-2 px-4 border-b">5</td>
+                        <td class="py-2 px-4 border-b">atomic_xchg</td>
+                        <td class="py-2 px-4 border-b">已确认</td>
+                        <td class="py-2 px-4 border-b">验证器错误识别标量类型，栈指针验证失败</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">6</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">7</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">8</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">9</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">10</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">11</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">12</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-4 border-b">RC1</td>
+                        <td class="py-2 px-4 border-b">13</td>
+                        <td class="py-2 px-4 border-b">load</td>
+                        <td class="py-2 px-4 border-b">已修复</td>
+                        <td class="py-2 px-4 border-b">缺少从寄存器到非8字节对齐栈的范围传播</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原表图注:</strong> Vertas发现的13个错误，按根本原因分类。RC1：抽象解释不精确；RC3：错误实现；RC4：错误优化。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>RC1错误(6-13):</strong> 这些错误源于验证器抽象解释的不精确性，特别是缺少从寄存器到非8字节对齐栈的范围传播</li>
+                  <li><strong>RC3错误(2,4,5):</strong> 这些错误源于验证器的错误实现，包括缺少参数类型检查和精度传播</li>
+                  <li><strong>RC4错误(1,3):</strong> 这些错误源于验证器的错误优化，包括未能跟踪栈上的非r10精度和错误标记栈槽类型</li>
+                  <li><strong>安全影响:</strong> 错误1和3可能导致权限提升和ASLR绕过，而其他错误主要影响可用性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">性能评估</h3>
+          
+          <!-- 技术细节：图8 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图8 - Vertas性能评估
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: Vertas性能评估
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: Vertas性能评估图" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Vertas性能评估，展示了不同配置下的测试用例生成和验证时间。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>测试配置:</strong> 在Intel Xeon Gold 6248R CPU @ 3.00GHz上运行，使用Linux 6.5.0内核</li>
+                  <li><strong>性能指标:</strong> 测量了不同配置下测试用例生成和验证的时间</li>
+                  <li><strong>关键结果:</strong> Vertas能够在合理时间内完成大规模测试，证明了其在实际应用中的可行性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+        
+        <div class="mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">与现有工具对比</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">工具</th>
+                  <th class="py-2 px-4 border-b text-left">检测错误类型</th>
+                  <th class="py-2 px-4 border-b text-left">RC1</th>
+                  <th class="py-2 px-4 border-b text-left">RC2</th>
+                  <th class="py-2 px-4 border-b text-left">RC3</th>
+                  <th class="py-2 px-4 border-b text-left">RC4</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">KASAN</td>
+                  <td class="py-2 px-4 border-b">内存错误</td>
+                  <td class="py-2 px-4 border-b">❌</td>
+                  <td class="py-2 px-4 border-b">❌</td>
+                  <td class="py-2 px-4 border-b">部分</td>
+                  <td class="py-2 px-4 border-b">部分</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">标量范围不一致</td>
+                  <td class="py-2 px-4 border-b">验证器状态不一致</td>
+                  <td class="py-2 px-4 border-b">❌</td>
+                  <td class="py-2 px-4 border-b">❌</td>
+                  <td class="py-2 px-4 border-b">部分</td>
+                  <td class="py-2 px-4 border-b">部分</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Vertas</td>
+                  <td class="py-2 px-4 border-b">基于规范</td>
+                  <td class="py-2 px-4 border-b">✅</td>
+                  <td class="py-2 px-4 border-b">✅</td>
+                  <td class="py-2 px-4 border-b">✅</td>
+                  <td class="py-2 px-4 border-b">✅</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            本文提出了SpecCheck，一种基于规范的预言机制，用于检测eBPF验证器中的错误。SpecCheck将eBPF指令语义和安全属性编码为规范，并将判断具体eBPF程序是否安全的问题转化为检查相应安全约束的可满足性。作者将SpecCheck集成到模糊测试框架Vertas中，实现了对eBPF验证器各类错误的自动全面检测。
+          </p>
+          
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-green-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要成果
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>系统分析了eBPF虚拟机，指定了其指令语义（特别是类型系统）和保证的安全属性</li>
+              <li>提出了基于规范的检查器SpecCheck，并集成到模糊测试框架Vertas中</li>
+              <li>Vertas发现了13个错误，包括可导致权限提升或信息泄露的严重错误</li>
+              <li>证明了基于规范的预言在检测eBPF验证器错误方面的有效性</li>
+            </ul>
+          </div>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来工作
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>扩展SpecCheck以支持更多的eBPF特性和指令</li>
+              <li>优化验证性能，提高测试效率</li>
+              <li>探索在其他系统组件中应用类似的基于规范的测试方法</li>
+              <li>研究如何将规范验证集成到开发流程中，实现持续验证</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

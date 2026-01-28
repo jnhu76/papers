@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMigrate：利用可编程网络的内存键值存储在线迁移</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: smooth; }
+        .section-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .section-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .nav-link.active { border-bottom: 3px solid #3b82f6; color: #1d4ed8; font-weight: 600; }
+        .image-modal { display: none; position: fixed; z-index: 100; padding-top: 60px; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+        .modal-content { margin: auto; display: block; max-width: 90%; max-height: 80%; }
+        .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+        .fig-container { cursor: pointer; border: 1px solid #e5e7eb; border-radius: 0.5rem; overflow: hidden; }
+        .fig-container img { width: 100%; height: auto; display: block; }
+        .katex { font-size: 1.1em; }
+        
+        /* 新增：优化图片题注样式 */
+        .fig-caption {
+            text-align: center;
+            font-size: 0.875rem; /* 小字 */
+            color: #6b7280; /* 灰色 */
+            padding: 0.75rem 1rem;
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Navigation -->
+    <nav id="top-nav" class="sticky top-0 z-50 bg-white shadow-md py-3 px-4 overflow-x-auto whitespace-nowrap">
+        <div class="container mx-auto flex space-x-6">
+            <a href="#title" class="nav-link py-2 px-1">概览</a>
+            <a href="#core-problem" class="nav-link py-2 px-1">核心问题</a>
+            <a href="#contributions" class="nav-link py-2 px-1">核心贡献</a>
+            <a href="#methodology" class="nav-link py-2 px-1">方法原理</a>
+            <a href="#evaluation" class="nav-link py-2 px-1">实验评估</a>
+            <a href="#conclusion" class="nav-link py-2 px-1">总结</a>
+        </div>
+    </nav>
+
+    <!-- Title Section -->
+    <header id="title" class="container mx-auto px-4 py-12 md:py-16">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">In-Memory Key-Value Store Live Migration with NetMigrate</h1>
+            <p class="text-xl text-gray-600 mb-6">利用可编程网络实现零中断、高性能的内存键值存储在线迁移</p>
+            <div class="flex flex-wrap justify-center items-center gap-4 text-lg text-gray-700">
+                <div><i class="fas fa-user-graduate mr-2 text-blue-500"></i>Zeying Zhu, Yibo Zhao, Zaoxing Liu</div>
+                <div><i class="fas fa-university mr-2 text-blue-500"></i>University of Maryland, Boston University</div>
+                <div><i class="fas fa-calendar-alt mr-2 text-blue-500"></i>FAST '24</div>
+            </div>
+            <hr class="my-8 border-gray-300">
+            <div class="text-left bg-blue-50 p-6 rounded-xl border border-blue-200">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-3"><i class="fas fa-lightbulb text-yellow-500 mr-2"></i>摘要总结</h3>
+                <p class="text-gray-700 leading-relaxed">
+                    本文提出了 <strong>NetMigrate</strong>，一种基于可编程网络数据平面的内存键值存储在线迁移新方法。
+                    传统迁移方案（基于源、基于目标、混合）因无法精确感知迁移过程中数据的实时位置，导致查询性能下降或额外开销巨大。
+                    NetMigrate 创新性地将机架顶部（ToR）可编程交换机作为迁移状态的跟踪中心与查询的智能路由器。
+                    交换机使用混合布隆过滤器以组为单位高效跟踪迁移状态，并据此将客户端查询实时路由到持有数据最新版本的服务器（源或目标）。
+                    实验表明，相比现有最佳方案，NetMigrate 在保证零服务中断的同时，能将查询吞吐量提升 <strong>6.5% 至 416%</strong>，并维持极低的访问延迟和可忽略的额外带宽开销。
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 pb-20">
+        <div class="max-w-6xl mx-auto">
+
+            <!-- Section 1: Core Problem -->
+            <section id="core-problem" class="mb-16 scroll-mt-20">
+                <div class="section-card bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-question-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900">❶ 论文要解决的核心问题</h2>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="p-5 bg-red-50 border-l-4 border-red-500">
+                            <p class="text-lg font-semibold text-gray-800">如何在分布式内存键值存储的<strong>在线数据分片迁移</strong>过程中，保证<strong>零服务中断</strong>的同时，将迁移对<strong>查询性能的影响降至最低</strong>？</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">现有方法的缺陷：</h3>
+                            <div class="grid md:grid-cols-3 gap-4 mb-6">
+                                <div class="p-4 border rounded-lg bg-blue-50">
+                                    <h4 class="font-bold text-blue-800 mb-2">基于源的方法</h4>
+                                    <p class="text-sm">查询都由源处理，迁移时间长，最终仍需暂停服务同步“脏数据”。</p>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-yellow-50">
+                                    <h4 class="font-bold text-yellow-800 mb-2">基于目标的方法</h4                                    <p class="text-sm">查询立刻转到目标，但数据未到时需回源拉取，导致<strong>高查询延迟</strong>。</p>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-green-50">
+                                    <h4 class="font-bold text-green-800 mb-2">混合方法</h4>
+                                    <p class="text-sm">客户端或协调器跟踪状态，导致<strong>双读开销大、客户端复杂、一致性维护难</strong>。</p>
+                                </div>
+                            </div>
+                            <p class="text-gray-700">根本问题：缺乏对<strong>数据实时位置的全局、细粒度视图</strong>。查询到达时，系统不知道数据在哪，只能通过额外数据移动（拉取、重试、双读）保证正确性，损害性能。</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">谁在乎？</h3>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                <li><strong>系统与数据库社区</strong>：大规模服务后端（Redis, Memcached）需要频繁迁移以实现负载均衡、弹性伸缩。</li>
+                                <li><strong>云服务商与平台工程师</strong>：服务级别协议（SLA）严格要求可用性与低延迟，性能下降意味着经济损失和信任危机。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Core Contributions -->
+            <section id="contributions" class="mb-16 scroll-mt-20">
+                <div class="section-card bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-star text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900">❷ 核心贡献（4C 模型）</h2>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="space-y-6">
+                            <div class="p-5 border border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-white">
+                                <h3 class="text-xl font-bold text-blue-800 mb-2"><i class="fas fa-lightbulb mr-2"></i>Concept（新概念）</h3>
+                                <p><strong>NetMigrate</strong>：利用可编程网络数据平面（交换机）作为<strong>迁移状态跟踪与查询路由中枢</strong>的在线迁移框架。首次将交换机变为迁移的"智能大脑"。</p>
+                            </div>
+                            <div class="p-5 border border-yellow-200 rounded-xl bg-gradient-to-br from-yellow-50 to-white">
+                                <h3 class="text-xl font-bold text-yellow-800 mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Challenge（解决的难题）</h3>
+                                <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                    <li><strong>资源受限下的细粒度状态跟踪</strong>：交换机内存有限，如何跟踪数十亿键？</li>
+                                    <li><strong>强一致性保证</strong>：使用概率数据结构时，如何确保总能访问到最新数据？</li>
+                                    <li><strong>支持多样化迁移策略</strong>：如何灵活权衡迁移速度与查询性能？</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="p-5 border border-green-200 rounded-xl bg-gradient-to-br from-green-50 to-white">
+                                <h3 class="text-xl font-bold text-green-800 mb-2"><i class="fas fa-cogs mr-2"></i>Construction（方法设计）</h3>
+                                <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                    <li><strong>网络中心化架构</strong>：ToR交换机实现状态表和路由模块。</li>
+                                    <li><strong>混合布隆过滤器</strong>：BF跟踪<em>已完成</em>组，CBF跟踪<em>迁移中</em>组。</li>
+                                    <li><strong>基于状态的智能路由</strong>：根据状态（S1/S2/S3）路由查询到源、目标或双读。</li>
+                                    <li><strong>动态策略调整</strong>：通过配置模拟不同迁移协议行为。</li>
+                                </ul>
+                            </div>
+                            <div class="p-5 border border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 to-white">
+                                <h3 class="text-xl font-bold text-purple-800 mb-2"><i class="fas fa-chart-line mr-2"></i>Claim（性能提升）</h3>
+                                <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                    <li><strong>零服务中断</strong>：对客户端完全透明。</li>
+                                    <li><strong>查询吞吐提升 6.5% ~ 416%</strong>：优于所有基线。</li>
+                                    <li><strong>低访问延迟</strong>：中位数和尾部延迟显著降低。</li>
+                                    <li><strong>开销可忽略</strong>：额外带宽开销 < 0.05%。</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Methodology -->
+            <section id="methodology" class="mb-16 scroll-mt-20">
+                <div class="section-card bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-project-diagram text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900">❸ 方法机制解析</h2>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">系统架构概览</h3>
+                        <p class="text-gray-700 mb-6">NetMigrate 的核心思想是将可编程交换机置于迁移协调的中心位置。图1展示了其整体架构，包括ToR交换机、控制器、客户端和服务器。</p>
+                        <div class="fig-container">
+                            <img src="./images/fig1.png" alt="Figure 1: NetMigrate system architecture." onclick="openModal(this)">
+                            <div class="fig-caption">图1：NetMigrate 系统架构。交换机包含迁移状态表、路由模块和迁移实例表。</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">工作流程</h3>
+                        <p class="text-gray-700 mb-6">图2描绘了完整的迁移过程，从初始化、数据迁移与状态跟踪，到查询处理和最终终止。</p>
+                        <div class="fig-container">
+                            <img src="./images/fig2.png" alt="Figure 2: NetMigrate migration workflow." onclick="openModal(this)">
+                            <div class="fig-caption">图2：NetMigrate 迁移工作流程。交换机通过控制包更新状态，并基于状态路由客户端查询。</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">迁移状态跟踪与查询路由状态机</h3>
+                        <p class="text-gray-700 mb-4">这是NetMigrate的核心逻辑。交换机使用混合布隆过滤器跟踪每个键值"组"的三种状态，并据此做出路由决策。图3详细展示了状态转换和对应的查询处理规则。</p>
+                        <div class="fig-container">
+                            <img src="./images/fig3.png" alt="Figure 3: NetMigrate migration state tracking and query handling state machine." onclick="openModal(this)">
+                            <div class="fig-caption">图3：迁移状态跟踪与查询处理状态机。基于BF和CBF的查询结果，决定路由到源(S)、目标(D)或双读(S+D)。</div>
+                        </div>
+                        <div class="mt-6 p-5 bg-gray-100 rounded-lg">
+                            <h4 class="font-bold text-gray-800 mb-3">状态解释与路由策略：</h4>
+                            <ul class="space-y-3">
+                                <li><span class="font-bold text-blue-700">S1 (未开始)</span>：BF=0, CBF=0。读写均路由到<strong>源节点</strong>。</li>
+                                <li><span class="font-bold text-yellow-700">S2 (迁移中)</span>：BF=0, CBF>0。<strong>读查询双读</strong>（源+目标），<strong>写查询到目标</strong>。</li>
+                                <li><span class="font-bold text-green-700">S3 (已完成)</span>：BF=1, CBF=0。读写均路由到<strong>目标节点</strong>。若BF假阳性，目标触发PriorityPull从源拉取数据。</li>
+                                <li><span class="font-bold text-red-700">S4 (冲突态，假阳性)</span>：BF=1, CBF>0。按S2处理（双读）。</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">与现有方法对比</h3>
+                        <p class="text-gray-700 mb-6">表1总结了各类迁移方法的特性，清晰地展示了NetMigrate的综合优势。</p>
+                        <div class="fig-container">
+                            <img src="./images/table1.png" alt="Table 1: Overview of live migration approaches." onclick="openModal(this)">
+                            <div class="fig-caption">表1：在线迁移方法概览。NetMigrate在多个维度上取得了最佳平衡。</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">适用与限制场景</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="p-5 border border-green-300 rounded-xl bg-green-50">
+                                <h4 class="text-xl font-bold text-green-800 mb-3"><i class="fas fa-check-circle mr-2"></i>适用场景</h4>
+                                <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                    <li>同一机架内内存键值存储分片的在线迁移。</li>
+                                    <li>对迁移期间查询性能和可用性要求极高的场景。</li>
+                                    <li>需要灵活权衡迁移速度与查询性能的场景。</li>
+                                </ul>
+                            </div>
+                            <div class="p-5 border border-red-300 rounded-xl bg-red-50">
+                                <h4 class="text-xl font-bold text-red-800 mb-3"><i class="fas fa-times-circle mr-2"></i>限制场景</h4>
+                                <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                    <li><strong>跨机架迁移</strong>：需扩展设计以同步多个交换机状态。</li>
+                                    <li><strong>非内存数据库</strong>：磁盘I/O可能成为新瓶颈。</li>
+                                    <li><strong>交换机资源耗尽</strong>：极多并发迁移任务可能需要更紧凑的结构或调度。</li>
+                                    <li><strong>网络路径要求</strong>：客户端查询流量必须经过该ToR交换机。</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Evaluation -->
+            <section id="evaluation" class="mb-16 scroll-mt-20">
+                <div class="section-card bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-flask text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900">❹ 实验、结果与结论</h2>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">关键实验结果</h3>
+                        <p class="text-gray-700 mb-6">在由 Intel Tofino 交换机和商品服务器组成的测试平台上，迁移包含 2.56 亿键值对（~16GB）的 Redis 实例，使用 YCSB 基准测试。</p>
+
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">1. 查询吞吐量与迁移时间对比</h4>
+                            <p class="text-gray-700 mb-4">图4展示了NetMigrate在不同配置下与基线方法的吞吐量对比。NetMigrate在迁移期间能实现更高的吞吐量，并且吞吐量曲线呈现先升后降的趋势，这是因为迁移初期源节点服务大部分查询，后期目标节点逐步分担负载。</p>
+                            <div class="fig-container">
+                                <img src="./images/fig4.png" alt="Figure 4: Comparing Rocksteady, Fulva, Source-based protocol, and NetMigrate on query throughput." onclick="openModal(this)">
+                                <div class="fig-caption">图4：查询吞吐量对比（YCSB-B, 5%写, 100% CPU预算）。NetMigrate吞吐量更高，且可调整迁移时间策略（短/中/长）。</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">2. 查询延迟对比</h4>
+                            <p class="text-gray-700 mb-4">图5和图6分别显示了中位数延迟和99%尾部延迟。NetMigrate的中位数延迟在所有配置下都保持最低。其尾部延迟在类似迁移时间下，优于Rocksteady和Fulva。</p>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="fig-container">
+                                    <img src="./images/fig5.png" alt="Figure 5: Median latency comparison." onclick="openModal(this)">
+                                    <div class="fig-caption">图5：中位数延迟对比。</div>
+                                </div>
+                                <div class="fig-container">
+                                    <img src="./images/fig6.png" alt="Figure 6: 99%-tail latency comparison." onclick="openModal(this)">
+                                    <div class="fig-caption">图6：99%尾部延迟对比。</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">3. 状态索引（BF/CBF）大小调优</h4>
+                            <p class="text-gray-700 mb-4">表2显示了调整布隆过滤器大小对性能的影响。使用较小的片上内存（如512KB BF + 64B CBF）即可获得极低的假阳性率（0.26%）和优秀的性能，证明了设计的资源高效性。</p>
+                            <div class="fig-container">
+                                <img src="./images/table2.png" alt="Table 2: Impact on migration when tuning BF and CBF sizes." onclick="openModal(this)">
+                                <div class="fig-caption">表2：调整BF和CBF大小对迁移的影响。8-bit-per-element设置提供了最佳性能平衡。</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">4. 额外带宽开销</h4>
+                            <p class="text-gray-700 mb-4">表4对比了不同方法的额外带宽开销。NetMigrate在客户端和服务器端的开销都<strong>可忽略不计</strong>（客户端<0.05%，服务器端<4e-5%），远低于混合方法Fulva（>35%）和基于目标的方法Rocksteady。</p>
+                            <div class="fig-container">
+                                <img src="./images/table4.png" alt="Table 4: Extra bandwidth usage." onclick="openModal(this)">
+                                <div class="fig-caption">表4：额外带宽使用情况对比。NetMigrate的开销极低。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">论文证明了什么？</h3>
+                        <div class="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                            <ul class="list-disc pl-5 space-y-3 text-gray-700">
+                                <li><strong>有效性</strong>：NetMigrate 成功实现了零停机、高性能的在线迁移，吞吐量提升显著（6.5%-416%），延迟更低。</li>
+                                <li><strong>资源效率</strong>：利用有限的交换机片上资源，通过混合BF高效跟踪大规模键值对的迁移状态。</li>
+                                <li><strong>开销极低</strong>：用于纠正状态误判的操作（双读、PriorityPull）占比极小，额外带宽开销可忽略。</li>
+                                <li><strong>策略灵活</strong>：可通过配置模拟不同迁移协议行为，并实现相同迁移时间下的更优查询性能。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Conclusion -->
+            <section id="conclusion" class="scroll-mt-20">
+                <div class="section-card bg-white rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-flag-checkered text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-900">总结与展望</h2>
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="p-5 border border-green-300 rounded-xl bg-green-50">
+                            <h3 class="text-xl font-bold text-green-800 mb-3"><i class="fas fa-thumbs-up mr-2"></i>方法优点</h3>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                <li><strong>零服务中断，对客户端透明</strong>。</li>
+                                <li><strong>显著提升迁移期间的查询性能</strong>（吞吐↑，延迟↓）。</li>
+                                <li><strong>开销极低</strong>，资源利用高效。</li>
+                                <li><strong>设计灵活</strong>，支持多种迁移策略和目标。</li>
+                                <li>开辟了"<strong>以网络为中心的系统设计</strong>"新思路。</li>
+                            </ul>
+                        </div>
+                        <div class="p-5 border border-yellow-300 rounded-xl bg-yellow-50">
+                            <h3 class="text-xl font-bold text-yellow-800 mb-3"><i class="fas fa-exclamation-circle mr-2"></i>存在的局限性</h3>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                <li>主要面向<strong>机架内</strong>迁移，跨机架需扩展。</li>
+                                <li>原型基于UDP，生产环境需增强<strong>可靠传输与故障容错</strong>。</li>
+                                <li>对<strong>复杂查询（事务、范围查询）</strong>的支持有待扩展。</li>
+                                <li>实验数据规模虽大，但对超TB级分片的极端情况验证不足。</li>
+                            </ul>
+                        </div>
+                        <div class="p-5 border border-blue-300 rounded-xl bg-blue-50">
+                            <h3 class="text-xl font-bold text-blue-800 mb-3"><i class="fas fa-road mr-2"></i>未来工作</h3>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-700">
+                                <li>研究<strong>跨机架、跨集群</strong>的迁移方案。</li>
+                                <li>集成<strong>RDMA、DPDK</strong>等高速网络技术以加速迁移本身。</li>
+                                <li>增强<strong>故障恢复</strong>机制，处理服务器/交换机故障。</li>
+                                <li>探索与更复杂的<strong>数据库操作和一致性模型</strong>的集成。</li>
+                                <li>将NetMigrate思想应用于<strong>其他有状态数据平面的系统优化</strong>。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-10 p-6 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl border">
+                        <p class="text-center text-gray-700 italic">
+                            <strong>结论</strong>：NetMigrate 成功地将可编程网络数据平面从被动的数据转发设备，转变为主动的、具备状态感知能力的存储系统协调器。它在保证强一致性和零停机的前提下，显著降低了在线数据迁移对业务性能的影响，为构建更弹性、更高效的云原生存储系统提供了有力的新工具。
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImg">
+        <div id="caption" class="text-center text-white mt-2 text-lg"></div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="fixed bottom-8 right-8 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center hidden">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="mb-2"><i class="fas fa-code mr-2"></i>本可视化页面基于论文《In-Memory Key-Value Store Live Migration with NetMigrate》内容生成，用于辅助理解。</p>
+            <p class="text-sm">论文作者: Zeying Zhu, Yibo Zhao, Zaoxing Liu | 会议: USENIX FAST 2024</p>
+            <p class="text-sm mt-4 text-gray-500">内容基于AI生成，仅供参考。所有图表版权归原论文作者所有。</p>
+        </div>
+    </footer>
+
+    <script>
+        // Back to Top Button
+        const backToTopBtn = document.getElementById('backToTop');
+        window.onscroll = function() { scrollFunction() };
+        function scrollFunction() {
+            if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+                backToTopBtn.classList.remove('hidden');
+            } else {
+                backToTopBtn.classList.add('hidden');
+            }
+        }
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Image Modal
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImg');
+        const captionText = document.getElementById('caption');
+        function openModal(imgElement) {
+            modal.style.display = "block";
+            modalImg.src = imgElement.src;
+            captionText.innerHTML = imgElement.alt;
+        }
+        function closeModal() {
+            modal.style.display = "none";
+        }
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        // Navigation active state
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 100;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+                    current = section.getAttribute('id');
+                }
+            });
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').substring(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

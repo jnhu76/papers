@@ -1,0 +1,10 @@
+{
+  "id": "b3c6e4e7c5a5",
+  "title": "Umbra: A Disk-Based System with In-Memory Performance",
+  "authors": ["Thomas Neumann", "Michael Freitag"],
+  "year": 2020,
+  "conference": "CIDR",
+  "category": "数据库系统",
+  "keywords": ["数据库系统", "缓冲管理", "可变大小页", "SSD", "查询执行", "内存性能", "磁盘存储"],
+  "abstract": "The increases in main-memory sizes over the last decade have made pure in-memory database systems feasible, and in-memory systems offer unprecedented performance. However, DRAM is still relatively expensive, and the growth of main-memory sizes has slowed down. In contrast, the prices for SSDs have fallen substantially in the last years, and their read bandwidth has increased to gigabytes per second. This makes it attractive to combine a large in-memory buffer with fast SSDs as storage devices, combining the excellent performance for the in-memory working set with the scalability of a disk-based system.\nIn this paper we present the Umbra system, an evolution of the pure in-memory HyPer system towards a disk-based, or rather SSD-based, system. We show that by introducing a novel low-overhead buffer manager with variable-size pages we can achieve comparable performance to an in-memory database system for the cached working set, while handling accesses to uncached data gracefully. We discuss the changes and techniques that were necessary to handle the out-of-memory case gracefully and with low overhead, offering insights into the design of a memory optimized disk-based system."
+}

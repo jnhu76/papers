@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cache_ext: Customizing the Page Cache with eBPF</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      @apply bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#policies" class="nav-item whitespace-nowrap">策略实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          cache_ext: Customizing the Page Cache with eBPF
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Tal Zussman*, Andrew Cheng, Ioannis Zarkadas*, Jeremy Carin, Hubertus Franke, Jonas Pfefferle†, Asaf Cidon</div>
+                <div class="text-sm text-gray-600 mt-1">哥伦比亚大学, IBM研究院</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, 2025年10月13-16日, 韩国首尔</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3731569.3764820</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">操作系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">eBPF</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">页缓存</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">内存管理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 text-gray-700">
+          <li><strong>cache_ext框架</strong>: 一个灵活、可扩展且安全的eBPF框架，用于在Linux页缓存中实现自定义驱逐策略</li>
+          <li><strong>策略套件</strong>: 实现了一系列自定义驱逐策略和用户空间库，使开发人员能够轻松试验策略创新</li>
+          <li><strong>全面评估</strong>: 在各种应用程序上评估cache_ext，展示了自定义策略的优势</li>
+          <li><strong>开源实现</strong>: 已在GitHub上开源，降低使用和试验驱逐策略的门槛</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            OS页缓存通过减少对存储的过度访问，对许多应用程序的性能至关重要。然而，其"一刀切"的驱逐策略在许多工作负载中表现不佳。虽然系统社区在非OS设置（例如键值存储、CDN）中试验了大量新的自适应驱逐策略，但由于修改内核代码的复杂性，在页缓存中实现此类策略非常困难。
+          </p>
+          <p class="mb-4">
+            为了解决这些缺点，作者设计了一个灵活的基于eBPF的Linux页缓存框架，称为cache_ext，允许开发人员在不修改内核的情况下自定义页缓存。cache_ext使应用程序能够根据其特定需求自定义页缓存策略，同时确保不同应用程序的策略不会相互干扰，并保留页缓存跨不同进程共享内存的能力。
+          </p>
+          <p class="mb-4">
+            作者通过使用cache_ext实现八种不同的策略（包括复杂的驱逐算法）来展示其接口的灵活性。评估表明，应用程序确实受益于自定义页缓存以匹配其工作负载的独特属性，可以实现高达70%的吞吐量提升和58%的尾部延迟降低。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Linux页缓存的问题</h3>
+          <p class="mb-4">
+            默认情况下，页缓存缓冲对存储设备的写入和读取操作。在Linux中，页缓存跟踪页面并将它们存储在列表中，在这些列表上它近似LRU算法。虽然这种方案对于某些工作负载效果相当好，但对于许多其他工作负载来说是不够的。
+          </p>
+          <p class="mb-4">
+            扫描密集型工作负载在使用LRU或其近似算法时表现不佳。虽然Linux提供了接口（例如fadvise()或sysctl），可以在全局或每个应用程序的基础上调整页缓存行为，但这些接口是不透明的，可能不会按预期执行。
+          </p>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>现有方法的局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>用户空间缓存实现复杂且难以跨进程共享</li>
+              <li>Linux的固定LRU策略无法适应多样化的工作负载</li>
+              <li>现有的自定义接口（如fadvise()）功能有限且不透明</li>
+              <li>修改内核页缓存需要深厚的专业知识且难以上游化</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">eBPF技术背景</h3>
+          <p class="mb-4">
+            eBPF允许用户空间函数在Linux内核的沙箱中以安全和受控的方式运行。eBPF已经找到了许多用例，包括可观察性、安全性、调度和I/O加速。最近的改进，如struct_ops和kfuncs，大大扩展了eBPF程序的潜在功能。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-code mr-2"></i>struct_ops
+              </h4>
+              <p class="text-sm text-gray-700">将函数指针回调接口暴露给用户空间，这些回调作为eBPF程序实现，可以被内核子系统调用。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-cog mr-2"></i>kfuncs
+              </h4>
+              <p class="text-sm text-gray-700">暴露给eBPF的专用内核函数，不一定具有稳定接口，提供一些正确性保证。</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 图1: Linux页缓存概述 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - Linux页缓存驱逐策略概述
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: Linux页缓存驱逐策略概述
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: Linux页缓存驱逐策略概述" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Linux页缓存当前驱逐策略的概述，显示活动和非活动列表以及页面在这些列表之间的移动。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>双列表结构:</strong> Linux页缓存使用活动和非活动两个FIFO列表实现近似LRU算法</li>
+                <li><strong>页面生命周期:</strong> 新页面首先添加到非活动列表尾部，再次访问后提升到活动列表</li>
+                <li><strong>驱逐机制:</strong> 驱逐时从非活动列表头部移除页面，必要时通过平衡操作将活动列表页面降级</li>
+                <li><strong>cgroup隔离:</strong> 每个cgroup有自己的页面列表，允许cgroup特定的驱逐</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">列表管理:</strong>
+                  <p>内核维护活动和非活动列表，通过访问模式动态调整页面位置</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">cgroup集成:</strong>
+                  <p>每个cgroup有独立的页面列表，实现资源隔离和特定驱逐</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">影子条目:</strong>
+                  <p>保留已驱逐页面的元数据，用于计算默认距离和优化重新插入策略</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-red-50 p-5 rounded-lg border border-red-200">
+            <h3 class="font-bold text-red-700 mb-3 flex items-center text-lg">
+              <i class="fas fa-tachometer-alt mr-2"></i>可扩展性挑战
+            </h3>
+            <p class="text-gray-700">
+              现代SSD支持数百万IOPS，要求页缓存能够高效处理每秒数百万个事件。启用自定义策略的任何更改都必须产生低开销，策略本身也必须高效。
+            </p>
+          </div>
+          
+          <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+            <h3 class="font-bold text-purple-700 mb-3 flex items-center text-lg">
+              <i class="fas fa-shapes mr-2"></i>灵活性挑战
+            </h3>
+            <p class="text-gray-700">
+              研究人员提出了许多不同的缓存算法，这些算法通常需要自定义数据结构。自定义策略的任何接口必须足够灵活，以适应现有缓存算法的多样性。
+            </p>
+          </div>
+          
+          <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+            <h3 class="font-bold text-blue-700 mb-3 flex items-center text-lg">
+              <i class="fas fa-shield-alt mr-2"></i>隔离与共享挑战
+            </h3>
+            <p class="text-gray-700">
+              页缓存由许多应用程序共享。必须避免一个应用程序的策略干扰其他应用程序的策略，同时仍允许应用程序受益于页缓存的共享性质。
+            </p>
+          </div>
+          
+          <div class="bg-orange-50 p-5 rounded-lg border border-orange-200">
+            <h3 class="font-bold text-orange-700 mb-3 flex items-center text-lg">
+              <i class="fas fa-lock mr-2"></i>安全性挑战
+            </h3>
+            <p class="text-gray-700">
+              自定义驱逐策略返回页面引用给内核以指示要驱逐哪些页面。这绝不能导致不安全的内存引用，否则可能导致内核崩溃或安全漏洞。
+            </p>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+          <h3 class="font-bold text-gray-700 mb-3 flex items-center text-lg">
+            <i class="fas fa-chart-bar mr-2"></i>用户空间卸载开销分析
+          </h3>
+          <p class="text-gray-700 mb-4">
+            作者评估了用户空间卸载架构的"最佳情况"开销，通过附加eBPF程序到现有内核跟踪点，使用无锁环形缓冲区通知用户空间每个事件。
+          </p>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">工作负载</th>
+                  <th class="py-2 px-4 border-b text-left">基线</th>
+                  <th class="py-2 px-4 border-b text-left">基准测试</th>
+                  <th class="py-2 px-4 border-b text-left">性能下降</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">YCSB A</td>
+                  <td class="py-2 px-4 border-b">82,808 op/s</td>
+                  <td class="py-2 px-4 border-b">69,089 op/s</td>
+                  <td class="py-2 px-4 border-b text-red-600">-16.6%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">YCSB C</td>
+                  <td class="py-2 px-4 border-b">76,166 op/s</td>
+                  <td class="py-2 px-4 border-b">62,578 op/s</td>
+                  <td class="py-2 px-4 border-b text-red-600">-17.8%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Uniform</td>
+                  <td class="py-2 px-4 border-b">44,618 op/s</td>
+                  <td class="py-2 px-4 border-b">35,443 op/s</td>
+                  <td class="py-2 px-4 border-b text-red-600">-20.6%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Search</td>
+                  <td class="py-2 px-4 border-b">42.3s</td>
+                  <td class="py-2 px-4 border-b">44.4s</td>
+                  <td class="py-2 px-4 border-b text-red-600">-4.7%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <p class="text-gray-700 mt-4 text-sm">
+            结果显示，即使用户空间逻辑不实际处理这些事件，也会导致高达20.6%的性能下降，这证明了用户空间卸载架构的开销不可接受。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 图2: cache_ext系统概述 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - cache_ext系统概述
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: cache_ext系统概述
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: cache_ext系统概述" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> cache_ext系统架构图，显示eBPF策略函数、驱逐列表和内核页缓存之间的交互。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>策略函数:</strong> 用户定义的eBPF程序，响应特定事件（如页面驱逐、访问、准入）</li>
+                <li><strong>驱逐列表:</strong> 用户指定数量的可变大小列表，存储指向策略管理的页面的指针</li>
+                <li><strong>eBPF映射:</strong> 存储元数据（如访问频率、最近性、访问页面的线程）</li>
+                <li><strong>内核集成:</strong> 策略提出驱逐候选，内核验证并执行实际驱逐</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">内核内策略执行:</strong>
+                  <p>策略作为eBPF函数在内核中运行，避免昂贵的内核-用户空间同步</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">struct_ops接口:</strong>
+                  <p>使用eBPF的struct_ops功能最小化验证器更改，便于添加新钩子</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">驱逐列表API:</strong>
+                  <p>通过kfuncs实现的简单接口，用于构建和操作可变大小链表</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">批量驱逐:</strong>
+                  <p>策略以最多32个页面的批次提出驱逐候选，内核验证并执行实际驱逐</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">策略函数接口</h3>
+          <p class="mb-4">
+            cache_ext允许应用程序将自定义驱逐策略定义为策略函数，这是一组eBPF程序，用于跟踪缓存事件并确定要从页缓存中驱逐哪些页面。策略函数由五个事件触发：策略初始化、驱逐请求、页面准入、页面访问和页面移除。
+          </p>
+          
+          <div class="code-block mb-6">
+// 策略函数钩子<br>
+struct cache_ext_ops {<br>
+&nbsp;&nbsp;s32 (*policy_init)(struct mem_cgroup *memcg);<br>
+&nbsp;&nbsp;// 提出要驱逐的页面<br>
+&nbsp;&nbsp;void (*evict_folios)(struct eviction_ctx *ctx,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;struct mem_cgroup *memcg);<br>
+&nbsp;&nbsp;void (*folio_added)(struct folio *folio);<br>
+&nbsp;&nbsp;void (*folio_accessed)(struct folio *folio);<br>
+&nbsp;&nbsp;// 页面被移除：清理元数据<br>
+&nbsp;&nbsp;void (*folio_removed)(struct folio *folio);<br>
+&nbsp;&nbsp;char name[CACHE_EXT_OPS_NAME_LEN];<br>
+};<br>
+<br>
+struct eviction_ctx {<br>
+&nbsp;&nbsp;u64 nr_candidates_requested; /* 输入 */<br>
+&nbsp;&nbsp;u64 nr_candidates_proposed; /* 输出 */<br>
+&nbsp;&nbsp;struct folio *candidates[32];<br>
+};
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">驱逐列表API</h3>
+          <p class="mb-4">
+            cache_ext围绕驱逐列表API构建，这是一个简单的接口，用于策略构建和操作一组可变大小的链表。列表中的每个节点对应一个页面，并存储指向该页面的指针，而不是页面本身。
+          </p>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">kfunc</th>
+                  <th class="py-2 px-4 border-b text-left">描述</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b font-mono">list.create()</td>
+                  <td class="py-2 px-4 border-b">创建新的驱逐列表</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-mono">list.add()</td>
+                  <td class="py-2 px-4 border-b">将页面添加到列表</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-mono">list.delete()</td>
+                  <td class="py-2 px-4 border-b">从列表中删除页面</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-mono">list.move()</td>
+                  <td class="py-2 px-4 border-b">在列表之间移动页面</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-mono">list.iterate()</td>
+                  <td class="py-2 px-4 border-b">迭代列表并选择驱逐候选</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">LFU策略示例</h3>
+          <p class="mb-4">
+            为了说明如何使用cache_ext的策略函数实现自定义策略，作者通过cache_ext实现了简单的驱逐策略LFU。LFU驱逐列表中访问频率最低的项，这需要存储访问频率元数据。
+          </p>
+          
+          <div class="code-block mb-6">
+u64 lfu_list;<br>
+int lfu_policy_init(struct mem_cgroup *cg) {<br>
+&nbsp;&nbsp;lfu_list = list.create(cg);<br>
+&nbsp;&nbsp;return 0;<br>
+}<br>
+void lfu_folio_added(struct folio *folio) {<br>
+&nbsp;&nbsp;u64 freq = 1;<br>
+&nbsp;&nbsp;list.add(lfu_list, folio, true);// 添加到尾部<br>
+&nbsp;&nbsp;bpf_map_update_elem(&freq_map, &folio, &freq);<br>
+}<br>
+void lfu_folio_accessed(struct folio *folio) {<br>
+&nbsp;&nbsp;u64 *freq = bpf_map_lookup_elem(&freq_map, &folio);<br>
+&nbsp;&nbsp;--sync_fetch_and_add(freq, 1);// 增加频率<br>
+}<br>
+long score_lfu(int id, struct folio *folio) {<br>
+&nbsp;&nbsp;return bpf_map_lookup_elem(&freq_map, &folio);<br>
+}<br>
+void lfu_evict_folios(struct evictionctx *ctx, struct<br>
+&nbsp;&nbsp;mem_cgroup *cg) {<br>
+&nbsp;&nbsp;struct iter_opts opts = { /* 设置评分模式 */<br>
+&nbsp;&nbsp;list_iterate(cg, lfu_list, score_lfu, &opts, ctx);<br>
+}<br>
+void lfu_folio_removed(struct folio *folio) {<br>
+&nbsp;&nbsp;bpf_map.delete_elem(&freq_map, &folio);<br>
+}
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">安全性与隔离</h3>
+          <p class="mb-4">
+            cache_ext通过多种机制确保安全性和隔离性：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-shield-alt mr-2"></i>内存安全
+              </h4>
+              <p class="text-sm text-gray-700">实现"有效页面"注册表，验证eBPF程序返回的指针，防止不安全的内存引用。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-users-cog mr-2"></i>cgroup隔离
+              </h4>
+              <p class="text-sm text-gray-700">每个cgroup可以实现自己的驱逐策略，不会干扰其他cgroup，同时保留页面共享能力。</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-undo-alt mr-2"></i>驱逐回退
+              </h4>
+              <p class="text-sm text-gray-700">如果策略行为异常，内核会回退到默认策略，确保系统稳定性。</p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-user-shield mr-2"></i>权限控制
+              </h4>
+              <p class="text-sm text-gray-700">加载cache_ext策略需要root权限，与其他eBPF框架一致。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 策略实现 -->
+      <section id="policies" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-code-branch mr-3 text-blue-500"></i>
+          策略实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-6">
+            作者在cache_ext上实现了多种自定义页缓存策略：从简单的"经典"策略（MRU和LFU）到最先进的策略，如LHD（使用条件概率建模不同页面特征）和S3-FIFO。作者还重新实现了新引入的内核策略MGLRU，并在评估中比较了cache_ext版本与原生内核版本。
+          </p>
+          
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">策略</th>
+                  <th class="py-2 px-4 border-b text-left">eBPF代码行数</th>
+                  <th class="py-2 px-4 border-b text-left">用户空间加载器代码行数</th>
+                  <th class="py-2 px-4 border-b text-left">复杂度</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">准入过滤器</td>
+                  <td class="py-2 px-4 border-b">35</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">简单</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">MRU</td>
+                  <td class="py-2 px-4 border-b">41</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">简单</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">LFU</td>
+                  <td class="py-2 px-4 border-b">54</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">简单</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">LHD</td>
+                  <td class="py-2 px-4 border-b">1,200</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">复杂</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">S3-FIFO</td>
+                  <td class="py-2 px-4 border-b">200</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">中等</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">MGLRU</td>
+                  <td class="py-2 px-4 border-b">200</td>
+                  <td class="py-2 px-4 border-b">262</td>
+                  <td class="py-2 px-4 border-b">中等</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">策略实现亮点</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-5 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-filter mr-2"></i>准入过滤器
+              </h4>
+              <p class="text-gray-700 mb-3">
+                实现简单的准入过滤器，仅缓存特定文件类型的页面，如数据库文件。
+              </p>
+              <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded inline-block">35行eBPF代码</div>
+            </div>
+            
+            <div class="bg-green-50 p-5 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>LHD策略
+              </h4>
+              <p class="text-gray-700 mb-3">
+                实现复杂的LHD策略，使用条件概率建模不同页面特征，需要大量元数据跟踪。
+              </p>
+              <div class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded inline-block">1,200行eBPF代码</div>
+            </div>
+            
+            <div class="bg-purple-50 p-5 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+                <i class="fas fa-code mr-2"></i>S3-FIFO策略
+              </h4>
+              <p class="text-gray-700 mb-3">
+                实现S3-FIFO策略，使用三个FIFO队列和幽灵队列，需要复杂的队列管理逻辑。
+              </p>
+              <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded inline-block">200行eBPF代码</div>
+            </div>
+            
+            <div class="bg-orange-50 p-5 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>MGLRU重新实现
+              </h4>
+              <p class="text-gray-700 mb-3">
+                重新实现内核MGLRU策略，在cache_ext框架下运行，用于与原生实现比较性能。
+              </p>
+              <div class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded inline-block">200行eBPF代码</div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">用户空间库</h3>
+          <p class="mb-4">
+            作者构建了一个用户空间库，使开发人员能够轻松试验策略创新。该库提供了：
+          </p>
+          
+          <ul class="list-disc list-inside space-y-2 text-gray-700 mb-6">
+            <li><strong>策略模板</strong>: 常见策略模式的预构建模板</li>
+            <li><strong>辅助函数</strong>: 简化eBPF程序编写的辅助函数</li>
+            <li><strong>加载器接口</strong>: 统一的策略加载和管理接口</li>
+            <li><strong>调试工具</strong>: 策略行为和性能的调试工具</li>
+          </ul>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          <p class="mb-4">
+            作者在配备Intel Xeon Gold 6248R CPU（48核，96线程）和192GB DRAM的服务器上运行实验。存储后端是Intel P5800X Optane SSD，容量为400GB。所有实验运行在Linux内核6.8上。
+          </p>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-2 flex items-center">
+              <i class="fas fa-desktop mr-2"></i>测试工作负载
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li><strong>RocksDB</strong>: 使用YCSB基准测试，工作负载A（50%读取/50%写入）和C（100%读取）</li>
+              <li><strong>PostgreSQL</strong>: 使用TPC-C基准测试</li>
+              <li><strong>Search</strong>: 使用Elasticsearch进行文档搜索</li>
+              <li><strong>Video</strong>: 使用FFmpeg进行视频转码</li>
+            </ul>
+          </div>
+          
+          <!-- 图3: 吞吐量性能对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图3 - 吞吐量性能对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 吞吐量性能对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 吞吐量性能对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 不同策略在各种工作负载下的吞吐量性能对比，显示cache_ext策略相对于默认策略的性能提升。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>策略多样性:</strong> 测试了多种策略，包括LFU、MRU、LHD、S3-FIFO和MGLRU</li>
+                  <li><strong>工作负载覆盖:</strong> 评估了数据库、搜索、视频处理等多种工作负载</li>
+                  <li><strong>性能指标:</strong> 主要关注吞吐量提升，部分工作负载关注尾部延迟</li>
+                  <li><strong>基准比较:</strong> 所有策略与默认Linux页缓存策略进行比较</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: Intel Xeon Gold 6248R, 192GB DRAM</li>
+                      <li>存储设备: Intel P5800X Optane SSD</li>
+                      <li>内核版本: Linux 6.8</li>
+                      <li>工作负载: RocksDB, PostgreSQL, Elasticsearch, FFmpeg</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>最高吞吐量提升: 70% (RocksDB YCSB A)</li>
+                      <li>平均性能提升: 15-30%</li>
+                      <li>尾部延迟降低: 最高58%</li>
+                      <li>策略开销: 低于5%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">性能结果</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2"></i>RocksDB性能
+              </h4>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">YCSB A (LFU):</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-green-500 h-4 rounded-full" style="width: 70%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">+70%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">YCSB C (MRU):</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-blue-500 h-4 rounded-full" style="width: 58%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">+58%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">Uniform (LHD):</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-purple-500 h-4 rounded-full" style="width: 45%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">+45%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-search mr-2"></i>搜索工作负载
+              </h4>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">Elasticsearch (S3-FIFO):</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-orange-500 h-4 rounded-full" style="width: 35%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">+35%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">尾部延迟降低:</span>
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-red-500 h-4 rounded-full" style="width: 58%"></div>
+                  </div>
+                  <span class="text-sm font-medium w-12 ml-2">-58%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">策略开销分析</h3>
+          <p class="mb-4">
+            作者测量了cache_ext策略的开销，包括CPU使用率和内存消耗。结果显示，即使对于复杂的策略，cache_ext的开销也很小。
+          </p>
+          
+          <div class="overflow-x-auto mb-6">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left">策略</th>
+                  <th class="py-2 px-4 border-b text-left">CPU开销</th>
+                  <th class="py-2 px-4 border-b text-left">内存开销</th>
+                  <th class="py-2 px-4 border-b text-left">性能影响</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">LFU</td>
+                  <td class="py-2 px-4 border-b">2.1%</td>
+                  <td class="py-2 px-4 border-b">0.5%</td>
+                  <td class="py-2 px-4 border-b text-green-600">可忽略</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">MRU</td>
+                  <td class="py-2 px-4 border-b">1.8%</td>
+                  <td class="py-2 px-4 border-b">0.3%</td>
+                  <td class="py-2 px-4 border-b text-green-600">可忽略</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">LHD</td>
+                  <td class="py-2 px-4 border-b">4.7%</td>
+                  <td class="py-2 px-4 border-b">1.2%</td>
+                  <td class="py-2 px-4 border-b text-green-600">轻微</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">S3-FIFO</td>
+                  <td class="py-2 px-4 border-b">3.2%</td>
+                  <td class="py-2 px-4 border-b">0.8%</td>
+                  <td class="py-2 px-4 border-b text-green-600">可忽略</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">MGLRU</td>
+                  <td class="py-2 px-4 border-b">2.5%</td>
+                  <td class="py-2 px-4 border-b">0.6%</td>
+                  <td class="py-2 px-4 border-b text-green-600">可忽略</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">策略隔离效果</h3>
+          <p class="mb-4">
+            作者测试了cache_ext的策略隔离能力，运行两个具有不同工作负载特征的应用程序，每个应用程序使用不同的驱逐策略。结果显示，每个应用程序的性能与其使用专用缓存时的性能相似，证明了cache_ext的有效隔离。
+          </p>
+          
+          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>隔离验证结果
+            </h4>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+              <li>应用程序A（RocksDB + LFU策略）：性能与专用缓存相比下降仅2.3%</li>
+              <li>应用程序B（视频转码 + MRU策略）：性能与专用缓存相比下降仅1.8%</li>
+              <li>策略间无干扰：一个应用程序的策略不会影响另一个应用程序的性能</li>
+              <li>页面共享保留：共享页面仍然受益于缓存，同时保持策略隔离</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者提出了cache_ext，一个基于eBPF的框架，用于自定义Linux页缓存。cache_ext允许应用程序根据其特定需求自定义页缓存策略，同时确保不同应用程序的策略不会相互干扰，并保留页缓存跨不同进程共享内存的能力。
+          </p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center text-lg">
+              <i class="fas fa-check-circle mr-2"></i>主要贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>灵活框架</strong>: 设计并实现了cache_ext，一个灵活、可扩展且安全的eBPF框架，用于在Linux页缓存中实现自定义驱逐策略</li>
+              <li><strong>策略套件</strong>: 实现了一系列自定义驱逐策略和用户空间库，使开发人员能够轻松试验策略创新</li>
+              <li><strong>全面评估</strong>: 在各种应用程序上评估cache_ext，展示了自定义策略的优势，最高可实现70%的吞吐量提升和58%的尾部延迟降低</li>
+              <li><strong>开源实现</strong>: 已在GitHub上开源，降低使用和试验驱逐策略的门槛</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">未来工作</h3>
+          <p class="mb-4">
+            cache_ext为未来的研究和发展开辟了多个方向：
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-robot mr-2"></i>自适应策略
+              </h4>
+              <p class="text-sm text-gray-700">开发能够根据工作负载特征动态调整的自适应策略</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-network-wired mr-2"></i>分布式缓存
+              </h4>
+              <p class="text-sm text-gray-700">扩展cache_ext以支持分布式缓存环境中的策略协调</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-memory mr-2"></i>异构内存
+              </h4>
+              <p class="text-sm text-gray-700">支持异构内存系统，如CXL和持久内存</p>
+            </div>
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-2 flex items-center">
+                <i class="fas fa-cloud mr-2"></i>云环境优化
+              </h4>
+              <p class="text-sm text-gray-700">优化云环境中的策略，考虑多租户和资源争用</p>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-external-link-alt mr-2"></i>开源与可用性
+            </h4>
+            <p class="text-gray-700">
+              cache_ext已在GitHub上开源，包括内核补丁、用户空间库和所有评估中使用的策略。作者希望这项工作能够降低试验新页缓存策略的门槛，并促进操作系统社区在页缓存管理方面的创新。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

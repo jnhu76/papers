@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenOneRec Technical Report - An Open Foundation Model and Benchmark to Accelerate Generative Recommendation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .tech-card {
+      @apply p-4 rounded-lg border transition-all duration-300 hover:shadow-md;
+    }
+    .code-block {
+      @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap"><i class="fas fa-file-alt mr-2"></i>摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap"><i class="fas fa-layer-group mr-2"></i>背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap"><i class="fas fa-exclamation-triangle mr-2"></i>问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap"><i class="fas fa-cogs mr-2"></i>设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap"><i class="fas fa-chart-line mr-2"></i>测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap"><i class="fas fa-flag-checkered mr-2"></i>结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          OpenOneRec Technical Report: An Open Foundation Model and Benchmark to Accelerate Generative Recommendation
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者团队</strong>
+                <div class="text-lg">OneRec Team (快手团队)</div>
+                <div class="text-sm text-gray-600 mt-1">快手公司</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>arXiv预印本，2025年12月31日</div>
+                <div class="text-sm text-gray-600">arXiv:2512.24762v1 [cs.IR]</div>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <strong class="text-blue-700 block mb-1">项目地址</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">
+                  https://github.com/Kuaishou-OneRec/OpenOneRec
+                </div>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border mt-2">
+                  https://huggingface.co/OpenOneRec
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">生成式推荐</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">大语言模型</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">基础模型</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">基准测试</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 md:p-6 rounded-r-lg mb-8 md:mb-12">
+        <h4 class="font-bold text-green-700 mb-2 md:mb-4 flex items-center text-lg md:text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-2 md:space-y-3 text-gray-700">
+          <li><strong>RecIF-Bench基准测试</strong>：首个全面的推荐系统指令遵循基准测试，涵盖8个不同任务</li>
+          <li><strong>开源框架</strong>：完整的训练流水线开源，包括数据处理、协同预训练和后训练</li>
+          <li><strong>OneRec-Foundation模型家族</strong>：发布1.7B和8B参数的推荐基础模型，在多个任务上达到SOTA</li>
+          <li><strong>大规模数据集</strong>：公开包含9600万次交互、16万用户的训练数据集</li>
+          <li><strong>跨领域迁移能力</strong>：在Amazon数据集上平均Recall@10提升26.8%</li>
+        </ul>
+      </div>
+      
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 md:space-y-6">
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <p class="text-gray-700 leading-relaxed">
+              这篇论文提出了OpenOneRec框架，旨在解决现有推荐系统与大语言模型(LLMs)之间的差距。传统推荐系统作为领域专家，擅长模式匹配但缺乏世界知识、推理能力和指令遵循能力。论文作者通过三个方面解决这个问题：
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-6">
+            <div class="tech-card bg-blue-50 border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-list-check mr-2"></i>基准测试
+              </h4>
+              <p class="text-sm text-gray-700">RecIF-Bench基准测试，涵盖8个任务从基础预测到复杂推理</p>
+            </div>
+            <div class="tech-card bg-green-50 border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-code mr-2"></i>开源框架
+              </h4>
+              <p class="text-sm text-gray-700">完整训练流水线开源，支持可扩展的预训练和混合后训练</p>
+            </div>
+            <div class="tech-card bg-purple-50 border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-brain mr-2"></i>基础模型
+              </h4>
+              <p class="text-sm text-gray-700">OneRec-Foundation模型家族，在多个任务上达到SOTA性能</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="space-y-6 md:space-y-8">
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">大语言模型带来的范式转变</h3>
+            <p class="text-gray-700 mb-4">
+              近年来，大语言模型(LLMs)的进步催生了<strong>生成式推荐</strong>的范式转变。OneRec系列工作成功将多阶段推荐流水线统一为端到端的生成框架，将用户历史视为下一个物品预测的上下文。
+            </p>
+            <p class="text-gray-700">
+              然而，现有生成式推荐系统面临<strong>数据孤岛</strong>问题，无法像通用LLMs那样通过海量数据扩展获得涌现能力。这些系统本质上仍是领域专家，擅长协作模式匹配但缺乏更广泛的智能。
+            </p>
+          </div>
+          
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 md:p-6 rounded-r-lg">
+            <h4 class="font-bold text-red-700 mb-2 md:mb-3 flex items-center text-lg md:text-xl">
+              <i class="fas fa-exclamation-circle mr-2"></i>现有方法的局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>数据隔离</strong>：推荐系统局限于孤立的数据源，无法实现数据规模化</li>
+              <li><strong>缺乏通用智能</strong>：缺少世界知识、推理能力和指令遵循能力</li>
+              <li><strong>灾难性遗忘</strong>：特定任务微调会损害基础模型的通用能力</li>
+              <li><strong>评估不全面</strong>：现有基准测试仅限于狭窄的专业任务</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="space-y-6 md:space-y-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-language mr-2 text-blue-500"></i>
+                模态鸿沟问题
+              </h3>
+              <p class="text-gray-700">
+                将LLMs应用于推荐系统的根本挑战是连续语言空间与离散物品空间的不匹配。用详细文本描述表示物品效率低下，且无法保证生成库内物品。
+              </p>
+              <div class="mt-4 p-3 bg-gray-50 rounded">
+                <p class="text-sm text-gray-600"><strong>技术挑战：</strong>如何将物品表示为适合LLM处理的格式，同时保留协作过滤信号？</p>
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+              <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-brain mr-2 text-purple-500"></i>
+                能力平衡问题
+              </h3>
+              <p class="text-gray-700">
+                在提升推荐性能的同时，如何保持模型原有的通用推理能力和指令遵循能力？这是典型的多目标优化问题。
+              </p>
+              <div class="mt-4 p-3 bg-gray-50 rounded">
+                <p class="text-sm text-gray-600"><strong>技术挑战：</strong>如何避免灾难性遗忘，确保模型在成为推荐专家的同时不失去通用智能？</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">技术挑战总结</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-4 bg-blue-50 rounded-lg">
+                <div class="flex items-center mb-2">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-code text-blue-600"></i>
+                  </div>
+                  <h4 class="font-bold text-blue-700">表示学习</h4>
+                </div>
+                <p class="text-sm text-gray-700">将物品高效编码为LLM可理解的格式</p>
+              </div>
+              
+              <div class="p-4 bg-green-50 rounded-lg">
+                <div class="flex items-center mb-2">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-sliders-h text-green-600"></i>
+                  </div>
+                  <h4 class="font-bold text-green-700">平衡优化</h4>
+                </div>
+                <p class="text-sm text-gray-700">推荐性能与通用智能的权衡</p>
+              </div>
+              
+              <div class="p-4 bg-purple-50 rounded-lg">
+                <div class="flex items-center mb-2">
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                    <i class="fas fa-exchange-alt text-purple-600"></i>
+                  </div>
+                  <h4 class="font-bold text-purple-700">迁移学习</h4>
+                </div>
+                <p class="text-sm text-gray-700">跨领域知识迁移和适应</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8 md:space-y-12">
+          <!-- 整体框架图 -->
+          <div class="original-figure-container bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 2: OneRec-Foundation整体框架
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="architecture-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig2.png" alt="论文图2: OneRec-Foundation整体框架，展示三阶段流程：预训练、后训练和评估" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> The Overall Framework of OneRec-Foundation. (1) Pre-Training: Integrates collaborative signals with general semantics via Itemic-Text Alignment and mixed-domain Co-Pretraining. (2) Post-Training: Unlocks diverse downstream capabilities via SFT, and balances general reasoning with recommendation performance through alternating General Distillation and Rec-RL. (3) Evaluation: Comprehensively assesses holistic capabilities on RecIF-Bench and validates cross-domain transferability on Amazon datasets.
+            </div>
+          </div>
+          
+          <!-- 技术细节：物品作为令牌 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-microscope mr-2"></i>技术细节：物品作为令牌（Items as Tokens）
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 md:p-6 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>模态鸿沟解决方案：</strong>使用RQ-Kmeans算法将物品元数据的预训练语义嵌入离散化为分层离散编码</li>
+                  <li><strong>分层令牌：</strong>物品被压缩为短固定长度序列，相似语义的物品共享共同前缀</li>
+                  <li><strong>高效建模：</strong>支持高效的长上下文建模，同时保留协作结构</li>
+                  <li><strong>统一词汇表：</strong>词汇表被统一为 𝒱=𝒱_text∪𝒱_item，允许将用户交互历史视为长上下文序列</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 md:p-6 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">令牌化过程:</strong>
+                    <div class="code-block mt-2">
+<span style="color: #f8f8f2"># 物品令牌示例</span><br>
+<span style="color: #66d9ef">&lt;</span>|<span style="color: #a6e22e">item_begin</span>|<span style="color: #66d9ef">&gt;&lt;</span><span style="color: #f92672">item_a_5028</span><span style="color: #66d9ef">&gt;&lt;</span><span style="color: #f92672">item_b_6733</span><span style="color: #66d9ef">&gt;&lt;</span><span style="color: #f92672">item_c_2559</span><span style="color: #66d9ef">&gt;&lt;</span>|<span style="color: #a6e22e">item_end</span>|<span style="color: #66d9ef">&gt;</span>
+                    </div>
+                  </div>
+                  <div class="mt-3">
+                    <strong class="text-green-700">数学形式化:</strong>
+                    <p class="mt-1">推荐任务被统一为下一个令牌预测问题：</p>
+                    <div class="bg-gray-800 text-white p-3 rounded mt-2">
+                      ℒ(θ) = -∑<sub>t=1</sub><sup>|Y|</sup> log P<sub>θ</sub>(y<sub>t</sub>|ℐ, C, y<sub>&lt;t</sub>)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 技术细节：三阶段训练流程 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">三阶段训练流程</h3>
+            
+            <div class="space-y-6 md:space-y-8">
+              <!-- 阶段1 -->
+              <div class="p-4 md:p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+                <div class="flex items-center mb-3 md:mb-4">
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                    <span class="text-blue-600 font-bold">1</span>
+                  </div>
+                  <h4 class="text-lg md:text-xl font-bold text-blue-700">阶段1：预训练（Pre-Training）</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-2">物品-文本对齐</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600">
+                      <li>扩展词汇表添加物品令牌</li>
+                      <li>初始化物品令牌嵌入参数</li>
+                      <li>冻结其他参数，只训练物品相关参数</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-2">全参数协同预训练</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600">
+                      <li>解冻所有参数</li>
+                      <li>注入推荐知识</li>
+                      <li>混合通用领域数据避免灾难性遗忘</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 阶段2 -->
+              <div class="p-4 md:p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                <div class="flex items-center mb-3 md:mb-4">
+                  <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <span class="text-green-600 font-bold">2</span>
+                  </div>
+                  <h4 class="text-lg md:text-xl font-bold text-green-700">阶段2：后训练（Post-Training）</h4>
+                </div>
+                
+                <div class="space-y-4">
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1">2.1 多任务监督微调</h5>
+                    <p class="text-sm text-gray-600">恢复模型的指令遵循和推理能力，混合通用和推荐领域数据</p>
+                  </div>
+                  
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1">2.2 通用能力策略蒸馏</h5>
+                    <p class="text-sm text-gray-600">使用原始Qwen3作为教师模型，恢复通用推理能力</p>
+                  </div>
+                  
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1">2.3 推荐强化学习</h5>
+                    <p class="text-sm text-gray-600">使用GRPO框架，基于命中事件优化排名指标</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 阶段3 -->
+              <div class="p-4 md:p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                <div class="flex items-center mb-3 md:mb-4">
+                  <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                    <span class="text-purple-600 font-bold">3</span>
+                  </div>
+                  <h4 class="text-lg md:text-xl font-bold text-purple-700">阶段3：评估（Evaluation）</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-2">RecIF-Bench评估</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600">
+                      <li>8个任务涵盖4个能力层次</li>
+                      <li>从基础预测到复杂推理</li>
+                      <li>多领域覆盖</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-700 mb-2">Amazon基准测试</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600">
+                      <li>10个不同领域数据集</li>
+                      <li>测试跨领域迁移能力</li>
+                      <li>与最强基线对比</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 技术细节：RecIF-Bench基准测试 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-tasks mr-2"></i>技术细节：RecIF-Bench基准测试设计
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: RecIF-Bench任务分类
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: RecIF-Bench任务分类，展示8个任务跨越4个能力层次" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Task Taxonomy of RecIF-Bench. We organize 8 tasks across 4 capability layers, specifying the instruction, context, and target.
+                </div>
+              </div>
+              
+              <!-- 能力层次解释 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 md:p-6 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-layer-group mr-2"></i>能力层次1：对齐
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                    <li><strong>物品理解：</strong>给定物品令牌，生成文本描述</li>
+                    <li><strong>目标：</strong>验证物品令牌与语言令牌的对齐</li>
+                    <li><strong>评估：</strong>LLM-as-Judge评分</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-4 md:p-6 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i>能力层次2：基础推荐
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                    <li><strong>短视频推荐：</strong>单领域下一个物品预测</li>
+                    <li><strong>广告推荐：</strong>跨领域兴趣迁移</li>
+                    <li><strong>标签预测：</strong>点式估计</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 md:p-6 rounded-lg border border-yellow-200">
+                  <h5 class="font-semibold text-yellow-700 mb-3 flex items-center">
+                    <i class="fas fa-code mr-2"></i>能力层次3：指令遵循
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                    <li><strong>交互式推荐：</strong>基于自然语言查询的推荐</li>
+                    <li><strong>标签条件推荐：</strong>特定行为下的物品预测</li>
+                    <li><strong>目标：</strong>测试指令理解能力</li>
+                  </ul>
+                </div>
+                
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-4 md:p-6 rounded-lg border border-purple-200">
+                  <h5 class="font-semibold text-purple-700 mb-3 flex items-center">
+                    <i class="fas fa-brain mr-2"></i>能力层次4：推理
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                    <li><strong>推荐解释：</strong>生成推荐理由的自然语言解释</li>
+                    <li><strong>目标：</strong>测试用户-物品兼容性推理能力</li>
+                    <li><strong>评估：</strong>LLM-as-Judge评分</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8 md:space-y-12">
+          <!-- 主要结果概览 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">主要实验结果概览</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+              <div class="p-4 md:p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
+                <div class="flex items-center mb-3 md:mb-4">
+                  <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-trophy text-green-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-lg md:text-xl font-bold text-green-700">RecIF-Bench表现</h4>
+                    <p class="text-sm text-gray-600">在8个任务上全面超越基线</p>
+                  </div>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>SOTA性能：</strong>在所有任务上达到最先进水平</li>
+                  <li><strong>可扩展性：</strong>8B模型优于1.7B模型</li>
+                  <li><strong>数据扩展：</strong>OneRec-Pro优于OneRec</li>
+                  <li><strong>能力平衡：</strong>在保持通用能力的同时提升推荐性能</li>
+                </ul>
+              </div>
+              
+              <div class="p-4 md:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
+                <div class="flex items-center mb-3 md:mb-4">
+                  <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-exchange-alt text-blue-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-lg md:text-xl font-bold text-blue-700">跨领域迁移</h4>
+                    <p class="text-sm text-gray-600">Amazon基准测试表现</p>
+                  </div>
+                </div>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>显著提升：</strong>平均Recall@10提升26.8%</li>
+                  <li><strong>跨领域：</strong>在10个不同领域数据集上表现优异</li>
+                  <li><strong>小样本学习：</strong>在10%数据下保持45.2%的全数据性能</li>
+                  <li><strong>鲁棒性：</strong>证明作为基础模型的强大迁移能力</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 原图5：推荐领域的扩展定律 -->
+          <div class="original-figure-container bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-2">
+              <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                <i class="fas fa-image mr-2 text-blue-500"></i>
+                原图 5: 推荐领域的扩展定律
+              </h5>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+            </div>
+            
+            <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+              <img src="./images/fig5.png" alt="论文图5: 推荐领域的扩展定律分析" class="max-w-full h-auto rounded-lg">
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+              <strong>原图图注:</strong> Scaling laws on recommendation-domain data. Top-left: training loss vs. FLOPs for different model sizes, and the smooth convex envelope shown in grey. Top-right: log-log plot of training loss vs. model size under fixed token budgets. Bottom-left: compute-optimal model size N_Opt ∝ C^0.44 as a function of compute budget C. Bottom-right: compute-optimal token budget D_Opt ∝ C^0.56 as a function of C.
+            </div>
+          </div>
+          
+          <!-- 技术细节：扩展定律分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：推荐领域的扩展定律分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 md:p-6 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>关键发现：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>数据密集型扩展：</strong>推荐领域的扩展定律与通用文本不同，表现为数据密集型扩展（b=0.56 > a=0.44）</li>
+                  <li><strong>与Chinchilla定律的差异：</strong>Chinchilla定律建议等比例分配（a≈0.5,b≈0.5），但推荐领域需要更积极地扩展数据量</li>
+                  <li><strong>低熵任务：</strong>推荐任务的不可约损失下界（E=0.42）远低于自然文本（E≈1.69），说明推荐任务具有更低的内在熵</li>
+                  <li><strong>热启动效应：</strong>从Qwen3基础模型的迁移学习显著降低了数据系数B的值（7.02对比典型的可比较数值）</li>
+                </ul>
+              </div>
+              
+              <!-- 数学形式化 -->
+              <div class="bg-purple-50 p-4 md:p-6 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-square-root-alt mr-2"></i>数学形式化：
+                </h5>
+                <div class="space-y-4">
+                  <div>
+                    <p class="text-gray-700 mb-1">最优扩展关系：</p>
+                    <div class="bg-gray-800 text-white p-3 rounded text-center">
+                      N<sub>opt</sub> ∝ C<sup>0.44</sup>, D<sub>opt</sub> ∝ C<sup>0.56</sup>
+                    </div>
+                  </div>
+                  <div>
+                    <p class="text-gray-700 mb-1">损失函数参数化拟合：</p>
+                    <div class="bg-gray-800 text-white p-3 rounded text-center">
+                      L(N,D) = 0.4232 + 502.32/N<sup>0.3325</sup> + 7.02/D<sup>0.1865</sup>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-green-50 p-4 md:p-6 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-green-700">扩展行为：</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>推荐扩展遵循可预测的幂律</li>
+                      <li>数据衰减指数较低（β≈0.19）</li>
+                      <li>模型容量指数与通用LLM一致（α≈0.33）</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">工程意义：</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>计算预算应更多分配给数据而非模型</li>
+                      <li>需要策划更多样化和高质量的推荐语料库</li>
+                      <li>预训练基础模型的迁移学习效果显著</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- Amazon基准测试结果 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">Amazon基准测试结果分析</h3>
+            
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">模型</th>
+                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">平均R@10提升</th>
+                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">关键优势</th>
+                    <th class="py-3 px-4 border-b text-left text-sm font-semibold text-gray-700">技术原因</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm font-medium text-blue-700">OneRec-Foundation</td>
+                    <td class="py-3 px-4 text-sm font-bold text-green-700">26.8%</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">全面领先所有基线</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">大规模生成式预训练+跨领域迁移</td>
+                  </tr>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm text-gray-700">LC-Rec-8B</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">-</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">当前最强基线</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">对齐离散标识符与语言空间</td>
+                  </tr>
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm text-gray-700">TIGER</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">-</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">生成式检索方法</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">传统生成式推荐，缺乏通用智能</td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm text-gray-700">传统方法（SASRec等）</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">基准线</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">判别式推荐，任务特定</td>
+                    <td class="py-3 px-4 text-sm text-gray-700">缺乏统一框架和跨任务能力</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-3 bg-blue-50 rounded border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-1 text-sm">多领域联合训练优势</h5>
+                <p class="text-xs text-gray-600">OneRec在多领域联合训练下性能提升2.3%，而TIGER下降10.6%</p>
+              </div>
+              <div class="p-3 bg-green-50 rounded border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-1 text-sm">小样本学习能力</h5>
+                <p class="text-xs text-gray-600">在10%数据下，OneRec保持45.2%的全数据性能，TIGER仅23.0%</p>
+              </div>
+              <div class="p-3 bg-purple-50 rounded border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-1 text-sm">迁移学习差距</h5>
+                <p class="text-xs text-gray-600">全数据下领先77.7%，小样本下领先219.7%</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 消融研究结果 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">消融研究关键发现</h3>
+            
+            <div class="space-y-6">
+              <div class="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border-l-4 border-red-500">
+                <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                  <i class="fas fa-clipboard-check mr-2"></i>预训练策略消融
+                </h4>
+                <p class="text-sm text-gray-700 mb-3">比较完整模型与移除物品-文本对齐阶段的模型：</p>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li><strong>对齐阶段至关重要：</strong>特别对小模型（0.6B, 1.7B）性能影响显著</li>
+                  <li><strong>规模效应：</strong>大模型（8B）由于内在泛化能力较强，影响相对较小</li>
+                  <li><strong>领域特定精度：</strong>对齐阶段对标签预测和交互推荐任务特别重要</li>
+                </ul>
+              </div>
+              
+              <div class="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-l-4 border-blue-500">
+                <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                  <i class="fas fa-project-diagram mr-2"></i>后训练阶段分析
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1 text-sm">多任务SFT</h5>
+                    <p class="text-xs text-gray-600">恢复基础能力，但可能导致指令漂移</p>
+                  </div>
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1 text-sm">策略蒸馏</h5>
+                    <p class="text-xs text-gray-600">显著恢复通用能力，但仍有性能差距</p>
+                  </div>
+                  <div class="p-3 bg-white rounded border">
+                    <h5 class="font-semibold text-gray-700 mb-1 text-sm">推荐RL</h5>
+                    <p class="text-xs text-gray-600">针对性提升推荐任务，推理任务也受益</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论、局限性与未来方向
+        </h2>
+        
+        <div class="space-y-8 md:space-y-12">
+          <!-- 主要结论 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">主要结论</h3>
+            <div class="space-y-4">
+              <div class="p-3 md:p-4 bg-green-50 rounded-lg">
+                <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                  <i class="fas fa-check-circle mr-2"></i>框架有效性验证
+                </h4>
+                <p class="text-gray-700">
+                  论文作者提出的OpenOneRec框架成功缩小了传统推荐系统与大语言模型之间的差距。RecIF-Bench作为首个全面的推荐指令遵循基准测试，为评估推荐基础模型提供了标准化工具。
+                </p>
+              </div>
+              
+              <div class="p-3 md:p-4 bg-blue-50 rounded-lg">
+                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                  <i class="fas fa-chart-line mr-2"></i>性能优势证明
+                </h4>
+                <p class="text-gray-700">
+                  OneRec-Foundation模型在RecIF-Bench和Amazon基准测试上均达到最先进性能，证明了统一生成范式的有效性。模型展现出强大的跨领域迁移能力，特别是在小样本学习场景下表现突出。
+                </p>
+              </div>
+              
+              <div class="p-3 md:p-4 bg-purple-50 rounded-lg">
+                <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                  <i class="fas fa-balance-scale mr-2"></i>能力平衡达成
+                </h4>
+                <p class="text-gray-700">
+                  通过创新的三阶段训练流程，模型在保持通用推理能力的同时显著提升了推荐性能。物品作为令牌的设计成功桥接了模态鸿沟，支持高效的推荐任务建模。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 局限性分析 -->
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 md:p-6 rounded-r-lg">
+            <h3 class="text-xl font-bold text-red-700 mb-4 md:mb-6 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              局限性分析
+            </h3>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>分词器可迁移性限制：</strong>当前分词器在垂直领域的细粒度区分能力有限，导致高碰撞率（>30%），影响下游任务性能增益</li>
+              <li><strong>数据混合比例优化：</strong>保持通用智能需要混合大量通用领域文本，最优数据混合比例和效率提升是未解决的挑战</li>
+              <li><strong>推理能力提升有限：</strong>思维链推理仅在有限场景下带来改进，需要更系统的测试时扩展策略探索</li>
+              <li><strong>实验规模限制：</strong>扩展定律分析受限于实验规模，可能引入拟合噪声，预训练知识的贡献未完全分离</li>
+              <li><strong>通用能力轻微下降：</strong>尽管通过蒸馏恢复了大部分通用能力，但与原始Qwen3基线相比仍有差距</li>
+            </ul>
+          </div>
+          
+          <!-- 未来研究方向 -->
+          <div class="bg-white p-4 md:p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6">未来研究方向</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div class="tech-card bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+                <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-code mr-2"></i>分词器优化
+                </h4>
+                <p class="text-sm text-gray-700">最大化基础模型先验复用，同时确保下游任务的高质量物品索引</p>
+              </div>
+              
+              <div class="tech-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <h4 class="font-bold text-green-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-sliders-h mr-2"></i>数据策略优化
+                </h4>
+                <p class="text-sm text-gray-700">研究最优数据混合比例，提高数据利用效率，平衡领域精度与通用能力</p>
+              </div>
+              
+              <div class="tech-card bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-brain mr-2"></i>推理能力增强
+                </h4>
+                <p class="text-sm text-gray-700">探索更系统的测试时扩展策略，在多样化推荐场景中实现一致的推理增益</p>
+              </div>
+              
+              <div class="tech-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-expand-arrows-alt mr-2"></i>扩展定律深化
+                </h4>
+                <p class="text-sm text-gray-700">扩大实验规模，设计更精细的公式，更好地整合预训练知识的影响</p>
+              </div>
+              
+              <div class="tech-card bg-gradient-to-br from-red-50 to-pink-50 border-red-200">
+                <h4 class="font-bold text-red-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-robot mr-2"></i>智能体集成
+                </h4>
+                <p class="text-sm text-gray-700">将推荐基础模型与对话智能体集成，实现更自然的用户交互和个性化体验</p>
+              </div>
+              
+              <div class="tech-card bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
+                <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2 flex items-center">
+                  <i class="fas fa-share-alt mr-2"></i>社区协作
+                </h4>
+                <p class="text-sm text-gray-700">通过开源框架鼓励社区贡献，加速真正智能推荐系统的演进</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 总结评价 -->
+          <div class="bg-gradient-to-r from-gray-50 to-blue-50 border-l-4 border-gray-500 p-4 md:p-6 rounded-r-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center">
+              <i class="fas fa-graduation-cap mr-2"></i>
+              总结评价（AI生成评述）
+            </h3>
+            <div class="space-y-4 text-gray-700">
+              <p>
+                OpenOneRec工作代表了推荐系统向基础模型范式转变的重要里程碑。论文作者不仅提出了技术解决方案，更重要的是建立了标准化的评估框架和开源生态系统，这对领域发展具有长远意义。
+              </p>
+              <p>
+                技术层面的主要创新在于成功地将物品表示为适合LLM处理的令牌格式，并通过精心设计的三阶段训练流程实现了推荐性能与通用智能的平衡。实验结果令人印象深刻，特别是在跨领域迁移和小样本学习场景下的表现，验证了基础模型方法的有效性。
+              </p>
+              <p>
+                然而，这项工作也揭示了推荐基础模型面临的独特挑战。与通用文本不同，推荐领域的扩展定律表现出数据密集型特征，这为未来的系统设计提供了重要指导。同时，如何在不损害通用能力的前提下实现领域专业化，仍是一个需要深入研究的开放问题。
+              </p>
+              <p class="font-medium text-gray-800">
+                总体而言，OpenOneRec为构建真正智能的推荐系统奠定了坚实基础，其开源框架将加速社区在这一有前景方向上的研究进展。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动打开第一个技术细节
+      const firstDetails = document.querySelector('.technical-details');
+      if (firstDetails) {
+        firstDetails.open = true;
+      }
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

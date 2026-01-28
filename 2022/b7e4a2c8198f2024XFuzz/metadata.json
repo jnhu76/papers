@@ -1,0 +1,10 @@
+{
+    "id": "b7e4a2c8198f2024XFuzz",
+    "title": "XFuzz: Machine Learning Guided Cross-Contract Fuzzing",
+    "authors": ["Yinxing Xue", "Jiaming Ye", "Wei Zhang", "Jun Sun", "Lei Ma", "Haijun Wang", "Jianjun Zhao"],
+    "year": 2022,
+    "conference": "ICSE",
+    "category": "软件安全",
+    "keywords": ["智能合约", "模糊测试", "跨合约漏洞", "机器学习", "XFuzz", "Ethereum"],
+    "abstract": "Smart contract transactions are increasingly interleaved by cross-contract calls. While many tools have been developed to identify a common set of vulnerabilities, the cross-contract vulnerability is overlooked by existing tools. Cross-contract vulnerabilities are exploitable bugs that manifest in the presence of more than two interacting contracts. Existing methods are however limited to analyze a maximum of two contracts at the same time. Detecting cross-contract vulnerabilities is highly non-trivial. With multiple interacting contracts, the search space is much larger than that of a single contract. To address this problem, we present XFuzz, a machine learning guided smart contract fuzzing framework. The machine learning models are trained with novel features (e.g., word vectors and instructions) and are used to filter likely benign program paths. Comparing with existing static tools, machine learning model is proven to be more robust, avoiding directly adopting manually-defined rules in specific tools. We compare XFuzz with three state-of-the-art tools on 7,391 contracts. XFuzz detects 18 exploitable cross-contract vulnerabilities, of which 15 vulnerabilities are exposed for the first time. Furthermore, our approach is shown to be efficient in detecting non-cross-contract vulnerabilities as well--using less than 20% time as that of other fuzzing tools, XFuzz detects twice as many vulnerabilities."
+}

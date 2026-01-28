@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scalable Address Spaces using Concurrent Interval Skiplist</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Scalable Address Spaces using Concurrent Interval Skiplist
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Tae Woo Kim, Youngjin Kwon, Jeehoon Kang</div>
+                <div class="text-sm text-gray-600 mt-1">KAIST / FuriosaAI</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, October 13–16, 2025, Seoul, Republic of Korea</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3731569.3764807</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">操作系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">地址空间</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">可扩展性</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">并发数据结构</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>提出了<strong>并发区间跳表</strong>数据结构，支持并行区间操作</li>
+          <li>设计了<strong>两级锁定方案</strong>，支持混合粒度的全局和局部锁定</li>
+          <li>实现了<strong>可扩展的分配策略</strong>，通过分区和层次化减少竞争</li>
+          <li>开发了<strong>自适应计数器</strong>，在保证严格限制的同时提高可扩展性</li>
+          <li>在Linux 6.8.0上实现了完整方案，显著提升了多线程应用的性能</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <p class="text-gray-700 mb-4">
+            内核地址空间设计可能成为多线程应用的显著性能瓶颈，因为地址空间操作（如mmap()和mumap()）被粗粒度锁（如Linux的mmap_lock）串行化。这些锁长期以来被认为是内存管理中最棘手的竞争点之一。
+          </p>
+          
+          <p class="text-gray-700 mb-4">
+            作者提出了第一个可扩展且实用的地址空间设计，能够并行化关键操作。作者识别了关键的可扩展性瓶颈，并通过有针对性的解决方案解决了这些问题。其核心是<strong>并发区间跳表</strong>，这是一种新的数据结构，集成了映射和锁定功能，支持并行区间操作。
+          </p>
+          
+          <p class="text-gray-700">
+            作者在Linux 6.8上实现了该设计，并在双插槽48核机器上进行了评估。结果显示，对于mmap()微基准测试吞吐量提高了<strong>13.1倍</strong>，LevelDB提高了<strong>4.49倍</strong>，Apache Web服务器提高了<strong>3.19倍</strong>，Metis MapReduce提高了<strong>1.47倍</strong>，Psearchy文本索引提高了<strong>1.27倍</strong>。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2 text-red-500"></i>
+              问题：地址空间操作串行化
+            </h3>
+            <p class="text-gray-700 mb-4">
+              当前地址空间设计可能严重瓶颈多线程应用，因为Alloc和Modify操作被串行化。在内核中，这种串行化源于使用粗粒度锁来同步地址空间操作，如Linux中的读写mmap_lock。
+            </p>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+              <h4 class="font-semibold text-red-700 mb-2">性能影响</h4>
+              <p class="text-gray-700">
+                实验显示，在Linux 6.8.0上，Apache Web服务器、Metis MapReduce框架、Psearchy文本索引和LevelDB在高线程数下分别浪费高达<strong>90%</strong>、<strong>60%</strong>、<strong>41%</strong>和<strong>40%</strong>的执行时间等待mmap_lock。
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-history mr-2 text-blue-500"></i>
+              相关工作
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-semibold text-blue-700 mb-2">Linux per-VMA锁定</h4>
+                <p class="text-sm text-gray-700">
+                  允许Fault与Alloc或Modify并行运行，但仍然串行化Alloc和Modify操作。
+                </p>
+              </div>
+              
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 class="font-semibold text-green-700 mb-2">RadixVM</h4>
+                <p class="text-sm text-gray-700">
+                  唯一并行化Alloc和Modify操作的方法，但存在内存开销大、地址空间快速耗尽等实际问题。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-lock mr-2 text-purple-500"></i>
+              动态锁定区间
+            </h3>
+            <p class="text-gray-700 mb-4">
+              地址空间操作通常访问多个结构，如元数据结构或页表，其边界可能与操作本身不对齐。这种不对齐使得用细粒度锁替换粗粒度地址空间锁变得特别具有挑战性。
+            </p>
+            
+            <!-- 图3占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-project-diagram mr-2"></i>技术细节：图3 - 动态锁定区间示例
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 3: 动态锁定区间示例
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig3.png" alt="论文图3: 两个mummp()调用ummap不同区间但必须访问相同的元数据结构" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 两个mummp()调用ummap不同区间但必须访问相同的元数据结构
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>元数据结构共享:</strong> 两个操作针对不同区间，但必须访问相同的元数据结构</li>
+                    <li><strong>锁定范围扩展:</strong> 为了保持一致性，锁定区间必须覆盖整个元数据结构</li>
+                    <li><strong>动态确定:</strong> 所需的锁定区间取决于地址映射的动态状态</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-sync-alt mr-2 text-green-500"></i>
+              可扩展且RCU安全的区间更新
+            </h3>
+            <p class="text-gray-700 mb-4">
+              现有的区间映射串行化区间更新以保证跨所有连续节点的原子性。这些设计针对单节点操作进行了优化，而不是跨多个节点的更新，这凸显了对可扩展区间更新的需求。
+            </p>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-semibold text-yellow-700 mb-2">RCU挑战</h4>
+              <p class="text-gray-700">
+                传统的基于树的结构不适合RCU。启用RCU需要更新通过(1)复制结构，(2)修改副本，(3)原子替换原始结构来进行。当区间跨越多个子树时，这个过程变得昂贵。
+              </p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-database mr-2"></i>整个数据结构操作
+              </h4>
+              <p class="text-sm text-gray-700">某些操作跨越整个地址空间，需要全局锁定，如fork()和exit()</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-sitemap mr-2"></i>分配策略
+              </h4>
+              <p class="text-sm text-gray-700">Linux或FreeBSD使用首次适应策略，导致并发分配在相同点竞争</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-chart-bar mr-2"></i>资源限制
+              </h4>
+              <p class="text-sm text-gray-700">维护全局计数器可能成为显著的性能瓶颈</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-sitemap mr-2 text-blue-500"></i>
+              并发区间跳表
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">接口设计</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>Query(key):</strong> 检索包含指定键的区间</li>
+                  <li><strong>Map(start, end, value):</strong> 将值分配给区间</li>
+                  <li><strong>Alloc(start, end, length, value):</strong> 在区间内插入给定长度的区间</li>
+                  <li><strong>Lock(start, end):</strong> 获取区间的独占写锁</li>
+                  <li><strong>Unlock(start, end):</strong> 释放区间的锁</li>
+                  <li><strong>Swap(start, end, nodes):</strong> 原子交换与区间重叠的所有节点</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">关键技术</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>节点粒度区间锁定:</strong> 结合遍历和锁定</li>
+                  <li><strong>读-复制-更新:</strong> 支持原子交换操作</li>
+                  <li><strong>跳表扩展:</strong> 基于锁free跳表，支持O(log n)复杂度</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 图7占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-project-diagram mr-2"></i>技术细节：图7 - Map操作示例
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 7: Map操作示例
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig7.png" alt="论文图7: 在基于列表的区间映射中执行区间[32,38]的Map操作示例" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 在基于列表的区间映射中执行区间[32,38]的Map操作示例
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>区间锁定:</strong> 对目标区间执行区间锁定</li>
+                    <li><strong>交换操作:</strong> 调用Swap操作，包括将Map区间与其对应值关联的新节点</li>
+                    <li><strong>原子提交:</strong> 通过更新前驱节点的链接来提交交换</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-lock-open mr-2 text-green-500"></i>
+              两级锁定方案
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">锁定模式</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>全局读(GR):</strong> 读取所有每核锁</li>
+                  <li><strong>全局写(GW):</strong> 写入所有每核锁</li>
+                  <li><strong>局部读(LR):</strong> 读取运行核的锁</li>
+                  <li><strong>局部写(LW):</strong> 写入运行核的锁</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">设计优势</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>正确实现全局锁定</li>
+                  <li>显著减少锁获取次数</li>
+                  <li>支持非重叠区间的并行操作</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 图9占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-project-diagram mr-2"></i>技术细节：图9 - 互斥规则
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 9: 互斥规则
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig9.png" alt="论文图9: 新分布式锁中各种锁定模式的互斥规则" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 新分布式锁中各种锁定模式的互斥规则
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>互斥矩阵:</strong> 显示不同锁定模式之间的兼容性</li>
+                    <li><strong>核心锁定:</strong> 如果锁定不同的核心，某些模式可以共存</li>
+                    <li><strong>全局锁定:</strong> 全局模式与局部模式互斥</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-memory mr-2 text-purple-500"></i>
+              可扩展分配策略
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">每核竞技场</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>将地址空间的一小部分划分为64-GiB竞技场</li>
+                  <li>每个核心首先在其自己的每核竞技场中搜索空闲空间</li>
+                  <li>私有竞技场满时回退到共享的非竞技场区域</li>
+                  <li>128个竞技场仅占x86-64系统256-TiB虚拟地址空间的不到4%</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">跳表层次结构</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>使用专用分隔符节点分区竞技场</li>
+                  <li>层次化组织级别</li>
+                  <li>上层支持分隔符之间的遍历</li>
+                  <li>下层通常处理单个竞技场内的遍历</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 图11占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-project-diagram mr-2"></i>技术细节：图11 - 分隔符节点分区竞技场
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 11: 分隔符节点分区竞技场
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig11.png" alt="论文图11: 分隔符节点分区竞技场。上层支持分隔符之间的遍历，而下层主要处理同一竞技场内的遍历" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 分隔符节点分区竞技场。上层支持分隔符之间的遍历，而下层主要处理同一竞技场内的遍历
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>竞技场隔离:</strong> 分隔符节点将地址空间划分为独立的竞技场</li>
+                    <li><strong>层次化遍历:</strong> 上层处理竞技场间遍历，下层处理竞技场内遍历</li>
+                    <li><strong>减少竞争:</strong> 这种设计减少了不同核心之间的竞争</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-microchip mr-2 text-blue-500"></i>
+              实验设置
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">测试环境</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>硬件:</strong> 双插槽Intel Xeon Gold 6248R (3.0GHz, 48核, 96线程)</li>
+                  <li><strong>内存:</strong> 384GiB DRAM</li>
+                  <li><strong>存储:</strong> 4TB WD BLACK SN850X SSD</li>
+                  <li><strong>内核:</strong> Linux 6.8.0, IntervalVM, RadixVM</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">测试方法</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>每个基准测试重复20次并报告平均值</li>
+                  <li>LMbench运行40次（高方差）</li>
+                  <li>线程数变化高达物理核心数的两倍</li>
+                  <li>超线程范围用红色背景突出显示</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-database mr-2 text-green-500"></i>
+              数据结构微基准测试
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">测试内容</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>比较区间跳表和Linux Maple树</li>
+                  <li>评估Query、Alloc和Map操作</li>
+                  <li>使用每线程竞技场确保非重叠区域</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">关键结果</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>Query:</strong> 延迟+35%，峰值吞吐量0.77×</li>
+                  <li><strong>Alloc:</strong> 延迟+4%，峰值吞吐量22.9×</li>
+                  <li><strong>Map:</strong> 延迟-49%，峰值吞吐量5.28×</li>
+                </ul>
+              </div>
+            </div>
+            
+            <!-- 图12占位符 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-chart-bar mr-2"></i>技术细节：图12 - 区间跳表和Maple树性能对比
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 12: 区间跳表和Maple树性能
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig12.png" alt="论文图12: 区间跳表和Maple树在Query、Alloc和Map操作上的性能对比" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 区间跳表和Maple树在Query、Alloc和Map操作上的性能对比
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>查询性能:</strong> 区间跳表在查询操作上略逊于Maple树</li>
+                    <li><strong>分配性能:</strong> 区间跳表在分配操作上显著优于Maple树</li>
+                    <li><strong>映射性能:</strong> 区间跳表在映射操作上表现优异</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-server mr-2 text-purple-500"></i>
+              应用级基准测试
+            </h3>
+            
+            <div class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
+                  <div class="text-2xl font-bold text-blue-700 mb-2">13.1×</div>
+                  <div class="text-sm font-medium">mmap()微基准测试</div>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                  <div class="text-2xl font-bold text-green-700 mb-2">4.49×</div>
+                  <div class="text-sm font-medium">LevelDB</div>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
+                  <div class="text-2xl font-bold text-purple-700 mb-2">3.19×</div>
+                  <div class="text-sm font-medium">Apache Web服务器</div>
+                </div>
+                
+                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-center">
+                  <div class="text-2xl font-bold text-yellow-700 mb-2">1.47×</div>
+                  <div class="text-sm font-medium">Metis MapReduce</div>
+                </div>
+              </div>
+              
+              <!-- 图13占位符 -->
+              <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-6 mt-6">
+                <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                  <i class="fas fa-chart-line mr-2"></i>技术细节：图13 - 应用级基准测试结果
+                </summary>
+                
+                <div class="mt-6 space-y-6">
+                  <!-- 原图展示部分 -->
+                  <div class="original-figure-container">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                      <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                        <i class="fas fa-image mr-2 text-blue-500"></i>
+                        原图 13: 应用级基准测试结果
+                      </h5>
+                      <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                    </div>
+                    
+                    <!-- 原图占位符 -->
+                    <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                      <img src="./images/fig13.png" alt="论文图13: 应用级基准测试结果，包括Apache Web服务器、LevelDB、Metis MapReduce和Psearchy文本索引" class="max-w-full h-auto rounded-lg">
+                    </div>
+                    
+                    <!-- 原图图注 -->
+                    <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                      <strong>原图图注:</strong> 应用级基准测试结果，包括Apache Web服务器、LevelDB、Metis MapReduce和Psearchy文本索引
+                    </div>
+                  </div>
+                  
+                  <!-- 技术解释部分 -->
+                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                      <i class="fas fa-info-circle mr-2"></i>技术解释：
+                    </h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                      <li><strong>Apache Web服务器:</strong> 在48线程时性能提升3.19倍</li>
+                      <li><strong>LevelDB:</strong> 在48线程时性能提升4.49倍</li>
+                      <li><strong>Metis MapReduce:</strong> 在48线程时性能提升1.47倍</li>
+                      <li><strong>Psearchy文本索引:</strong> 在48线程时性能提升1.27倍</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-check-circle mr-2 text-green-500"></i>
+              主要贡献
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">技术贡献</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li><strong>并发区间跳表:</strong> 支持并行区间操作的新数据结构</li>
+                  <li><strong>两级锁定方案:</strong> 混合粒度的全局和局部锁定</li>
+                  <li><strong>可扩展分配策略:</strong> 通过分区和层次化减少竞争</li>
+                  <li><strong>自适应计数器:</strong> 在保证严格限制的同时提高可扩展性</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">性能成果</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>mmap()微基准测试吞吐量提高<strong>13.1倍</strong></li>
+                  <li>LevelDB性能提高<strong>4.49倍</strong></li>
+                  <li>Apache Web服务器性能提高<strong>3.19倍</strong></li>
+                  <li>Metis MapReduce性能提高<strong>1.47倍</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-road mr-2 text-blue-500"></i>
+              未来工作
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">技术方向</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>优化查询操作的性能</li>
+                  <li>减少内存管理开销</li>
+                  <li>探索其他并发数据结构</li>
+                  <li>改进分配策略</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-3">应用扩展</h4>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                  <li>扩展到其他操作系统</li>
+                  <li>支持更多类型的工作负载</li>
+                  <li>优化特定应用场景</li>
+                  <li>集成到主流内核版本</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>
+              总结
+            </h4>
+            <p class="text-gray-700">
+              作者提出了第一个可扩展且实用的地址空间设计，能够并行化关键操作。通过识别关键的可扩展性瓶颈并提供有针对性的解决方案，作者实现了显著的性能提升。这项工作为未来操作系统设计提供了重要的技术基础，特别是在多核系统日益普及的背景下。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

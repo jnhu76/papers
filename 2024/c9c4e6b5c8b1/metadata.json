@@ -1,0 +1,10 @@
+{
+  "id": "c9c4e6b5c8b1",
+  "title": "A Mess of Memory System Benchmarking, Simulation and Application Profiling",
+  "authors": ["Pouya Esmaili-Dokht", "Francesco Sgherzi", "Valéria Soldera Girelli", "Isaac Boixaderas", "Mariana Carmin", "Alireza Monemi", "Adrià Armejach", "Estanislao Mercadal", "Germán Llort", "Petar Radojković", "Miquel Moreto", "Judit Giménez", "Xavier Martorell", "Eduard Ayguadé", "Jesus Labarta", "Emanuele Confalonieri", "Rishabh Dubey", "Jason Adlard"],
+  "year": 2024,
+  "conference": "MICRO",
+  "category": "计算机体系结构",
+  "keywords": ["内存系统", "基准测试", "模拟", "性能分析", "带宽-延迟曲线", "CXL", "HBM"],
+  "abstract": "The Memory stress (Mess) framework provides a unified view of the memory system benchmarking, simulation and application profiling.\nThe Mess benchmark provides a holistic and detailed memory system characterization. It is based on hundreds of measurements that are represented as a family of bandwidth–latency curves. The benchmark increases the coverage of all the previous tools and leads to new findings in the behavior of the actual and simulated memory systems. We deploy the Mess benchmark to characterize Intel, AMD, IBM, Fujitsu, Amazon and NVIDIA servers with DDR4, DDR5, HBM2 and HBM2E memory. The Mess memory simulator uses bandwidth–latency concept for the memory performance simulation. We integrate Mess with widely-used CPUs simulators enabling modeling of all high-end memory technologies. The Mess simulator is fast, easy to integrate and it closely matches the actual system performance. By design, it enables a quick adoption of new memory technologies in hardware simulators. Finally, the Mess application profiling positions the application in the bandwidth–latency space of the target memory system. This information can be correlated with other application runtime activities and the source code, leading to a better overall understanding of the application’s behavior."
+}

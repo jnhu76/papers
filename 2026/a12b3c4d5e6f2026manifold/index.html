@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manifold-Constrained Hyper-Connections (mHC)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .code-block {
+      background-color: #f7fafc;
+      border-left: 4px solid #4299e1;
+      padding: 1rem;
+      border-radius: 0.375rem;
+      font-family: monospace;
+      overflow-x: auto;
+    }
+    /* KaTeX公式样式 */
+    .katex-formula {
+      font-size: 1.1em;
+      line-height: 1.5;
+    }
+    .katex-block {
+      display: block;
+      text-align: center;
+      margin: 1em 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .katex-inline {
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .latex-inline {
+      font-size: 1.05em;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Manifold-Constrained Hyper-Connections (mHC)
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Zhenda Xie*, Yixuan Wei*, Huang Cao*, 等</div>
+                <div class="text-sm text-gray-600 mt-1">DeepSeek-AI</div>
+                <div class="text-sm text-gray-500 mt-1">*核心贡献者，†通讯作者: xie.zhenda@deepseek.com</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">论文类型</strong>
+                <div>预印本论文，arXiv: 2512.24880v1</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">核心领域</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">神经网络架构</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">残差连接</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">大模型训练</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键技术</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">流形约束</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">双随机矩阵</span>
+                  <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">Sinkhorn-Knopp算法</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 text-xl mb-4 flex items-center">
+          <i class="fas fa-trophy mr-3"></i>核心贡献与技术突破
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700 pl-4">
+          <li><strong>提出流形约束超连接（mHC）框架</strong>：将HC的残差连接空间投影到特定流形上，恢复恒等映射特性</li>
+          <li><strong>解决训练不稳定问题</strong>：通过双随机矩阵约束，防止信号爆炸或消失，实现稳定的大规模训练</li>
+          <li><strong>高效基础设施优化</strong>：仅增加6.7%的时间开销（\(n=4\)时），实现接近HC的性能增益</li>
+          <li><strong>验证大规模可扩展性</strong>：在27B参数模型上验证了稳定性和性能提升，支持扩展到更大规模</li>
+          <li><strong>理论保障</strong>：基于Birkhoff多面体和双随机矩阵的理论性质，确保组合映射的稳定性</li>
+        </ul>
+      </div>
+
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="space-y-4 text-gray-700">
+          <p class="text-lg leading-relaxed">
+            本论文提出了<strong>流形约束超连接（Manifold-Constrained Hyper-Connections，简称mHC）</strong>，这是一个解决超连接（HC）训练不稳定性和可扩展性限制的通用框架。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>核心思想（简单理解）
+            </h5>
+            <p class="text-gray-700">
+              想象一下，HC就像是一个有很多条水管的系统，每条水管的水流可以随意变化。但有时候水流变化太大会导致系统崩溃。mHC就像是在每个水管连接处加了一个"流量调节器"，确保水流既不会太大也不会太小，保持稳定。
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>解决的问题
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-600">
+                <li>HC训练不稳定（损失函数突然暴涨）</li>
+                <li>信号爆炸或消失问题</li>
+                <li>内存访问开销大</li>
+                <li>可扩展性受限</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-rocket text-purple-500 mr-2"></i>达到的效果
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-600">
+                <li>保持HC的性能优势</li>
+                <li>实现稳定的大规模训练</li>
+                <li>仅6.7%额外时间开销</li>
+                <li>更好的下游任务性能</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="space-y-6">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">神经网络架构演化</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white p-4 rounded border">
+                <h4 class="font-bold text-blue-600 mb-2">ResNet (2016)</h4>
+                <p class="text-sm text-gray-600">残差连接：\(x_{l+1} = x_l + F(x_l)\)</p>
+                <div class="mt-2 text-xs bg-blue-50 text-blue-700 p-2 rounded">恒等映射，稳定</div>
+              </div>
+              <div class="bg-white p-4 rounded border">
+                <h4 class="font-bold text-purple-600 mb-2">HC (2024)</h4>
+                <p class="text-sm text-gray-600">超连接：扩展残差流宽度</p>
+                <div class="mt-2 text-xs bg-purple-50 text-purple-700 p-2 rounded">性能好，不稳定</div>
+              </div>
+              <div class="bg-white p-4 rounded border">
+                <h4 class="font-bold text-green-600 mb-2">mHC (本文)</h4>
+                <p class="text-sm text-gray-600">流形约束超连接</p>
+                <div class="mt-2 text-xs bg-green-50 text-green-700 p-2 rounded">性能好，稳定</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 原图占位符：残差连接范式对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - 残差连接范式对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 残差连接范式对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 标准残差连接、超连接和mHC的结构对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 比较(a)标准残差连接、(b)超连接(HC)和(c)流形约束超连接(mHC)的结构设计。与无约束的HC不同，mHC通过将矩阵投影到约束流形上来优化残差连接空间，确保稳定性。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>标准残差连接:</strong> 简单的\(x_{l+1} = x_l + F(x_l)\)形式，保持恒等映射特性，信号可以无损传递</li>
+                  <li><strong>超连接(HC):</strong> 扩展残差流宽度，增加连接复杂性，但失去恒等映射特性</li>
+                  <li><strong>mHC:</strong> 在HC基础上添加流形约束，恢复稳定性同时保持性能增益</li>
+                  <li><strong>关键差异:</strong> HC的连接矩阵无约束，mHC的连接矩阵被约束在双随机矩阵流形上</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>数学公式对比：
+                </h5>
+                <div class="space-y-4">
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">标准残差连接:</div>
+                    \[
+                    x_{l+1} = x_l + F(x_l, W_l)
+                    \]
+                  </div>
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">超连接(HC):</div>
+                    \[
+                    x_{l+1} = \mathcal{H}^{\text{res}}_{l} x_l + \mathcal{H}^{\text{post}\top}_{l} F(\mathcal{H}^{\text{pre}}_{l} x_l, \mathcal{W}_l)
+                    \]
+                  </div>
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">mHC:</div>
+                    \[
+                    x_{l+1} = \mathcal{P}_{\mathcal{M}}(\mathcal{H}^{\text{res}}_{l}) x_l + \mathcal{H}^{\text{post}\top}_{l} F(\mathcal{H}^{\text{pre}}_{l} x_l, \mathcal{W}_l)
+                    \]
+                    <div class="text-xs text-gray-500 mt-1">其中\(\mathcal{P}_{\mathcal{M}}\)表示流形投影操作</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 残差连接数学背景 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-calculator mr-2 text-blue-500"></i>残差连接的数学背景
+            </h4>
+            <div class="space-y-4">
+              <div class="code-block">
+                <div class="text-sm text-gray-500 mb-1">单层残差连接公式:</div>
+                \[
+                \mathbf{x}_{l+1} = \mathbf{x}_l + \mathcal{F}(\mathbf{x}_l, \mathcal{W}_l)
+                \]
+              </div>
+              
+              <div class="code-block">
+                <div class="text-sm text-gray-500 mb-1">多层递归扩展:</div>
+                \[
+                \mathbf{x}_L = \mathbf{x}_l + \sum_{i=l}^{L-1} \mathcal{F}(\mathbf{x}_i, \mathcal{W}_i)
+                \]
+                <div class="text-xs text-gray-500 mt-1">其中\(L\)和\(l\)分别对应更深层和更浅层</div>
+              </div>
+              
+              <div class="code-block">
+                <div class="text-sm text-gray-500 mb-1">恒等映射的重要性:</div>
+                \[
+                \mathbf{x}_l \rightarrow \mathbf{x}_L \quad \text{(直接映射，无修改)}
+                \]
+                <div class="text-xs text-gray-500 mt-1">浅层信号直接映射到深层，保持稳定性</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-history mr-2 text-blue-500"></i>发展脉络
+            </h4>
+            <div class="space-y-3">
+              <div class="flex items-start">
+                <div class="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</div>
+                <div>
+                  <strong class="text-gray-700">残差连接诞生 (2016):</strong> ResNet提出残差连接，解决了深层网络梯度消失问题
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-purple-100 text-purple-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</div>
+                <div>
+                  <strong class="text-gray-700">超连接出现 (2024):</strong> HC扩展残差流宽度，提升性能但引入不稳定性
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</div>
+                <div>
+                  <strong class="text-gray-700">mHC解决方案 (本文):</strong> 在HC基础上添加流形约束，兼顾性能与稳定性
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="space-y-6">
+          <!-- 核心挑战概述 -->
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-red-700 text-lg mb-3">HC的两个核心问题</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-red-600 mb-2 flex items-center">
+                  <i class="fas fa-bolt mr-2"></i>数值不稳定性
+                </h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                  <li>失去恒等映射特性</li>
+                  <li>信号爆炸或消失</li>
+                  <li>训练损失突然暴涨</li>
+                  <li>梯度不稳定</li>
+                </ul>
+              </div>
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-red-600 mb-2 flex items-center">
+                  <i class="fas fa-memory mr-2"></i>系统开销问题
+                </h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                  <li>内存访问开销大</li>
+                  <li>GPU内存占用高</li>
+                  <li>通信成本增加</li>
+                  <li>训练吞吐量下降</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- HC的数学公式 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-calculator mr-2 text-blue-500"></i>HC的数学形式与问题
+            </h4>
+            <div class="space-y-4">
+              <div class="code-block">
+                <div class="text-sm text-gray-500 mb-1">HC单层公式:</div>
+                \[
+                \mathbf{x}_{l+1} = \mathcal{H}^{\text{res}}_{l} \mathbf{x}_l + \mathcal{H}^{\text{post}\top}_{l} \mathcal{F}(\mathcal{H}^{\text{pre}}_{l} \mathbf{x}_l, \mathcal{W}_l)
+                \]
+                <div class="text-xs text-gray-500 mt-1">其中\(\mathbf{x}_l \in \mathbb{R}^{n \times C}\)，特征维度从\(C\)扩展到\(n \times C\)</div>
+              </div>
+              
+              <div class="code-block">
+                <div class="text-sm text-gray-500 mb-1">HC多层复合映射问题:</div>
+                \[
+                \mathbf{x}_L = \left( \prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{L-i} \right) \mathbf{x}_l + \sum_{i=l}^{L-1} \left( \prod_{j=1}^{L-1-i} \mathcal{H}^{\text{res}}_{L-j} \right) \mathcal{H}^{\text{post}\top}_{l} \mathcal{F}(\mathcal{H}^{\text{pre}}_{l} \mathbf{x}_l, \mathcal{W}_l)
+                \]
+                <div class="text-xs text-gray-500 mt-1 text-red-600">复合映射\(\prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{L-i}\)可能偏离恒等映射，导致信号爆炸或消失</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 训练不稳定性可视化 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图2 - HC训练不稳定性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 超连接(HC)的训练不稳定性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: HC相对于mHC的绝对损失差距和梯度范数比较" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 该图展示了(a)HC相对于mHC的绝对损失差距，和(b)梯度范数的比较。所有结果基于27B模型。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>关键发现：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>损失突增:</strong> 在12k步附近，HC出现意外损失突增，表明训练不稳定</li>
+                  <li><strong>梯度不稳定:</strong> HC的梯度范数波动剧烈，与损失突增高度相关</li>
+                  <li><strong>对比基准:</strong> mHC作为基线表现稳定，验证了流形约束的有效性</li>
+                  <li><strong>问题严重性:</strong> 这种不稳定性在大规模训练中尤为严重，可能阻碍模型收敛</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>不稳定性量化分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">信号增益分析:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>HC最大增益幅度: ~3000倍</li>
+                      <li>理想稳定值: 1倍</li>
+                      <li>偏差程度: 3000倍偏差</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">训练影响:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>损失突增点: 12k步附近</li>
+                      <li>收敛困难: 需要更多训练步数</li>
+                      <li>超参数敏感: 需要精细调优</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 传播不稳定性分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图3 - HC传播不稳定性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 超连接(HC)的传播不稳定性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: HC的单层映射和复合映射传播动力学" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 该图展示了27B模型中(a)单层映射\(\mathcal{H}^{\text{res}}_{l}\)和(b)复合映射\(\prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{l-i}\)的传播动力学。层索引l(x轴)将每个标准Transformer块展开为两个独立层(Attention和FFN)。Amax增益幅度(y轴)计算为最大绝对行和(前向信号)和列和(后向梯度)，在选定序列的所有token上平均。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>Amax增益幅度:</strong> 基于复合映射行/列和的最大绝对值，捕捉前向/后向传播中的最坏情况扩展</li>
+                  <li><strong>单层映射波动:</strong> \(\mathcal{H}^{\text{res}}_{l}\)在各层间变化剧烈，无约束导致不稳定</li>
+                  <li><strong>复合映射爆炸:</strong> \(\prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{l-i}\)产生峰值高达3000的极端值，严重偏离理想值1</li>
+                  <li><strong>确认信号爆炸:</strong> 极大增益幅度证实了爆炸残差流的存在</li>
+                </ul>
+              </div>
+              
+              <!-- 数学分析部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-calculator mr-2"></i>数学分析：
+                </h5>
+                <div class="space-y-3">
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">复合映射分析:</div>
+                    \[
+                    \text{复合映射} = \prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{l-i} \quad \text{其中} \quad \mathcal{H}^{\text{res}}_{l} \in \mathbb{R}^{n \times n}
+                    \]
+                  </div>
+                  
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">信号增益计算:</div>
+                    \[
+                    \text{前向增益} = \max_{j} \left| \sum_{i} \left( \prod_{k=1}^{L-l} \mathcal{H}^{\text{res}}_{l-k} \right)_{j,i} \right|
+                    \]
+                    \[
+                    \text{后向增益} = \max_{i} \left| \sum_{j} \left( \prod_{k=1}^{L-l} \mathcal{H}^{\text{res}}_{l-k} \right)_{j,i} \right|
+                    \]
+                  </div>
+                  
+                  <div class="text-sm text-gray-600">
+                    <strong>结论:</strong> 当增益值远大于1时，信号在传播过程中被过度放大；当远小于1时，信号衰减。HC的增益值达到3000，表明严重的信号爆炸问题。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 内存访问成本表格 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-table mr-2 text-blue-500"></i>内存访问成本对比（表2）
+            </h4>
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">方法</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">读取(元素)</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">写入(元素)</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr class="bg-blue-50">
+                  <td class="px-4 py-3 font-medium text-gray-700" rowspan="2">残差连接</td>
+                  <td class="px-4 py-3 text-gray-600">残差合并</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">2C</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">C</td>
+                </tr>
+                <tr class="bg-blue-50">
+                  <td class="px-4 py-3 font-medium text-gray-700">总I/O</td>
+                  <td class="px-4 py-3 font-mono text-gray-700 font-bold">2C</td>
+                  <td class="px-4 py-3 font-mono text-gray-700 font-bold">C</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700" rowspan="6">超连接(HC)</td>
+                  <td class="px-4 py-3 text-gray-600">计算\(\mathcal{H}\)矩阵</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">n²+2n</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-gray-600">\(\mathcal{H}^{\text{pre}}_{l}\)操作</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC+n</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">C</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-gray-600">\(\mathcal{H}^{\text{post}}_{l}\)操作</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">C+n</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-gray-600">\(\mathcal{H}^{\text{res}}_{l}\)操作</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC+n²</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-gray-600">残差合并</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">2nC</td>
+                  <td class="px-4 py-3 font-mono text-gray-700">nC</td>
+                </tr>
+                <tr class="bg-red-50">
+                  <td class="px-4 py-3 font-medium text-red-700">总I/O</td>
+                  <td class="px-4 py-3 font-mono text-red-700 font-bold">(5n+1)C+n²+2n</td>
+                  <td class="px-4 py-3 font-mono text-red-700 font-bold">(3n+1)C+n²+2n</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+              <strong>分析:</strong> 当\(n=4\)时，HC的I/O开销比标准残差连接增加约4-5倍，这是"内存墙"问题的直接体现。
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-calculator mr-2 text-blue-500"></i>数学问题分析
+              </h4>
+              <div class="code-block mb-3">
+                <div class="text-sm text-gray-500 mb-1">HC多层复合映射:</div>
+                \[
+                \mathbf{x}_L = \left( \prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{L-i} \right) \mathbf{x}_l + \cdots
+                \]
+              </div>
+              <p class="text-gray-600 text-sm">
+                由于\(\mathcal{H}^{\text{res}}_{l}\)无约束，复合映射\(\prod_{i=1}^{L-l} \mathcal{H}^{\text{res}}_{L-i}\)可能偏离恒等映射，导致信号幅度爆炸或消失。
+              </p>
+            </div>
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-server mr-2 text-blue-500"></i>系统问题分析
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-600 text-sm">
+                <li><strong>内存墙:</strong> I/O成本成为主要瓶颈</li>
+                <li><strong>通信开销:</strong> 流水线并行中n倍通信成本</li>
+                <li><strong>内存占用:</strong> 需要梯度检查点技术</li>
+                <li><strong>训练吞吐量:</strong> 显著的吞吐量下降</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="space-y-6">
+          <!-- mHC核心思想 -->
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 text-lg mb-3">mHC核心设计思想</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-blue-600 mb-2 flex items-center">
+                  <i class="fas fa-project-diagram mr-2"></i>流形约束
+                </h5>
+                <p class="text-gray-600 text-sm">
+                  将残差映射\(\mathcal{H}^{\text{res}}_{l}\)约束在双随机矩阵流形（Birkhoff多面体）上。双随机矩阵的行和列和都为1，确保信号能量守恒。
+                </p>
+              </div>
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-blue-600 mb-2 flex items-center">
+                  <i class="fas fa-bolt mr-2"></i>基础设施优化
+                </h5>
+                <p class="text-gray-600 text-sm">
+                  通过内核融合、重计算、通信计算重叠等技术，将额外开销降至仅6.7%（\(n=4\)时）。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 双随机矩阵解释 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-cube mr-2 text-blue-500"></i>双随机矩阵的三大优势
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-green-50 p-4 rounded border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">1. 范数保持</h5>
+                <p class="text-sm text-gray-600">谱范数≤1，确保映射非扩张，防止梯度爆炸</p>
+                <div class="mt-2 code-block text-xs">
+                  \[
+                  \|\mathcal{H}^{\text{res}}_{l}\|_2 \leq 1
+                  \]
+                </div>
+              </div>
+              <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                <h5 class="font-bold text-blue-700 mb-2">2. 组合封闭性</h5>
+                <p class="text-sm text-gray-600">双随机矩阵乘积仍为双随机矩阵，确保多层稳定性</p>
+                <div class="mt-2 code-block text-xs">
+                  \[
+                  \mathcal{H}_1, \mathcal{H}_2 \in \mathcal{M}^{\text{res}} \Rightarrow \mathcal{H}_1 \mathcal{H}_2 \in \mathcal{M}^{\text{res}}
+                  \]
+                </div>
+              </div>
+              <div class="bg-purple-50 p-4 rounded border border-purple-200">
+                <h5 class="font-bold text-purple-700 mb-2">3. 几何解释</h5>
+                <p class="text-sm text-gray-600">Birkhoff多面体，排列矩阵的凸组合</p>
+                <div class="mt-2 code-block text-xs">
+                  \[
+                  \mathcal{M}^{\text{res}} = \text{conv}(\text{Permutation Matrices})
+                  \]
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 双随机矩阵流形定义 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-shapes mr-2 text-blue-500"></i>双随机矩阵流形定义
+            </h4>
+            <div class="code-block">
+              <div class="text-sm text-gray-500 mb-1">流形约束定义:</div>
+              \[
+              \mathcal{P}_{\mathcal{M}^{\text{res}}}(\mathcal{H}^{\text{res}}_{l}) := \left\{ \mathcal{H}^{\text{res}}_{l} \in \mathbb{R}^{n \times n} \mid \mathcal{H}^{\text{res}}_{l} \mathbf{1}_n = \mathbf{1}_n, \; \mathbf{1}^{\top}_n \mathcal{H}^{\text{res}}_{l} = \mathbf{1}^{\top}_n, \; \mathcal{H}^{\text{res}}_{l} \geqslant 0 \right\}
+              \]
+              <div class="text-xs text-gray-500 mt-2">
+                其中\(\mathbf{1}_n\)表示全1的n维向量，\(\mathcal{H}^{\text{res}}_{l} \geqslant 0\)表示矩阵所有元素非负
+              </div>
+            </div>
+          </div>
+
+          <!-- 技术实现流程 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-code-branch mr-2"></i>技术细节：mHC算法流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 算法步骤 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-list-ol mr-2"></i>mHC计算步骤：
+                </h5>
+                <div class="space-y-4">
+                  <div class="bg-white p-3 rounded border">
+                    <div class="text-sm font-medium text-blue-600 mb-1">步骤1: 输入处理</div>
+                    <div class="code-block text-sm">
+                      \[
+                      \text{输入: } \mathbf{x}_l \in \mathbb{R}^{n \times C}
+                      \]
+                      \[
+                      \text{扁平化: } \tilde{\mathbf{x}}_l = \text{vec}(\mathbf{x}_l) \in \mathbb{R}^{1 \times nC}
+                      \]
+                      \[
+                      \text{归一化: } \tilde{\mathbf{x}}'_l = \text{RMSNorm}(\tilde{\mathbf{x}}_l)
+                      \]
+                    </div>
+                  </div>
+                  <div class="bg-white p-3 rounded border">
+                    <div class="text-sm font-medium text-blue-600 mb-1">步骤2: 动态映射计算</div>
+                    <div class="code-block text-sm">
+                      \[
+                      \tilde{\mathcal{H}}^{\text{pre}}_{l} = \alpha^{\text{pre}}_{l} \cdot (\tilde{\mathbf{x}}'_l \varphi^{\text{pre}}_{l}) + \mathbf{b}^{\text{pre}}_{l}
+                      \]
+                      \[
+                      \tilde{\mathcal{H}}^{\text{post}}_{l} = \alpha^{\text{post}}_{l} \cdot (\tilde{\mathbf{x}}'_l \varphi^{\text{post}}_{l}) + \mathbf{b}^{\text{post}}_{l}
+                      \]
+                      \[
+                      \tilde{\mathcal{H}}^{\text{res}}_{l} = \alpha^{\text{res}}_{l} \cdot \text{mat}(\tilde{\mathbf{x}}'_l \varphi^{\text{res}}_{l}) + \mathbf{b}^{\text{res}}_{l}
+                      \]
+                    </div>
+                  </div>
+                  <div class="bg-white p-3 rounded border">
+                    <div class="text-sm font-medium text-blue-600 mb-1">步骤3: 流形投影</div>
+                    <div class="code-block text-sm">
+                      \[
+                      \mathcal{H}^{\text{pre}}_{l} = \sigma(\tilde{\mathcal{H}}^{\text{pre}}_{l})
+                      \]
+                      \[
+                      \mathcal{H}^{\text{post}}_{l} = 2\sigma(\tilde{\mathcal{H}}^{\text{post}}_{l})
+                      \]
+                      \[
+                      \mathcal{H}^{\text{res}}_{l} = \text{Sinkhorn-Knopp}(\tilde{\mathcal{H}}^{\text{res}}_{l}) \quad \text{# 双随机化}
+                      \]
+                    </div>
+                  </div>
+                  <div class="bg-white p-3 rounded border">
+                    <div class="text-sm font-medium text-blue-600 mb-1">步骤4: 最终输出</div>
+                    <div class="code-block text-sm">
+                      \[
+                      \mathbf{x}_{l+1} = \mathcal{H}^{\text{res}}_{l} \mathbf{x}_l + \mathcal{H}^{\text{post}\top}_{l} \mathcal{F}(\mathcal{H}^{\text{pre}}_{l} \mathbf{x}_l, \mathcal{W}_l)
+                      \]
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Sinkhorn-Knopp算法解释 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-sync-alt mr-2"></i>Sinkhorn-Knopp算法：
+                </h5>
+                <div class="space-y-3">
+                  <div class="text-gray-700">
+                    <strong>目的:</strong> 将任意非负矩阵转换为双随机矩阵（行和列和都为1）
+                  </div>
+                  <div class="code-block">
+                    <div class="text-sm text-gray-500 mb-1">迭代过程:</div>
+                    \[
+                    \mathbf{M}^{(0)} = \exp(\tilde{\mathcal{H}}^{\text{res}}_{l}) \quad \text{# 确保非负}
+                    \]
+                    \[
+                    \text{for } t = 1 \text{ to } T:
+                    \]
+                    \[
+                    \quad \mathbf{M}^{(t)} = \mathcal{T}_r \left( \mathcal{T}_c(\mathbf{M}^{(t-1)}) \right)
+                    \]
+                    <div class="text-sm ml-4"># \(\mathcal{T}_r\): 行归一化，\(\mathcal{T}_c\): 列归一化</div>
+                    \[
+                    \mathcal{H}^{\text{res}}_{l} = \mathbf{M}^{(T)}
+                    \]
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    <strong>论文设置:</strong> T=20次迭代，平衡计算效率与精度
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 性能优化技术 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-tachometer-alt mr-2"></i>性能优化技术：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">内核融合:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>多个操作融合为统一内核</li>
+                      <li>减少内存带宽瓶颈</li>
+                      <li>使用TileLang框架</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">重计算策略:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>丢弃中间激活值</li>
+                      <li>反向传播时重新计算</li>
+                      <li>最优块大小: \(L_r^* \approx \sqrt{\frac{nL}{n+2}}\)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">通信重叠:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>扩展DualPipe调度</li>
+                      <li>重叠通信与计算</li>
+                      <li>专用计算流</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">内存优化:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>内存访问减少</li>
+                      <li>从\((3n+1)C\)到\((n+1)C\)</li>
+                      <li>混合精度策略</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 简单比喻 -->
+          <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-amber-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>简单理解mHC（比喻）
+            </h4>
+            <div class="space-y-3 text-gray-700">
+              <p><strong>HC的问题:</strong> 就像有一个多车道高速公路，但每个出口的车辆分流没有限制，可能导致某些出口拥堵，某些出口空置。</p>
+              <p><strong>mHC的解决方案:</strong> 在每个出口安装"流量调节器"，确保每个出口的车辆数均衡，既不拥堵也不空置。</p>
+              <p><strong>技术对应:</strong> </p>
+              <ul class="list-disc list-inside pl-4 space-y-1">
+                <li>多车道 = 多流残差连接</li>
+                <li>车辆 = 信号/特征</li>
+                <li>流量调节器 = 双随机矩阵约束</li>
+                <li>Sinkhorn-Knopp = 自动调节算法</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="space-y-6">
+          <!-- 实验设置 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-flask mr-2 text-blue-500"></i>实验设置
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">模型配置</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                  <li>模型大小: 3B, 9B, 27B参数</li>
+                  <li>基础架构: DeepSeek-V3 MoE架构</li>
+                  <li>扩展率: \(n=4\) (HC和mHC)</li>
+                  <li>主要关注: 27B模型</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-gray-700 mb-2">训练配置</h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600 text-sm">
+                  <li>数据集: 与参数成比例</li>
+                  <li>对比基准: Baseline, HC, mHC</li>
+                  <li>Token规模实验: 3B模型，1万亿token</li>
+                  <li>评估: 8个下游基准测试</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 训练稳定性结果 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-area mr-2"></i>技术细节：图5 - mHC训练稳定性
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: 流形约束超连接(mHC)的训练稳定性
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: mHC和HC相对于基线的绝对训练损失差距和梯度范数" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 该图展示了(a)mHC和HC相对于基线的绝对训练损失差距，和(b)三种方法的梯度范数。所有实验使用27B模型。结果表明mHC在损失和梯度范数方面表现出改进的稳定性。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>关键发现：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>损失稳定性:</strong> mHC有效缓解了HC的训练不稳定，相比基线最终损失降低0.021</li>
+                  <li><strong>梯度稳定性:</strong> mHC的梯度范数行为显著优于HC，保持与基线相当的稳定特征</li>
+                  <li><strong>无意外突增:</strong> mHC在整个训练过程中没有出现HC在12k步附近的损失突增现象</li>
+                  <li><strong>收敛优势:</strong> mHC不仅更稳定，而且实现了更好的最终损失值</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能提升量化：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm md:text-base">
+                  <div class="text-center p-3 bg-white rounded border">
+                    <div class="text-2xl font-bold text-green-600">0.021</div>
+                    <div class="text-xs text-gray-600 mt-1">损失降低</div>
+                    <div class="text-xs text-gray-500">相比基线</div>
+                  </div>
+                  <div class="text-center p-3 bg-white rounded border">
+                    <div class="text-2xl font-bold text-blue-600">稳定</div>
+                    <div class="text-xs text-gray-600 mt-1">梯度范数</div>
+                    <div class="text-xs text-gray-500">无剧烈波动</div>
+                  </div>
+                  <div class="text-center p-3 bg-white rounded border">
+                    <div class="text-2xl font-bold text-purple-600">无突增</div>
+                    <div class="text-xs text-gray-600 mt-1">训练过程</div>
+                    <div class="text-xs text-gray-500">平滑收敛</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 下游任务性能表格 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-trophy mr-2 text-blue-500"></i>下游任务性能对比（表4）
+            </h4>
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">基准测试</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">27B基线</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">27B w/ HC</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">27B w/ mHC</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">BBH (EM)</td>
+                  <td class="px-4 py-3 text-gray-600">43.8</td>
+                  <td class="px-4 py-3 text-gray-600">48.9</td>
+                  <td class="px-4 py-3 font-bold text-green-600">51.0</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">DROP (F1)</td>
+                  <td class="px-4 py-3 text-gray-600">47.0</td>
+                  <td class="px-4 py-3 text-gray-600">51.6</td>
+                  <td class="px-4 py-3 font-bold text-green-600">53.9</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">GSM8K (EM)</td>
+                  <td class="px-4 py-3 text-gray-600">46.7</td>
+                  <td class="px-4 py-3 text-gray-600">53.2</td>
+                  <td class="px-4 py-3 font-bold text-green-600">53.8</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">HellaSwag (Acc.)</td>
+                  <td class="px-4 py-3 text-gray-600">73.7</td>
+                  <td class="px-4 py-3 text-gray-600">74.3</td>
+                  <td class="px-4 py-3 font-bold text-green-600">74.7</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">MATH (EM)</td>
+                  <td class="px-4 py-3 text-gray-600">22.0</td>
+                  <td class="px-4 py-3 font-bold text-blue-600">26.4</td>
+                  <td class="px-4 py-3 text-gray-600">26.0</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">MMLU (Acc.)</td>
+                  <td class="px-4 py-3 text-gray-600">59.0</td>
+                  <td class="px-4 py-3 text-gray-600">63.0</td>
+                  <td class="px-4 py-3 font-bold text-green-600">63.4</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">PIQA (Acc.)</td>
+                  <td class="px-4 py-3 text-gray-600">78.5</td>
+                  <td class="px-4 py-3 text-gray-600">79.9</td>
+                  <td class="px-4 py-3 font-bold text-green-600">80.5</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 font-medium text-gray-700">TriviaQA (EM)</td>
+                  <td class="px-4 py-3 text-gray-600">54.3</td>
+                  <td class="px-4 py-3 text-gray-600">56.3</td>
+                  <td class="px-4 py-3 font-bold text-green-600">57.6</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="px-4 py-3 font-bold text-gray-700">优于HC的任务数</td>
+                  <td class="px-4 py-3 text-gray-600">-</td>
+                  <td class="px-4 py-3 text-gray-600">-</td>
+                  <td class="px-4 py-3 font-bold text-green-600">7/8</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+              <strong>关键发现:</strong> mHC在8个基准测试中的7个超越HC，特别是在推理能力上显著提升（BBH提升2.1%，DROP提升2.3%）。
+            </div>
+          </div>
+
+          <!-- 扩展性实验 -->
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-3">扩展性分析</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-green-600 mb-2 flex items-center">
+                  <i class="fas fa-expand-alt mr-2"></i>计算扩展曲线
+                </h5>
+                <p class="text-gray-600 text-sm">
+                  从3B扩展到27B参数，mHC的性能优势保持稳健，仅边际衰减。证明mHC在不同计算预算下都有效。
+                </p>
+                <div class="mt-3 flex items-center">
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: 95%"></div>
+                  </div>
+                  <span class="ml-2 text-xs font-medium text-green-600">95%优势保持</span>
+                </div>
+              </div>
+              <div class="bg-white/70 p-4 rounded-lg">
+                <h5 class="font-semibold text-green-600 mb-2 flex items-center">
+                  <i class="fas fa-chart-line mr-2"></i>Token扩展曲线
+                </h5>
+                <p class="text-gray-600 text-sm">
+                  3B模型在1万亿token训练中，mHC始终保持稳定的性能提升轨迹，验证了其在长时间训练中的稳定性。
+                </p>
+                <div class="mt-3 flex items-center">
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-500 h-2 rounded-full" style="width: 98%"></div>
+                  </div>
+                  <span class="ml-2 text-xs font-medium text-blue-600">98%稳定性</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 传播稳定性分析 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-shield-alt mr-2 text-blue-500"></i>传播稳定性对比
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="p-4 bg-red-50 rounded border border-red-200">
+                <h5 class="font-bold text-red-700 mb-2">HC问题</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li>单层映射：无约束</li>
+                  <li>复合映射：最大增益3000倍</li>
+                  <li>信号爆炸严重</li>
+                  <li>所有传播路径都不稳定</li>
+                </ul>
+              </div>
+              <div class="p-4 bg-green-50 rounded border border-green-200">
+                <h5 class="font-bold text-green-700 mb-2">mHC改进</h5>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <li>单层映射：双随机约束</li>
+                  <li>复合映射：最大增益1.6倍</li>
+                  <li>信号传播稳定</li>
+                  <li>提升3个数量级稳定性</li>
+                </ul>
+              </div>
+            </div>
+            <div class="mt-4 p-3 bg-blue-50 rounded text-sm text-gray-700">
+              <strong>稳定性提升:</strong> 最大增益从3000降低到1.6，实现了近2000倍的稳定性提升。
+            </div>
+          </div>
+
+          <!-- 效率分析 -->
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-purple-700 mb-3">效率分析</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="text-center p-4 bg-white rounded-lg border border-purple-200">
+                <div class="text-3xl font-bold text-purple-600">6.7%</div>
+                <div class="text-sm text-gray-600 mt-1">额外时间开销</div>
+                <div class="text-xs text-gray-500">\(n=4\)时</div>
+              </div>
+              <div class="text-center p-4 bg-white rounded-lg border border-purple-200">
+                <div class="text-3xl font-bold text-green-600">4-5倍</div>
+                <div class="text-sm text-gray-600 mt-1">I/O开销降低</div>
+                <div class="text-xs text-gray-500">相比原始HC实现</div>
+              </div>
+              <div class="text-center p-4 bg-white rounded-lg border border-purple-200">
+                <div class="text-3xl font-bold text-blue-600">可扩展</div>
+                <div class="text-sm text-gray-600 mt-1">大规模训练</div>
+                <div class="text-xs text-gray-500">支持27B+模型</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="space-y-6">
+          <!-- 主要贡献总结 -->
+          <div class="bg-gradient-to-r from-blue-50 to-green-50 border-l-4 border-blue-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 text-lg mb-3">主要贡献总结</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-semibold text-green-600 mb-2 flex items-center">
+                  <i class="fas fa-check-circle mr-2"></i>解决的问题
+                </h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                  <li>HC训练不稳定性</li>
+                  <li>信号爆炸/消失问题</li>
+                  <li>内存访问开销大</li>
+                  <li>大规模可扩展性限制</li>
+                </ul>
+              </div>
+              <div>
+                <h5 class="font-semibold text-blue-600 mb-2 flex items-center">
+                  <i class="fas fa-rocket mr-2"></i>提供的解决方案
+                </h5>
+                <ul class="list-disc list-inside space-y-1 text-gray-600">
+                  <li>流形约束超连接(mHC)</li>
+                  <li>双随机矩阵约束</li>
+                  <li>高效基础设施优化</li>
+                  <li>仅6.7%额外开销</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 技术成就 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-medal mr-2 text-amber-500"></i>技术成就
+            </h4>
+            <div class="space-y-4">
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div>
+                  <strong class="text-gray-700">恢复恒等映射特性:</strong> 通过流形约束，在保持HC性能优势的同时恢复稳定性
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                  <strong class="text-gray-700">实现稳定的大规模训练:</strong> 在27B参数模型上验证了稳定性和可扩展性
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-purple-100 text-purple-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <i class="fas fa-bolt"></i>
+                </div>
+                <div>
+                  <strong class="text-gray-700">高效实现:</strong> 通过基础设施优化，仅增加6.7%的时间开销
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-amber-100 text-amber-800 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                  <i class="fas fa-cogs"></i>
+                </div>
+                <div>
+                  <strong class="text-gray-700">理论保障:</strong> 基于Birkhoff多面体和双随机矩阵的理论性质，提供严格的稳定性保证
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 论文不足之处 -->
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-red-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>论文不足之处（批判性分析）
+            </h4>
+            <div class="space-y-3 text-gray-700">
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-red-600 mb-2">1. 流形选择的局限性</h5>
+                <p class="text-sm">双随机矩阵虽然提供稳定性保证，但可能不是最优选择。其他流形约束可能在不同场景下表现更好。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-red-600 mb-2">2. Sinkhorn-Knopp迭代开销</h5>
+                <p class="text-sm">20次迭代虽然实用，但仍有计算开销。更高效的近似算法可能进一步降低开销。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-red-600 mb-2">3. 扩展性验证有限</h5>
+                <p class="text-sm">仅在27B模型上验证，更大规模（如100B+）的验证仍有待进行。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-red-600 mb-2">4. 理论分析深度不足</h5>
+                <p class="text-sm">对流形约束与泛化性能的理论联系分析不够深入。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-red-600 mb-2">5. 与其他技术的比较有限</h5>
+                <p class="text-sm">与DenseNet、Fractal-Net等其他复杂连接架构的对比不够充分。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 未来研究方向 -->
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-indigo-700 text-lg mb-3 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来研究方向
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">1. 探索不同流形约束</h5>
+                <p class="text-sm text-gray-600">研究其他流形（如正交流形、辛流形）对性能和稳定性的影响。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">2. 自适应流形选择</h5>
+                <p class="text-sm text-gray-600">开发根据训练状态自适应选择流形的机制。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">3. 更大规模验证</h5>
+                <p class="text-sm text-gray-600">在100B+参数模型上验证mHC的可扩展性。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">4. 与其他架构结合</h5>
+                <p class="text-sm text-gray-600">研究mHC与MoE、稀疏注意力等其他先进架构的结合。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">5. 理论深化</h5>
+                <p class="text-sm text-gray-600">深入研究流形约束与优化动力学、泛化性能的理论关系。</p>
+              </div>
+              <div class="bg-white/70 p-4 rounded">
+                <h5 class="font-semibold text-indigo-600 mb-2">6. 硬件协同设计</h5>
+                <p class="text-sm text-gray-600">开发针对mHC优化的专用硬件加速器。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 学习要点总结 -->
+          <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
+              <i class="fas fa-graduation-cap mr-2 text-green-500"></i>学习要点总结
+            </h4>
+            <div class="space-y-3">
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-1 flex-shrink-0 text-xs">
+                  1
+                </div>
+                <div>
+                  <strong class="text-gray-700">核心问题:</strong> HC扩展残差流宽度提升性能，但破坏恒等映射导致训练不稳定
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-1 flex-shrink-0 text-xs">
+                  2
+                </div>
+                <div>
+                  <strong class="text-gray-700">解决方案:</strong> mHC通过双随机矩阵流形约束恢复稳定性
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-1 flex-shrink-0 text-xs">
+                  3
+                </div>
+                <div>
+                  <strong class="text-gray-700">关键技术:</strong> Sinkhorn-Knopp算法实现双随机化，内核融合等优化降低开销
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-1 flex-shrink-0 text-xs">
+                  4
+                </div>
+                <div>
+                  <strong class="text-gray-700">实验结果:</strong> mHC在27B模型上实现稳定训练，下游任务性能全面提升
+                </div>
+              </div>
+              <div class="flex items-start">
+                <div class="bg-green-100 text-green-800 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-1 flex-shrink-0 text-xs">
+                  5
+                </div>
+                <div>
+                  <strong class="text-gray-700">实际意义:</strong> 为大规模模型训练提供稳定高效的连接范式，支持更大规模扩展
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 最终评价 -->
+          <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500 p-5 rounded-r-lg">
+            <h4 class="font-bold text-amber-700 mb-3 flex items-center">
+              <i class="fas fa-star mr-2"></i>论文综合评价
+            </h4>
+            <div class="space-y-3 text-gray-700">
+              <p><strong>创新性:</strong> ★★★★☆ (4/5) - 将流形约束引入超连接，创造性解决稳定性问题</p>
+              <p><strong>技术深度:</strong> ★★★★☆ (4/5) - 结合理论分析与工程优化，实现高效稳定系统</p>
+              <p><strong>实验验证:</strong> ★★★★☆ (4/5) - 大规模实验充分验证，但更大规模验证有待补充</p>
+              <p><strong>实用性:</strong> ★★★★★ (5/5) - 仅6.7%额外开销，具备实际部署价值</p>
+              <p><strong>影响力:</strong> ★★★★☆ (4/5) - 为大模型架构设计提供新思路，可能推动领域发展</p>
+              <div class="mt-3 p-3 bg-white rounded border">
+                <p class="text-sm font-medium text-amber-700">总评: 这是一篇高质量的研究论文，在理论和实践层面都做出了实质性贡献，为大模型训练稳定性问题提供了优雅且高效的解决方案。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- KaTeX自动渲染和手动处理 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 首先，处理所有行内LaTeX公式
+      function processInlineLatex() {
+        // 处理所有包含LaTeX的行内文本
+        const elements = document.querySelectorAll('p, li, td, div:not(.code-block)');
+        
+        elements.forEach(element => {
+          let html = element.innerHTML;
+          
+          // 将行内LaTeX公式用\(\)包装
+          html = html.replace(/\$\$([^$]+)\$\$/g, '\\[$1\\]'); // 处理$$公式$$
+          html = html.replace(/\$([^$]+)\$/g, '\\($1\\)'); // 处理$公式$
+          
+          // 处理特殊的LaTeX表达式
+          html = html.replace(/\\mathcal\{P\}_\\mathcal\{M\}/g, '\\(\\mathcal{P}_{\\mathcal{M}}\\)');
+          html = html.replace(/\\prod_\{i=1\}\^{L-l\} \\mathcal\{H\}\^\\text\{res\}_\{L-i\}/g, '\\(\\prod_{i=1}^{L-l} \\mathcal{H}^{\\text{res}}_{L-i}\\)');
+          html = html.replace(/\\mathbf\{x\}_l \\in \\mathbb\{R\}\^{n \\times C\}/g, '\\(\\mathbf{x}_l \\in \\mathbb{R}^{n \\times C}\\)');
+          html = html.replace(/C扩展到n \\times C/g, '\\(C\\)扩展到\\(n \\times C\\)');
+          html = html.replace(/n=4/g, '\\(n=4\\)');
+          html = html.replace(/L_r\* \\approx \\sqrt\{\\frac\{nL\}\{n\+2\}\}/g, '\\(L_r^* \\approx \\sqrt{\\frac{nL}{n+2}}\\)');
+          html = html.replace(/\(3n\+1\)C/g, '\\((3n+1)C\\)');
+          html = html.replace(/\(n\+1\)C/g, '\\((n+1)C\\)');
+          html = html.replace(/\\mathcal\{H\}\^\\text\{res\}_l/g, '\\(\\mathcal{H}^{\\text{res}}_l\\)');
+          html = html.replace(/\\mathcal\{H\}\^\\text\{pre\}_l/g, '\\(\\mathcal{H}^{\\text{pre}}_l\\)');
+          html = html.replace(/\\mathcal\{H\}\^\\text\{post\}_l/g, '\\(\\mathcal{H}^{\\text{post}}_l\\)');
+          
+          element.innerHTML = html;
+        });
+      }
+      
+      // 执行行内LaTeX处理
+      processInlineLatex();
+      
+      // 配置KaTeX自动渲染
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\[', right: '\\]', display: true},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false,
+        trust: true
+      });
+      
+      // 导航功能
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动展开第一个技术细节
+      const firstDetails = document.querySelector('.technical-details');
+      if (firstDetails) {
+        firstDetails.open = true;
+      }
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

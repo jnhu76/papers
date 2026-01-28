@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALP: Adaptive Lossless floating-Point Compression 论文解析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-scroll {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+        .smooth-scroll {
+            scroll-behavior: smooth;
+        }
+        .card-hover {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            z-index: 1000;
+        }
+        .ai-notice {
+            background-color: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 smooth-scroll">
+    <!-- 返回顶部按钮 -->
+    <button id="backToTop" class="back-to-top bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- 顶部导航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="nav-scroll py-4 flex space-x-6">
+                <a href="#title" class="text-blue-600 font-medium hover:text-blue-800">标题</a>
+                <a href="#abstract" class="text-gray-600 font-medium hover:text-blue-800">摘要</a>
+                <a href="#core-question" class="text-gray-600 font-medium hover:text-blue-800">核心问题</a>
+                <a href="#contributions" class="text-gray-600 font-medium hover:text-blue-800">贡献</a>
+                <a href="#methodology" class="text-gray-600 font-medium hover:text-blue-800">方法原理</a>
+                <a href="#experiments" class="text-gray-600 font-medium hover:text-blue-800">实验与结果</a>
+                <a href="#conclusion" class="text-gray-600 font-medium hover:text-blue-800">结论</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- AI生成声明 -->
+        <div class="ai-notice p-4 rounded mb-8">
+            <p class="text-sm"><i class="fas fa-robot mr-2"></i>本内容基于AI对论文的解析生成，旨在帮助理解复杂学术内容。</p>
+        </div>
+
+        <!-- 标题区 -->
+        <section id="title" class="mb-12">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-700 text-white rounded-2xl p-8 shadow-lg">
+                <h1 class="text-3xl md:text-4xl font-bold mb-4">ALP: Adaptive Lossless floating-Point Compression</h1>
+                <div class="flex flex-wrap items-center mb-4">
+                    <div class="mr-6 mb-2">
+                        <i class="fas fa-user-graduate mr-2"></i>
+                        <span>Azim Afroozeh, Leonardo X. Kuffo, Peter Boncz</span>
+                    </div>
+                    <div class="mr-6 mb-2">
+                        <i class="fas fa-university mr-2"></i>
+                        <span>Centrum Wiskunde & Informatica, The Netherlands</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-book-open mr-2"></i>
+                    <span>Proc. ACM Manag. Data 1, 4 (SIGMOD), Article 230 (December 2023)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 摘要 -->
+        <section id="abstract" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">摘要</h2>
+                <p class="text-gray-700 leading-relaxed">
+                    IEEE 754双精度浮点数无法精确表示大多数实数值，在计算和序列化过程中会引入舍入误差。
+                    这些误差阻碍了使用现有的轻量级压缩方案，如Delta和Frame Of Reference (FOR)。
+                    最近提出了新的方案：Gorilla、Chimp128、PseudoDecimals (PDE)、Elf和Patas。
+                    然而，它们的压缩比并不比通用压缩器（如Zstd）好，而解压缩速度比Delta和FOR慢得多。
+                </p>
+                <p class="text-gray-700 leading-relaxed mt-4">
+                    本文提出并评估了ALP，它在速度和压缩比方面显著改进了以前的方案。
+                    ALP经过对用于评估先前方案的数据集的仔细研究后创建。
+                    为了获得速度，ALP设计为适合向量化执行，这也被证明是提高压缩比的关键，
+                    因为我们在向量内发现了共同性以创建压缩机会。
+                </p>
+            </div>
+        </section>
+
+        <!-- 核心问题 -->
+        <section id="core-question" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">核心问题</h2>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                    <h3 class="font-bold text-red-700 mb-2">唯一关键问题</h3>
+                    <p class="text-gray-700">如何高效压缩IEEE 754双精度浮点数数据，同时实现高压缩比和快速解压缩速度？</p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-blue-700 mb-2 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>为什么现有方法不能解决？
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>传统轻量级压缩方案由于IEEE 754浮点数的舍入误差而无法使用</li>
+                            <li>现有的浮点压缩方案在压缩比和速度上都不理想</li>
+                            <li>通用压缩器虽然压缩比较好，但速度慢且是块压缩，无法跳过不需要的数据</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-green-700 mb-2 flex items-center">
+                            <i class="fas fa-users mr-2"></i>谁在乎这个问题？
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>大数据系统</li>
+                            <li>数据库系统</li>
+                            <li>数据分析平台</li>
+                            <li>时间序列数据库</li>
+                            <li>科学计算应用</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-6 bg-yellow-50 p-4 rounded-lg">
+                    <h3 class="font-bold text-yellow-700 mb-2 flex items-center">
+                        <i class="fas fa-bolt mr-2"></i>真实世界的痛点
+                    </h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li>浮点数据在分析工作负载中越来越常见</li>
+                        <li>存储和传输成本高</li>
+                        <li>查询性能受限于解压缩速度</li>
+                        <li>需要支持谓词下推（在不解压整个块的情况下跳过数据）</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 贡献 -->
+        <section id="contributions" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">核心贡献</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-purple-700 mb-2 flex items-center">
+                            <i class="fas fa-lightbulb mr-2"></i>Concept - 新概念
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>提出了ALP（自适应无损浮点压缩），一种向量化的浮点压缩方案</li>
+                            <li>引入双重编码策略：对于源自小数的浮点数使用增强的伪十进制编码，对于高精度浮点数使用前位压缩</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-red-700 mb-2 flex items-center">
+                            <i class="fas fa-tasks mr-2"></i>Challenge - 解决的难题
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>解决浮点数压缩中的精度保持问题</li>
+                            <li>克服现有方案在压缩比和速度之间的权衡</li>
+                            <li>实现向量化执行以提高性能</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-blue-700 mb-2 flex items-center">
+                            <i class="fas fa-cogs mr-2"></i>Construction - 方法设计
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>设计了两级自适应采样机制（行组级和向量级）</li>
+                            <li>实现了ALP_enc和ALP_dec过程，使用指数e和因子f将浮点数编码为整数</li>
+                            <li>开发了ALP_rd用于处理真正的高精度浮点数</li>
+                            <li>集成到FastLanes压缩库中，支持级联压缩</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-green-700 mb-2 flex items-center">
+                            <i class="fas fa-chart-line mr-2"></i>Claim - 性能提升
+                        </h3>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                            <li>压缩比优于所有现有浮点压缩方案</li>
+                            <li>解压缩速度比竞争对手快1-2个数量级</li>
+                            <li>在真实系统中，ALP压缩数据的扫描甚至比未压缩数据更快</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 方法原理 -->
+        <section id="methodology" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">方法原理解析</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">隐含假设</h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li>大多数存储为浮点数的数据实际上源自十进制值</li>
+                        <li>向量内的数据具有相似性（指数、小数精度）</li>
+                        <li>现代CPU的SIMD能力可以充分利用向量化执行</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">工作流程</h3>
+                    <ol class="list-decimal pl-5 text-gray-700 space-y-2">
+                        <li>行组级采样找到最佳(e,f)组合</li>
+                        <li>向量级编码使用ALP_enc将浮点数转换为整数</li>
+                        <li>处理异常值（无法编码的值）</li>
+                        <li>使用FFOR（融合帧参考）压缩整数</li>
+                        <li>对于高精度数据，切换到ALP_rd（前位压缩）</li>
+                    </ol>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">核心算法</h3>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <p class="font-mono text-lg text-center">
+                            ALP<sub>enc</sub> = round(n × 10<sup>e</sup> × 10<sup>-f</sup>)<br>
+                            ALP<sub>dec</sub> = d × 10<sup>f</sup> × 10<sup>-e</sup>
+                        </p>
+                    </div>
+                    <div class="mt-4 grid md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-700">参数说明：</h4>
+                            <ul class="list-disc pl-5 text-gray-700">
+                                <li>n: 原始双精度浮点数</li>
+                                <li>e: 指数（每向量相同）</li>
+                                <li>f: 因子（用于减少尾随零）</li>
+                                <li>d: 编码后的整数</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-700">关键创新：</h4>
+                            <ul class="list-disc pl-5 text-gray-700">
+                                <li>每向量使用相同的e和f，而非每值</li>
+                                <li>使用高指数提高编码成功率</li>
+                                <li>使用因子f减少尾随零</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">与相关工作对比</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-300">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="py-2 px-4 border-b">方法</th>
+                                    <th class="py-2 px-4 border-b">核心思想</th>
+                                    <th class="py-2 px-4 border-b">与ALP的区别</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="py-2 px-4 border-b">Gorilla</td>
+                                    <td class="py-2 px-4 border-b">与前值XOR，编码前导零和有效位</td>
+                                    <td class="py-2 px-4 border-b">ALP使用十进制编码而非XOR</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-4 border-b">Chimp128</td>
+                                    <td class="py-2 px-4 border-b">与前128个值中的最佳值XOR</td>
+                                    <td class="py-2 px-4 border-b">ALP压缩比和速度都更好</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-4 border-b">PDE</td>
+                                    <td class="py-2 px-4 border-b">将浮点数表示为整数和10的幂</td>
+                                    <td class="py-2 px-4 border-b">ALP使用每向量而非每值的指数，并使用高指数和因子f</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-4 border-b">Elf</td>
+                                    <td class="py-2 px-4 border-b">通过擦除尾数位改进XOR压缩</td>
+                                    <td class="py-2 px-4 border-b">ALP更快且压缩比更好</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-4 border-b">Patas</td>
+                                    <td class="py-2 px-4 border-b">Chimp128的字节对齐变体</td>
+                                    <td class="py-2 px-4 border-b">ALP压缩比和速度都更好</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-green-700 mb-2">适用场景</h3>
+                        <ul class="list-disc pl-5 text-gray-700">
+                            <li>时间序列数据</li>
+                            <li>源自小数的浮点数据</li>
+                            <li>列式存储系统</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-red-700 mb-2">限制场景</h3>
+                        <ul class="list-disc pl-5 text-gray-700">
+                            <li>真正高精度的浮点数据（如POI坐标）压缩比较低</li>
+                            <li>需要向量化执行环境以获得最佳性能</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实验与结果 -->
+        <section id="experiments" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">实验与结果</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">关键实验指标</h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li>压缩比（每值位数）</li>
+                        <li>压缩/解压缩速度（每CPU周期处理的元组数）</li>
+                        <li>端到端查询性能</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">论文证明的内容</h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li>ALP在30个数据集上的平均压缩比为21.7位/值，优于所有浮点压缩方案</li>
+                        <li>ALP解压缩速度比最接近的竞争对手快7倍以上</li>
+                        <li>在真实系统中，ALP压缩数据的扫描甚至比未压缩数据更快</li>
+                        <li>ALP完美扩展到多核环境</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">压缩性能对比</h3>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <p class="text-center font-semibold">图1: 所有方案的压缩性能（Intel Ice Lake）</p>
+                        <div class="flex justify-center mt-4">
+                            <div class="image-display bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                                <img src="./images/fig1.png" 
+                                    alt="论文图1: 压缩性能对比图" 
+                                    class="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                
+                                <div class="image-fallback bg-white p-8 rounded-lg border hidden">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i class="fas fa-sitemap text-3xl text-gray-400 mb-3"></i>
+                                    <p class="text-gray-600 font-medium mb-2">图 1: 压缩性能对比图</p>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-center mt-2 text-sm text-gray-600">每个点代表一个数据集。ALP在解压缩速度上比所有竞争方案快1-2个数量级，同时提供优异的压缩比。</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">可能存疑的结果</h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                        <li>实验数据集可能偏向于源自小数的浮点数据</li>
+                        <li>对于真正科学计算中的高精度浮点数，压缩效果可能不如声称的那么好</li>
+                        <li>向量大小固定为1024可能不适用于所有场景</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 结论 -->
+        <section id="conclusion" class="mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                <h2 class="text-2xl font-bold mb-4 text-blue-700 border-b pb-2">结论</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">主要贡献总结</h3>
+                    <ul class="list-disc pl-5 text-gray-700 space-y-2">
+                        <li>提出了ALP：一种增强的基于十进制的编码方法，对于真正高精度的浮点数具有自适应回退到前位压缩的能力</li>
+                        <li>在所有相关维度上击败了竞争对手：压缩比优于所有最近提出的浮点编码方案，同时解压缩速度更快</li>
+                        <li>其压缩比仅与重量级通用压缩相当，但这些方法解压缩速度慢且基于块：强制数据库扫描完全压缩大块数据</li>
+                        <li>相比之下，可以在向量级别跳过ALP压缩的数据；允许高效的谓词下推</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">关键洞察</h3>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-gray-700">
+                            ALP背后的关键思想是设计用于向量化执行；它引导我们从向量角度分析和发现各种数据集中未开发的机遇。
+                            向量化执行降低了计算成本（减少了循环、函数调用和加载/存储开销），
+                            在编译器中发挥了最佳效果（向量化代码触发以循环为中心的优化，包括自动向量化），
+                            但也摊销了存储（参数如指数每向量存储一次而不是每值），
+                            允许每向量自适应性而不会由于分支误预测而降低性能（如在例如Chimp变体中的每值自适应性中发生的那样），
+                            并且可以利用向量内数据共同性。
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-green-700 mb-2">未来工作</h3>
+                        <ul class="list-disc pl-5 text-gray-700">
+                            <li>在GPU和TPU等大规模并行硬件上实现ALP</li>
+                            <li>进一步优化ALP_rd的性能</li>
+                            <li>探索更多级联压缩策略</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-yellow-700 mb-2">实际应用价值</h3>
+                        <ul class="list-disc pl-5 text-gray-700">
+                            <li>大数据格式和数据库文件中的浮点数压缩</li>
+                            <li>减少存储成本跨内存层次结构</li>
+                            <li>减少I/O时间、网络传输时间和使用量</li>
+                            <li>随着数据科学和科学计算的融合，对数据库中双精度浮点数的需求将增长</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 返回顶部按钮功能
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.style.display = 'block';
+            } else {
+                backToTopButton.style.display = 'none';
+            }
+        });
+        
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // 导航链接平滑滚动
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

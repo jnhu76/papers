@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RVISmith: Fuzzing Compilers for RVV Intrinsics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          RVISmith: Fuzzing Compilers for RVV Intrinsics
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Yibo He (何一博), Cunjian Huang (黄存健), Xianmiao Qu (屈先淼), Hongdeng Chen (陈泓登), Wei Yang (杨威), Tao Xie (谢涛)*</div>
+                <div class="text-sm text-gray-600 mt-1">北京大学；阿里达摩院；德克萨斯大学达拉斯分校</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security (CCS '25), October 13–17, 2025, Taipei</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3719027.3744790</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">编译器测试</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">模糊测试</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">RISC-V向量扩展</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">SIMD内联函数</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            现代处理器配备了单指令多数据（SIMD）指令以实现细粒度数据并行。由于编译时信息不足，针对SIMD指令的编译器自动向量化技术面临性能限制，需要程序员手动操作SIMD指令。SIMD内联函数（Intrinsics）是现代编译器提供的一种内置函数，允许程序员在高级编程语言中操作SIMD指令。SIMD内联函数编译器中的错误可能会对软件安全构成潜在威胁，导致意外的计算结果、数据丢失、程序崩溃等。
+          </p>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            为了检测SIMD内联函数编译器中的错误，作者提出了RVISmith，一个随机化的模糊测试工具，用于生成包含各种RVV（RISC-V Vector Extension）内联函数调用序列的定义良好的C程序。RVISmith的设计旨在实现以下目标：（i）实现高的内联函数覆盖率，（ii）提高序列多样性，（iii）避免已知的未定义行为。
+          </p>
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+            <h4 class="font-bold text-green-700 mb-2 flex items-center">
+              <i class="fas fa-trophy mr-2"></i>核心贡献
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>实现了模糊测试工具RVISmith：首个能生成条带挖掘循环中复杂RVV内联函数组合的工具，支持几乎所有RVV内联函数。</li>
+              <li>检测到了真实世界的Bug：在GCC、LLVM和XuanTie编译器中检测到13个先前未知的Bug，提高了主流编译器的可靠性和安全性。</li>
+              <li>完成了Bug的实证研究：通过多个GCC和LLVM历史版本评估RVISmith，证明了与RVV内联函数相关的编译器Bug广泛存在。</li>
+              <li>报告了未定义行为：首次报告了由RVV内联函数引起的未定义行为及处理方式，为未来基于RVV内联函数的工作提供了参考。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        <div class="prose max-w-none">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">为什么需要SIMD内联函数？</h3>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            在机器学习、图像处理和云计算等领域，单指令多数据（SIMD）指令的重要性与复杂性日益增加。使用SIMD指令主要有三种方式：编码汇编指令、编译器自动向量化优化、通过编程SIMD内联函数进行手动向量化。
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-microchip mr-2"></i>汇编指令
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>可用于时钟周期级的细粒度优化。</li>
+                <li>极易出错且繁琐。</li>
+                <li>缺乏平台可移植性。</li>
+              </ul>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-robot mr-2"></i>自动向量化
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>可提高数据处理性能。</li>
+                <li>能力受限于编译时信息分析。</li>
+                <li>实际性能常远低于架构峰值。</li>
+              </ul>
+            </div>
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-code mr-2"></i>SIMD内联函数
+              </h4>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>封装SIMD指令，像C函数一样操作。</li>
+                <li>释放程序员处理寄存器分配等繁琐步骤。</li>
+                <li>在现代处理器中广泛使用。</li>
+              </ul>
+            </div>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">为什么关注RVV内联函数？</h3>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            RISC-V是一种开放的指令集架构（ISA），其向量扩展（RVV）具有模块化和可扩展的设计。RVV内联函数是新兴的，且面向开放的RISC-V ISA，需要开源社区的贡献。目前针对RVV内联函数编译器Bug的检测研究非常有限。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        <div class="prose max-w-none">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            现有的编译器测试方法（如Csmith、YARPGen等）无法生成包含SIMD内联函数的程序。相关研究工作主要集中在SIMD自动向量化的性能评估上，却忽视了编译器处理内联函数时的正确性问题。内联函数编译器被错误地认为本质上是健壮且无Bug的，因为从内联函数到指令的编译通常是一对一的翻译。然而，现实中的Bug表明并非如此。
+          </p>
+          <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-6">
+            <h4 class="font-bold text-red-700 mb-2 flex items-center">
+              <i class="fas fa-bug mr-2"></i>主要挑战
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>实现高内联函数覆盖率</strong>：RVV内联函数文档定义了超过120,000个带有语义信息的函数。如何随机组合并生成有效的条带挖掘循环操作序列是一个巨大挑战。</li>
+              <li><strong>提高序列多样性</strong>：需要生成多样的内联函数组合和数据依赖性序列，以更有效地触发潜在Bug。这需要向量寄存器分配和调度技术。</li>
+              <li><strong>避免未定义行为</strong>：RVV内联函数继承了C语言的不安全传统，其未定义行为的形式多样（如掩码关闭元素、尾部元素、条件未定义等），导致现有检测工具（如Clang sanitizer）失效。</li>
+            </ul>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">现有工具的局限：RIF</h3>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            SiFive的RVV Intrinsic Fuzzing (RIF) 是作者所知唯一的针对RVV内联函数的模糊测试工具，但它存在固有局限性：
+          </p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="py-2 px-4 border-b text-left font-semibold">比较维度</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">RIF</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">RVISmith (本工作)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b">支持的内联函数</td>
+                  <td class="py-2 px-4 border-b text-red-600">< 7%</td>
+                  <td class="py-2 px-4 border-b text-green-600">> 98%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">循环内操作组合</td>
+                  <td class="py-2 px-4 border-b text-red-600">每个循环单一操作</td>
+                  <td class="py-2 px-4 border-b text-green-600">支持复杂组合</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">规范版本</td>
+                  <td class="py-2 px-4 border-b">基于草案版本</td>
+                  <td class="py-2 px-4 border-b">基于正式批准的1.0版本</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Bug检测能力</td>
+                  <td class="py-2 px-4 border-b text-red-600">受限，无法检测复杂组合导致的Bug</td>
+                  <td class="py-2 px-4 border-b text-green-600">强大，已发现13个新Bug</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        <div class="prose max-w-none">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            RVISmith的核心目标是生成包含RVV内联函数的定义良好的C程序，并利用差分测试来发现编译器Bug。其主要工作流程如图所示，包含四个主要步骤。
+          </p>
+          <!-- 图3: RVISmith工作流概览 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-project-diagram mr-2"></i>技术细节：图3 - RVISmith工作流概览
+            </summary>
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: RVISmith工作流概览
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: RVISmith工作流程图。展示了从内联函数定义到生成测试程序的四个步骤：预处理和序列选择、数据流构造、内联函数调度和代码生成，并最终通过差分测试框架进行Bug检测。" class="max-w-full h-auto rounded-lg">
+                </div>
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> RVISmith的四个主要步骤：预处理和序列选择、数据流构造、内联函数调度、代码生成。最终通过差分测试框架进行Bug检测。
+                </div>
+              </div>
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>工作流程:</strong> 这是一个端到端的模糊测试生成流程。首先从RVV内联函数文档中提取信息，然后构建一个有效的计算序列。</li>
+                  <li><strong>核心步骤:</strong> 
+                    <ol class="list-decimal list-inside ml-4 mt-2 space-y-1">
+                      <li><strong>预处理与序列选择:</strong> 解析文档，随机选择一组与特定SEW/LMUL比例对齐的操作内联函数序列。</li>
+                      <li><strong>数据流构造:</strong> 使用随机化算法为序列中的参数和返回值分配向量寄存器变量，构建数据依赖关系。</li>
+                      <li><strong>内联函数调度:</strong> 在操作序列中插入加载（load）和存储（store）内联函数，形成完整的调用序列。使用了三种不同的调度算法以增加多样性。</li>
+                      <li><strong>代码生成:</strong> 生成完整的C程序，包括全局变量声明、内存初始化、循环生成和内存打印。</li>
+                    </ol>
+                  </li>
+                  <li><strong>差分测试:</strong> 生成最终程序后，通过比较不同编译器（GCC, LLVM, XuanTie）、不同优化等级（-O0, -O3等）或不同调度算法生成的等效程序的编译和执行结果来发现Bug。</li>
+                </ul>
+              </div>
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>RVISmith采用面向对象的数据结构存储从文档中解析出的内联函数信息。序列选择和寄存器分配基于随机算法，但受到“比例对齐”等语义规则的约束，以确保生成的程序是向量长度无关（VLA）风格的，可在不同VLEN设置的处理器上移植。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">关键技术:</strong>
+                    <ul class="list-disc list-inside ml-4 mt-1">
+                      <li><strong>比例对齐序列:</strong> 确保序列中所有内联函数的SEW/LMUL比例一致，这样每次循环迭代处理相同数量的元素，避免元素被跳过或重复处理。</li>
+                      <li><strong>三种调度算法:</strong> 全部在（All-in）、单元（Unit）和随机（Random）调度，用于在操作前后插入加载/存储内联函数，生成语义等效但结构不同的程序变体，增强测试多样性。</li>
+                      <li><strong>避免未定义行为:</strong> 实现了不可知状态模型，只打印“活跃的”（非掩码关闭、非尾部的）且来源明确的元素值。对于条件未定义的内联函数，使用基于规则的数据生成而非纯随机数。</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4 mt-8">差分测试策略</h3>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            生成程序后，RVISmith使用三种差分测试策略来发现Bug：
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-lg mb-2 text-center">跨编译器测试</h4>
+              <p class="text-sm text-gray-700 text-center">比较GCC、LLVM、XuanTie在相同优化等级下的编译运行结果。</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-lg mb-2 text-center">跨优化测试</h4>
+              <p class="text-sm text-gray-700 text-center">比较同一编译器在不同优化等级（如-O0与-O3）下的运行结果。</p>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-lg mb-2 text-center">等效程序测试</h4>
+              <p class="text-sm text-gray-700 text-center">比较由不同调度算法生成、但语义等效的程序在同一编译优化下的结果。</p>
+            </div>
+          </div>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            任何编译器崩溃、运行时崩溃或执行结果的差异都表示检测到了一个潜在的Bug案例。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        <div class="prose max-w-none">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">实验设置</h3>
+          <ul class="list-disc list-inside space-y-2 text-gray-700 mb-6">
+            <li><strong>被测编译器:</strong> GCC (≥14.1.0), LLVM (≥17.0.1), XuanTie (阿里基于GCC/LLVM的编译器)。</li>
+            <li><strong>优化标志:</strong> -O0, -O1, -O2, -O3, -Os。</li>
+            <li><strong>执行环境:</strong> 使用QEMU 9.1.0在x86服务器上模拟运行RISC-V ELF文件。</li>
+            <li><strong>对比基线:</strong> RIF (RVV内联函数模糊测试工具), Csmith (通用C编译器模糊测试工具)。</li>
+          </ul>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Bug检测结果</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            在一周的实验中，RVISmith在最新版本的编译器中共检测到<strong class="text-red-600">13个先前未知的Bug</strong>，而RIF和Csmith未检测到任何Bug。具体分布如下：
+          </p>
+          <!-- 表3: Bug类型和状态 -->
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+              <thead class="bg-gray-100">
+                <tr><th colspan="5" class="py-3 px-4 text-center font-bold text-lg text-gray-800">表3: 新编译器Bug的类型和状态</th></tr>
+                <tr>
+                  <th class="py-2 px-4 border-b text-left font-semibold">症状</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">GCC</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">LLVM</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">XuanTie</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">总计</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium">编译器崩溃</td>
+                  <td class="py-2 px-4 border-b text-center">2</td>
+                  <td class="py-2 px-4 border-b text-center">0</td>
+                  <td class="py-2 px-4 border-b text-center">1</td>
+                  <td class="py-2 px-4 border-b text-center font-bold">3</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium">运行时崩溃</td>
+                  <td class="py-2 px-4 border-b text-center">2</td>
+                  <td class="py-2 px-4 border-b text-center">1</td>
+                  <td class="py-2 px-4 border-b text-center">2</td>
+                  <td class="py-2 px-4 border-b text-center font-bold">5</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b font-medium">错误结果</td>
+                  <td class="py-2 px-4 border-b text-center">3</td>
+                  <td class="py-2 px-4 border-b text-center">0</td>
+                  <td class="py-2 px-4 border-b text-center">2</td>
+                  <td class="py-2 px-4 border-b text-center font-bold">5</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="py-2 px-4 font-bold">总计 (已确认 | 已修复)</td>
+                  <td class="py-2 px-4 text-center font-bold">7 (6|1)</td>
+                  <td class="py-2 px-4 text-center font-bold">1 (0|1)</td>
+                  <td class="py-2 px-4 text-center font-bold">5 (4|1)</td>
+                  <td class="py-2 px-4 text-center font-bold text-red-600">13 (10|3)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            这些Bug的影响包括意外的舍入、数据丢失、非法内存访问等，且通常没有编译警告或错误信息，难以被传统测试发现，可能对处理敏感数据的系统构成严重安全威胁。
+          </p>
+          <!-- 图6: GCC和LLVM版本量化比较 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图6 - GCC和LLVM版本量化比较
+            </summary>
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: GCC和LLVM版本量化比较
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: 柱状图展示了使用RVISmith测试GCC和LLVM各历史版本时，触发Bug的测试用例数量分布，包括编译器崩溃、运行时崩溃、错误结果和编译失败等类别。" class="max-w-full h-auto rounded-lg">
+                </div>
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用RVISmith对GCC和LLVM不同版本进行量化比较的结果。显示了每个版本中触发不同症状Bug的测试用例数量。
+                </div>
+              </div>
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>实验目的:</strong> 评估与RVV内联函数相关的编译器Bug在GCC和LLVM历史版本中的普遍性，并验证RVISmith检测已修复Bug的能力。</li>
+                  <li><strong>测试方法:</strong> 对GCC和LLVM的多个主要版本（包括支持批准后RVV内联函数的最早和最新版本），使用RVISmith各生成150万个程序（50万种子×3种调度算法），并用-O0和-O3编译。</li>
+                  <li><strong>关键发现:</strong>
+                    <ol class="list-decimal list-inside ml-4 mt-2 space-y-1">
+                      <li><strong>Bug广泛存在:</strong> 除了LLVM 20-trunk（其中唯一检测到的Bug已被修复），所有被测版本中都存在RVV内联函数相关的Bug。</li>
+                      <li><strong>检测已修复Bug:</strong> RVISmith也能检测到许多已修复的Bug。例如，大量程序在LLVM-17和LLVM-18的-O0与-O3优化下结果不一致，但此问题在LLVM-19和LLVM-20中已不复存在。</li>
+                      <li><strong>触发Bug的多样性:</strong> 能够触发同一Bug的程序是多样的，表明有大量内联函数受到这些Bug的影响。</li>
+                    </ol>
+                  </li>
+                  <li><strong>结果解读:</strong> 柱状图的高度代表了触发各类Bug的测试用例数量。例如，LLVM-17有大量“编译失败”案例，因为它不支持某些已批准的RVV内联函数。</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">覆盖率评估</h3>
+          <p class="text-gray-700 leading-relaxed mb-4">
+            为了衡量测试的有效性，作者评估了代码覆盖率和内联函数覆盖率。
+          </p>
+          <!-- 表5: 代码覆盖率 -->
+          <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+              <thead class="bg-gray-100">
+                <tr><th colspan="4" class="py-3 px-4 text-center font-bold text-lg text-gray-800">表5: GCC和LLVM源代码的代码覆盖率 (函数/行/分支)</th></tr>
+                <tr>
+                  <th class="py-2 px-4 border-b text-left font-semibold">生成器</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">GCC 覆盖率</th>
+                  <th class="py-2 px-4 border-b text-left font-semibold">LLVM 覆盖率</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="py-2 px-4 border-b font-medium" colspan="4" class="text-center bg-gray-50">单一工具</td></tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">RVISmith</td>
+                  <td class="py-2 px-4 border-b">26.88% / 23.77% / 14.90%</td>
+                  <td class="py-2 px-4 border-b">21.51% / 14.46% / 13.64%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Csmith</td>
+                  <td class="py-2 px-4 border-b">14.42% / 12.08% / 6.25%</td>
+                  <td class="py-2 px-4 border-b">16.00% / 8.82% / 6.79%</td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">RIF</td>
+                  <td class="py-2 px-4 border-b">6.05% / 6.18% / 3.69%</td>
+                  <td class="py-2 px-4 border-b">8.76% / 4.75% / 5.05%</td>
+                </tr>
+                <tr><td class="py-2 px-4 border-b font-medium" colspan="4" class="text-center bg-gray-50">组合工具 (绝对增量)</td></tr>
+                <tr>
+                  <td class="py-2 px-4 border-b">Csmith+RIF+RVISmith</td>
+                  <td class="py-2 px-4 border-b"><strong>27.63% / 24.76% / 15.39%</strong> <br> <span class="text-sm text-gray-600">(+14,985 行)</span></td>
+                  <td class="py-2 px-4 border-b"><strong>22.49% / 15.28% / 14.48%</strong> <br> <span class="text-sm text-gray-600">(+91,987 行)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            结果表明，RVISmith比现有工具（Csmith、RIF）实现了显著的代码覆盖提升，并且多种工具互补使用可以达到最高的覆盖率。
+          </p>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">内联函数覆盖率</h3>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            作者提出了“内联函数覆盖率”这一新指标，以更直接地衡量对RVV内联函数的测试覆盖程度。实验显示，当测试用例数 n=10⁵ 时，RVISmith的总内联函数覆盖率达到<strong class="text-green-600">74.08%</strong>，而RIF仅为<strong class="text-red-600">6.39%</strong>，RVISmith的覆盖率是RIF的<strong>11.5倍</strong>。
+          </p>
+          <!-- 图7: 覆盖的RVV内联函数分布 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-pie mr-2"></i>技术细节：图7 - 覆盖的RVV内联函数分布 (n=10⁵)
+            </summary>
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 覆盖的RVV内联函数分布
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 横向柱状图，展示了RIF和RVISmith工具根据RVV内联函数文档按功能分类（如加载、存储、算术运算等）所覆盖的内联函数比例。RVISmith在几乎所有类别上的覆盖率都远高于RIF。" class="max-w-full h-auto rounded-lg">
+                </div>
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> RIF和RVISmith覆盖的RVV内联函数分布，按功能分类。RVISmith在除段加载/存储外的所有类别中都实现了超过90%的覆盖率。
+                </div>
+              </div>
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>图表解读:</strong> 此横向柱状图按RVV内联函数的功能类别（如配置、加载、存储、算术、掩码操作等）比较了RIF和RVISmith的覆盖比例。每个类别有两个柱子，分别代表RIF和RVISmith。</li>
+                  <li><strong>关键结论:</strong>
+                    <ol class="list-decimal list-inside ml-4 mt-2 space-y-1">
+                      <li><strong>RIF覆盖率极低:</strong> 除基本加载/存储外，RIF在大多数功能类别上的覆盖率都非常低（接近0%），因为它只支持显式非重载内联函数，且每个循环仅限一个操作。</li>
+                      <li><strong>RVISmith覆盖率极高:</strong> 在除了“段加载/存储”（Segment Load/Store）和“配置设置”（Configuration-Setting）之外的所有类别，RVISmith都实现了超过90%的覆盖率。</li>
+                      <li><strong>段加载/存储覆盖较低:</strong> 该类别覆盖率相对较低（约60%），主要原因是其内联函数数量庞大，并且需要确保数组安全以避免越界写入，这在生成随机数据时具有挑战性。</li>
+                    </ol>
+                  </li>
+                  <li><strong>实验意义:</strong> 该图直观地证明了RVISmith在测试RVV内联函数功能多样性方面远超现有工具，能够更全面地触发编译器后端的各种代码路径。</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        <div class="prose max-w-none">
+          <p class="text-gray-700 leading-relaxed mb-6">
+            作者提出并实现了一种针对RVV内联函数编译器的模糊测试方法。RVISmith模糊测试工具基于正式批准的RVV内联函数文档1.0版本构建，解决了此类模糊测试的主要挑战：（i）实现高内联函数覆盖率，（ii）提高序列多样性，（iii）避免已知的未定义行为。
+          </p>
+          <div class="bg-gradient-to-r from-blue-50 to-green-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-8">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>主要成果总结
+            </h4>
+            <ul class="list-disc list-inside space-y-3 text-gray-700">
+              <li><strong>性能卓越:</strong> 实验结果表明，RVISmith的内联函数覆盖率比最先进的RVV内联函数模糊测试工具RIF高出<strong class="text-green-600">11.5倍</strong>。</li>
+              <li><strong>有效检测Bug:</strong> 通过对GCC、LLVM和XuanTie这三个现代RVV内联函数编译器进行模糊测试，RVISmith检测并报告了<strong class="text-red-600">13个先前未知的Bug</strong>。其中10个已得到编译器开发者的确认，3个已被修复。</li>
+              <li><strong>开创性方向:</strong> RVISmith为学术界和工业界检测与内置函数（尤其是SIMD内联函数）相关的潜在编译器Bug开辟了一个新的方向。</li>
+            </ul>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">局限性与未来工作</h3>
+          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-6 rounded-r-lg mb-8">
+            <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>当前局限
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>纯随机生成:</strong> RVISmith内联函数调用序列的生成是纯随机的，未来可采用覆盖率引导的方法来提高对特定内联函数或组合的覆盖。</li>
+              <li><strong>测试场景单一:</strong> 目前仅测试单个条带挖掘循环内的组合，未涉及复杂控制流（如嵌套循环、条件分支）中的RVV内联函数。</li>
+              <li><strong>数据生成限制:</strong> 为避免未定义行为，对部分内联函数使用了基于规则而非完全随机的数据生成，可能导致某些场景未被覆盖。</li>
+              <li><strong>安全漏洞覆盖不全:</strong> 未专门针对模拟器/硬件的SIMD指令漏洞、由未定义行为引入的漏洞等进行测试。</li>
+            </ul>
+          </div>
+          <p class="text-gray-700 leading-relaxed mb-6">
+            未来工作方向包括改进RVV内联函数代码生成方法、将模糊测试扩展至其他ISA（如x86 SSE/AVX、ARM Neon）的SIMD内联函数编译器，以及开发针对SIMD指令模拟器和硬件的模糊测试工具。
+          </p>
+          <div class="text-center p-6 border-t border-gray-200 mt-12">
+            <p class="text-gray-600">
+              项目开源地址: <a href="https://github.com/yibo2000/RVISmith" class="text-blue-600 hover:underline font-medium">https://github.com/yibo2000/RVISmith</a><br>
+              数据集地址: <a href="https://zenodo.org/records/15548270" class="text-blue-600 hover:underline font-medium">https://zenodo.org/records/15548270</a>
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body>
+</html>

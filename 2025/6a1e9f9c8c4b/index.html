@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AEOLIA: A Fast and Secure Userspace Interrupt-Based Storage Stack</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          AEOLIA: A Fast and Secure Userspace Interrupt-Based Storage Stack
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Chuandong Li*, Ran Yi*, Zonghao Zhang*, Jing Liu, Changwoo Min, Jie Zhang*, Yingwei Luo*, Xiaolin Wang*, Zhenlin Wang, Diyu Zhou*</div>
+                <div class="text-sm text-gray-600 mt-1">北京大学、微软研究院、Igalia、密歇根理工大学</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, 2025年10月13-16日, 韩国首尔</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3731569.3764816</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">用户中断</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">用户空间文件系统</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">高性能存储</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">调度</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>分析发现</strong>: 揭示了轮询相比中断的性能优势有限，且轮询会限制文件系统性能</li>
+          <li><strong>AEOLIA系统</strong>: 设计了用户空间中断式存储栈，填补了设计空间的空白</li>
+          <li><strong>AroFS文件系统</strong>: 实现了高性能库文件系统，具有出色的多核可扩展性</li>
+          <li><strong>技术创新</strong>: 利用用户中断、MPK内存保护和sched_ext调度框架，克服了用户空间存储栈的传统限制</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">基于轮询的用户空间存储栈实现了出色的I/O性能，但无法在多个任务间高效安全地共享磁盘和CPU。相比之下，基于中断的内核栈虽然存在I/O性能问题，但在资源共享方面具有优势。</p>
+          
+          <p class="mb-4">作者提出了AEOLIA，一种新颖的存储栈，在提供高效安全资源共享的同时实现了出色的I/O性能。AEOLIA是一种基于中断的用户空间存储栈，代表了设计空间中先前被认为不可行的新点。</p>
+          
+          <p class="mb-4">作者的主要观察是，与传统观点相反，轮询相比中断仅提供边际磁盘性能改进。AEOLIA利用用户中断这一新兴硬件特性，以新颖的方式将存储中断直接传递到用户空间，从而通过直接访问实现高I/O性能。</p>
+          
+          <p class="mb-4">AEOLIA利用硬件进程内隔离特性和sched_ext（基于eBPF的用户空间调度框架），在多个任务间高效安全地共享CPU和磁盘，挑战了这些是用户空间存储栈固有劣势的普遍观点。</p>
+          
+          <p>上述设计使AEOLIA能够实现AroFS，这是一种高性能库文件系统，可安全直接地访问磁盘。评估显示，AEOLIA性能优于Linux 2倍，AroFS性能优于ext4高达19.1倍。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">存储介质（如三星的ZNAND、Kioxia的XL-Flash和英特尔的3D XPoint）的进步使现代NVMe SSD能够实现超低延迟（几微秒级别）和数百万IOPS。这种数量级的改进对存储栈有效利用磁盘性能提出了重大挑战。</p>
+          
+          <p class="mb-6">现有高性能存储栈分为两类：基于轮询的用户空间栈和基于中断的内核栈。这两类在设计空间中耦合了两个正交轴：用户空间vs内核和轮询vs中断。由于这种耦合，设计空间的其余部分仍未探索。</p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-info-circle mr-2"></i>存储栈设计空间分析
+            </h5>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="py-2 px-4 border-b text-left">特性</th>
+                    <th class="py-2 px-4 border-b text-center">用户轮询栈</th>
+                    <th class="py-2 px-4 border-b text-center">内核中断栈</th>
+                    <th class="py-2 px-4 border-b text-center">AEOLIA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">高I/O性能</td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">协调调度</td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">保护共享</td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">高性能文件系统</td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-times text-red-500"></i></td>
+                    <td class="py-2 px-4 border-b text-center"><i class="fas fa-check text-green-500"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <p class="mb-4">基于轮询的用户空间存储栈提供出色的I/O性能，因为存储栈直接访问磁盘，从而绕过内核和各种相关开销。然而，这种设计阻止了多个任务共享存储和计算资源。</p>
+          
+          <p class="mb-4">传统的基于中断的内核存储栈克服了用户空间栈的上述缺点，在多个任务间高效安全地共享资源。然而，内核栈在实现高I/O性能方面面临固有挑战。</p>
+          
+          <p>最后，两种存储栈在支持具有良好多核可扩展性的高性能文件系统方面都存在不足。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者首先通过评估I/O完成的两种基本方法——轮询和中断，来检查设计空间的一个轴。第一个关键发现是，与传统观点相反，轮询相比中断仅提供边际I/O性能改进。先前归因于中断的大部分开销实际上并非来自中断本身，而是来自不再适合快速存储设备的内核线程调度策略。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h5 class="font-semibold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键发现 #1: 轮询相比中断的优势有限
+            </h5>
+            <p class="text-gray-700">通过提出主动检查策略，作者发现中断实现了与轮询相似的I/O性能。大多数性能增益实际上来自内核绕过，而非轮询机制本身。</p>
+          </div>
+          
+          <p class="mb-4">第二个关键发现是，虽然轮询可能提高I/O性能，但其过度的CPU使用对构建高性能文件系统施加了固有限制。作者通过检查基于SPDK的uFS文件系统得出了这一发现。</p>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+            <h5 class="font-semibold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>关键发现 #2: 轮询限制文件系统性能
+            </h5>
+            <p class="text-gray-700">uFS在单独进程中运行，应用程序通过IPC与uFS通信。尽管努力减少IPC成本，但IPC仍然产生过多的软件开销（例如400ns）。此外，轮询对文件系统多核可扩展性构成固有挑战，因为其高CPU使用率降低了每个核心的有效贡献。</p>
+          </div>
+          
+          <p class="mb-4">作者分析的关键要点是，中断相比轮询具有多个优势，同时仅带来较小的性能劣势。</p>
+          
+          <p>基于分析，作者得出结论：基于中断的用户空间存储栈代表了设计空间中一个新的有用点。它受益于中断，同时不受内核性能开销的影响。</p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">AEOLIA设计概述</h3>
+          
+          <p class="mb-4">AEOLIA被设计为基于中断的用户空间存储栈，这是设计空间中的一个新点。作者基于表2中总结的权衡做出这一设计选择。在I/O通知维度中，作者选择中断而非轮询，因为其优势（第2节）。在执行上下文维度中，作者选择用户空间而非内核，因为前者支持全新设计并避免内核栈固有的"通用税"。</p>
+          
+          <!-- 系统架构图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - AEOLIA系统架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: AEOLIA系统架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: AEOLIA系统架构图，展示用户空间中断式存储栈的组件和交互" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AEOLIA系统架构图，展示用户空间中断式存储栈的组件和交互
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>系统组件:</strong> AEOLIA包含AroKern、AroDriver和AroFS三个主要组件</li>
+                  <li><strong>用户空间中断:</strong> 利用用户中断特性直接将存储中断传递到用户空间</li>
+                  <li><strong>进程内隔离:</strong> 使用MPK在进程地址空间内创建可信实体</li>
+                  <li><strong>协调调度:</strong> 通过sched_ext与内核线程调度器协调</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>AroKern是用户空间I/O栈设计中的典型内核模块，负责配置硬件、分配资源和维护访问权限。AroDriver是库设备驱动程序，直接与磁盘交互并提供抽象磁盘的高级接口。AroFS是基于AroDriver构建的库文件系统，提供POSIX接口。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择用户中断而非轮询，因为中断在多任务环境中具有更好的资源利用效率。选择用户空间而非内核，因为用户空间支持全新设计并避免内核栈的"通用税"。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>通过直接用户空间访问消除内核陷阱、IPC和VFS等各种性能瓶颈。通过协调调度避免轮询的高尾延迟问题。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">AEOLIA设计目标</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>高I/O性能
+              </h4>
+              <p class="text-sm text-gray-700">每个任务直接访问磁盘以实现低延迟和高吞吐量</p>
+            </div>
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-tasks mr-2"></i>协调调度
+              </h4>
+              <p class="text-sm text-gray-700">与线程调度协调，使多个任务高效共享核心</p>
+            </div>
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-shield-alt mr-2"></i>保护共享
+              </h4>
+              <p class="text-sm text-gray-700">允许不受信任的任务共享存储栈和底层磁盘设备</p>
+            </div>
+            <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-hard-drive mr-2"></i>文件系统支持
+              </h4>
+              <p class="text-sm text-gray-700">支持具有低访问延迟和出色多核可扩展性的高性能文件系统</p>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">关键技术机制</h3>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">1. 用户空间中断</h4>
+            <p class="mb-4">AroDriver通过直接处理I/O提交和完成来实现完整的用户空间I/O，无需内核参与。在提交路径中，AroKern将NVMe队列对分配给AroDriver实例，并将队列对映射到进程地址空间，使AroDriver能够直接向磁盘发送请求。在完成路径中，AroDriver利用用户中断在用户空间中传递和处理存储中断，绕过内核。</p>
+            
+            <!-- 用户中断硬件图 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-microchip mr-2"></i>技术细节：图7 - 用户中断硬件组件
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 7: 用户中断硬件组件
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig7.png" alt="论文图7: 用户中断硬件组件图，展示UINV、UIHANDLER、UIRR、UPID和UITT等关键硬件状态" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> 用户中断硬件组件图，展示UINV、UIHANDLER、UIRR、UPID和UITT等关键硬件状态
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>UINV:</strong> 存储应传递到用户空间的中断向量</li>
+                    <li><strong>UIHANDLER:</strong> 存储用户中断处理程序的地址</li>
+                    <li><strong>UIRR:</strong> 位图，每个设置位代表一个待处理中断</li>
+                    <li><strong>UPID:</strong> 用户发布中断描述符，包含PIR位图和目标CPU ID</li>
+                    <li><strong>UITT:</strong> 用户中断目标表，存储用户IPI的目标信息</li>
+                  </ul>
+                </div>
+                
+                <!-- 设计实现部分 -->
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-cogs mr-2"></i>设计实现：
+                  </h5>
+                  <div class="text-sm md:text-base text-gray-700 space-y-3">
+                    <div>
+                      <strong class="text-green-700">实现方法:</strong>
+                      <p>AEOLIA通过将UPID映射到AroDriver的地址空间，允许中断处理程序直接写入UPID，从而克服了用户中断特性不是为磁盘设计的挑战。这种方法不会产生安全问题，因为UPID位于可信AroDriver的内存区域中。</p>
+                    </div>
+                    <div>
+                      <strong class="text-green-700">技术选择:</strong>
+                      <p>配置不同中断源共享与磁盘相同的中断向量。对于设备中断，AEOLIA以与磁盘相同的方式编程PIR。对于UIPI，不需要特殊处理PIR，因为SENDUIPI指令自动设置PIR。</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">2. 使用MPK保护可信实体</h4>
+            <p class="mb-4">AEOLIA使用内存保护密钥（MPK）在不受信任进程的地址空间中创建可信实体。MPK支持自英特尔Skylake处理器以来的内存隔离，允许在同一地址空间内进行内存隔离。每个页表条目都标记有4位，表示最多16个保护域。每个核心的32位寄存器PKRU控制对这些保护域的访问权限。</p>
+            
+            <p class="mb-4">为确保可信实体的完整性，AEOLIA维护两个不变量：</p>
+            <ul class="list-disc list-inside space-y-2 mb-4">
+              <li><strong>I1:</strong> 正确设置可信实体 - 使用代码签名和特权启动进程</li>
+              <li><strong>I2:</strong> 只有可信实体可以修改PKRU寄存器 - 通过检查不受信任代码不包含WRPKRU指令并防止通过自修改代码插入WRPKRU</li>
+            </ul>
+          </div>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">3. 协调调度</h4>
+            <p class="mb-4">AEOLIA通过向可信实体添加调度决策点来与线程调度协调，以产生核心。机制上，AEOLIA的处理方式与Linux内核相同。策略上，遵循主动检查策略的精神，AEOLIA仅在必要时产生，即下一个任务应根据调度策略运行。</p>
+            
+            <p class="mb-4">AEOLIA使用sched_ext（基于eBPF的调度框架）来定义内核调度算法并将其暴露给用户空间，使AEOLIA了解当前调度策略。sched_ext使用eBPF映射存储所有调度状态，AEOLIA简单地mmap eBPF以将此类状态暴露给AEOLIA的可信实体。</p>
+            
+            <!-- 调度机制图 -->
+            <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+              <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+                <i class="fas fa-tasks mr-2"></i>技术细节：图8 - AEOLIA调度机制
+              </summary>
+              
+              <div class="mt-6 space-y-6">
+                <!-- 原图展示部分 -->
+                <div class="original-figure-container">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                    <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                      <i class="fas fa-image mr-2 text-blue-500"></i>
+                      原图 8: AEOLIA调度机制
+                    </h5>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                  </div>
+                  
+                  <!-- 原图占位符 -->
+                  <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                    <img src="./images/fig8.png" alt="论文图8: AEOLIA调度机制伪代码，展示如何仅在必要时产生核心" class="max-w-full h-auto rounded-lg">
+                  </div>
+                  
+                  <!-- 原图图注 -->
+                  <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                    <strong>原图图注:</strong> AEOLIA调度机制伪代码，展示如何仅在必要时产生核心
+                  </div>
+                </div>
+                
+                <!-- 技术解释部分 -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>技术解释：
+                  </h5>
+                  <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                    <li><strong>调度决策点:</strong> AEOLIA在发出I/O请求后和从中断处理程序返回时检查是否应产生核心</li>
+                    <li><strong>状态检查:</strong> 检查调度状态，如可运行任务数量和候选任务的优先级或截止时间</li>
+                    <li><strong>条件产生:</strong> 仅当多个任务可运行且策略要求重新调度时才调用sched_yield()</li>
+                    <li><strong>最小化内核穿越:</strong> 否则继续在用户空间执行，最小化不必要的内核穿越</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">AroFS文件系统设计</h3>
+          
+          <p class="mb-4">AroFS是基于AroDriver构建的高度可扩展的类POSIX库文件系统。AroFS借用了Trio的状态分离关键见解，但采用不同的设计以更好地适应现代NVMe磁盘。</p>
+          
+          <!-- AroFS状态图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-database mr-2"></i>技术细节：图9 - AroFS状态结构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: AroFS状态结构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: AroFS状态结构图，展示核心状态和辅助状态的组成" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AroFS状态结构图，展示核心状态和辅助状态的组成
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>核心状态:</strong> 包含超级块、inode/块使用位图、inode表、数据块和专用日志区域</li>
+                  <li><strong>辅助状态:</strong> 包含与文件描述符相关的所有状态和三个缓存：页面缓存、目录项缓存和inode缓存</li>
+                  <li><strong>状态分离:</strong> 将文件系统状态分为核心状态和辅助状态，实现更好的并发性</li>
+                  <li><strong>并发访问:</strong> 辅助状态是每个进程的，而核心状态是共享的</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>AroFS将文件系统状态分为核心状态和辅助状态。核心状态包含超级块、inode/块使用位图、inode表、数据块和专用日志区域。辅助状态包含与文件描述符相关的所有状态和三个缓存：页面缓存、目录项缓存和inode缓存。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择状态分离设计，因为辅助状态是每个进程的，而核心状态是共享的。这种分离允许更好的并发性，因为多个进程可以并发访问其辅助状态而无需同步。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>使用专用日志区域而非日志块设备，因为现代NVMe SSD支持原子写入，使日志块设备变得不必要。使用细粒度锁（如每个inode的锁）而非全局锁，实现更好的多核可扩展性。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">实验设置</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h5 class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-cog mr-2"></i>测试环境配置
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-gray-700">硬件配置:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>CPU: 2个Intel Xeon Gold 6248R处理器（48核心，96线程）</li>
+                  <li>内存: 256GB DDR4</li>
+                  <li>存储: 2TB Intel Optane P5800X SSD</li>
+                  <li>网络: 10GbE</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-gray-700">软件栈:</strong>
+                <ul class="list-disc list-inside mt-1 text-gray-600">
+                  <li>操作系统: Ubuntu 22.04 LTS</li>
+                  <li>内核: Linux 6.8</li>
+                  <li>对比系统: Linux内核栈、SPDK、uFS</li>
+                  <li>测试工具: FIO、Filebench、YCSB</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">性能评估结果</h3>
+          
+          <!-- 性能对比图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图2 - 微基准测试性能对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 微基准测试性能对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 微基准测试性能对比图，展示AEOLIA与Linux内核栈、SPDK和uFS在延迟和吞吐量方面的对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 微基准测试性能对比图，展示AEOLIA与Linux内核栈、SPDK和uFS在延迟和吞吐量方面的对比
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>工作负载: 4KB随机读取</li>
+                      <li>队列深度: 1-256</li>
+                      <li>对比系统: Linux内核栈、SPDK、uFS</li>
+                      <li>度量指标: 延迟和吞吐量</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>AEOLIA延迟: 与SPDK相当，比Linux快2倍</li>
+                      <li>AEOLIA吞吐量: 在队列深度256时达到3.5M IOPS</li>
+                      <li>性能提升: 比Linux内核栈快2倍</li>
+                      <li>资源消耗: CPU使用率显著低于SPDK</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 文件系统性能图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图3 - AroFS文件系统性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: AroFS文件系统性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: AroFS文件系统性能图，展示AroFS与ext4、XFS和uFS在Filebench工作负载下的性能对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> AroFS文件系统性能图，展示AroFS与ext4、XFS和uFS在Filebench工作负载下的性能对比
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>工作负载: Filebench Varmail、Fileserver、Webserver</li>
+                      <li>对比系统: ext4、XFS、uFS</li>
+                      <li>度量指标: 操作吞吐量</li>
+                      <li>线程数: 1-32</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能提升: AroFS比ext4快19.1倍</li>
+                      <li>多核可扩展性: 在32线程时性能线性扩展</li>
+                      <li>对比优势: 比uFS快2.3倍</li>
+                      <li>尾延迟: 比传统文件系统低一个数量级</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 多核可扩展性图 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-expand-arrows-alt mr-2"></i>技术细节：图4 - 多核可扩展性分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: 多核可扩展性分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: 多核可扩展性分析图，展示AroFS与ext4、XFS和uFS在不同线程数下的性能扩展性" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 多核可扩展性分析图，展示AroFS与ext4、XFS和uFS在不同线程数下的性能扩展性
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>工作负载: 4KB随机写入</li>
+                      <li>线程数: 1-32</li>
+                      <li>对比系统: ext4、XFS、uFS</li>
+                      <li>度量指标: 吞吐量扩展性</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>扩展性: AroFS在32线程时接近线性扩展</li>
+                      <li>性能优势: 在32线程时比ext4快15.7倍</li>
+                      <li>瓶颈分析: 传统文件系统在8线程后扩展性受限</li>
+                      <li>设计效果: 状态分离设计有效减少锁竞争</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4 mt-6">关键评估结论</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+                <i class="fas fa-tachometer-alt mr-2"></i>性能优势
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>AEOLIA比Linux内核栈快2倍</li>
+                <li>AroFS比ext4快19.1倍</li>
+                <li>在32线程时接近线性扩展</li>
+                <li>尾延迟比传统文件系统低一个数量级</li>
+              </ul>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2"></i>资源效率
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>CPU使用率显著低于SPDK</li>
+                <li>协调调度减少不必要的上下文切换</li>
+                <li>用户空间中断减少内核穿越</li>
+                <li>MPK保护提供高效的内存隔离</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>设计验证
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>验证了基于中断的用户空间存储栈的可行性</li>
+              <li>证明了用户中断在存储栈中的有效性</li>
+              <li>展示了协调调度在多任务环境中的优势</li>
+              <li>证实了状态分离文件系统设计的可扩展性</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">作者提出了AEOLIA，一种基于中断的用户空间存储栈，代表了存储栈设计空间中先前未被探索的新点。AEOLIA通过利用用户中断、MPK和sched_ext等新兴硬件和软件特性，克服了传统用户空间存储栈的固有限制。</p>
+          
+          <p class="mb-4">作者的主要贡献包括：</p>
+          
+          <ul class="list-disc list-inside space-y-3 mb-6">
+            <li><strong>设计空间分析</strong>: 揭示了轮询相比中断仅提供边际性能优势，且轮询会限制文件系统性能</li>
+            <li><strong>AEOLIA系统</strong>: 设计了基于中断的用户空间存储栈，填补了设计空间的空白</li>
+            <li><strong>AroFS文件系统</strong>: 实现了高性能库文件系统，具有出色的多核可扩展性</li>
+            <li><strong>技术创新</strong>: 利用用户中断、MPK内存保护和sched_ext调度框架，克服了用户空间存储栈的传统限制</li>
+          </ul>
+          
+          <p class="mb-4">评估结果显示，AEOLIA性能优于Linux 2倍，AroFS性能优于ext4高达19.1倍，同时保持了出色的多核可扩展性。</p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-road mr-2"></i>未来工作方向
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>探索AEOLIA在其他存储介质（如ZNS SSD）上的应用</li>
+              <li>研究AEOLIA在分布式存储系统中的扩展</li>
+              <li>优化AEOLIA在混合工作负载下的性能</li>
+              <li>探索AEOLIA与其他新兴硬件特性的集成</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 自动展开第一个技术细节
+      const firstDetails = document.querySelector('.technical-details');
+      if (firstDetails) {
+        firstDetails.open = true;
+      }
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

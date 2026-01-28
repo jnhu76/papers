@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>λScale: Enabling Fast Scaling for Serverless Large Language Model Inference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          λScale: Enabling Fast Scaling for Serverless Large Language Model Inference
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Minchen Yu, Rui Yang, Chaobo Jia, Zhaoyuan Su, Sheng Yao, Tingfeng Lan, Yuchen Yang, Yue Cheng, Wei Wang, Ao Wang, Ruichuan Chen</div>
+                <div class="text-sm text-gray-600 mt-1">香港中文大学（深圳）、弗吉尼亚大学、香港科技大学、阿里巴巴集团、诺基亚贝尔实验室</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">论文标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">arXiv:2502.09922v2</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Serverless Computing</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">LLM Inference</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Model Scaling</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">RDMA</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li><strong>λPipe模型扩展方案</strong>：支持自适应模型多播和动态构建执行管道，实现"边加载边执行"的分布式推理</li>
+          <li><strong>基于二项式管道的多播算法</strong>：利用高速RDMA网络实现低延迟模型传输，相比现有方案提升1.5-1.8倍性能</li>
+          <li><strong>跨存储层的高效模型管理</strong>：支持GPU内存和主机内存中的模型管理，优化模型启动性能</li>
+          <li><strong>实际工作负载验证</strong>：在真实LLM推理追踪上实现高达5倍的尾部延迟改进和31.3%的成本降低</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">无服务器计算已成为基于云的模型推理的一个有吸引力的解决方案。然而，随着现代大语言模型(LLM)规模的不断增长，现有的无服务器平台面临着显著的模型启动开销。这给高效扩展模型实例以适应实际推理服务中常见的动态、突发工作负载带来了重大挑战。</p>
+          
+          <p class="mb-4">本文介绍了λScale，一个高效的无服务器推理系统，旨在实现快速模型扩展。λScale的关键思想是利用GPU节点之间的高速RDMA网络进行快速模型多播，同时在模型传输期间启用分布式推理执行——称为"边加载边执行"。</p>
+          
+          <p class="mb-4">λScale提出了一个高效的模型扩展方案λPipe，它支持自适应模型多播，并在接收节点之间动态构建执行管道，以实现协作式分布式推理。此外，λScale支持跨GPU和主机内存的高效模型管理，允许在不同存储层之间快速扩展模型。</p>
+          
+          <p>评估结果显示，与现有解决方案相比，λScale能够实现快速模型扩展并有效处理负载峰值，在实际LLM推理追踪上实现了高达5倍的尾部延迟改进和31.3%的成本降低。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">无服务器LLM推理的挑战</h3>
+          <p class="mb-4">无服务器计算为托管ML推理服务提供了一个有吸引力的选择，用户只需发布带有推理代码的模型作为函数，而云提供商自动管理资源供应、自动扩展、调度和容错。无服务器推理平台提供细粒度的按使用付费计费，考虑到推理工作负载的动态性质，可以实现显著的成本节约。</p>
+          
+          <p class="mb-6">无服务器LLM推理的关键是能够快速扩展模型服务实例，以有效处理现实世界中的动态工作负载。论文中展示的两个代表性LLM推理工作负载的12小时归一化请求率显示，请求到达模式高度突发，请求率在几分钟内激增超过一个数量级。这种突发性请求可能压垮现有的服务实例，导致违反推理服务的服务级别目标(SLO)定义的延迟要求。</p>
+          
+          <!-- 图1占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图1 - 代表性无服务器推理服务的归一化请求率
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 1: 代表性无服务器推理服务的归一化请求率
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig1.png" alt="论文图1: 两个代表性服务器推理服务的12小时归一化请求率追踪" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 两个代表性无服务器推理服务的归一化请求率。Trace 1 (顶部)：从阿里云收集的12小时无服务器推理追踪。Trace 2 (底部)：来自真实世界LLM工作负载的12小时追踪[48]。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>突发性工作负载模式:</strong> 两个追踪都显示了高度突发的请求到达模式，请求率在短时间内急剧变化</li>
+                  <li><strong>扩展性需求:</strong> 这种突发性请求模式要求无服务器推理平台能够快速扩展模型服务实例</li>
+                  <li><strong>SLO挑战:</strong> 请求率的大幅波动可能导致违反服务级别目标，需要快速响应机制</li>
+                  <li><strong>现实世界验证:</strong> 使用来自生产环境的真实工作负载追踪，增强了研究的实用性和可信度</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">现有解决方案的不足</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-cloud-download-alt mr-2"></i>远程加载模型
+              </h4>
+              <p class="text-sm text-gray-700">从远程模型注册表或存储服务获取模型耗时严重，加载Llama-70B模型(140GB)在1Gbps网络上需要超过18分钟。</p>
+            </div>
+            
+            <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-microchip mr-2"></i>GPU过度配置
+              </h4>
+              <p class="text-sm text-gray-700">维持足够数量的活动函数实例导致显著的资源浪费，GPU利用率极低，与无服务器计算的按使用付费模式相矛盾。</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-memory mr-2"></i>主机内存和SSD缓存
+              </h4>
+              <p class="text-sm text-gray-700">在多租户环境中，主机内存容量有限，SSD加载速度慢，从SSD加载Llama-70B模型到GPU需要超过30秒。</p>
+            </div>
+          </div>
+          
+          <!-- 图2和图3占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图2和图3 - 模型保持时间和缓存命中率分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 图2部分 -->
+              <div class="original-figure-container mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 2: 内存中模型保持时间的分布
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig2.png" alt="论文图2: 内存中模型保持时间的分布" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 内存中模型保持时间的分布。
+                </div>
+              </div>
+              
+              <!-- 图3部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 三种模型加载类型的比例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 三种模型加载类型的比例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 两个追踪中三种加载情况的比例：从内存加载模型、从SSD加载模型和热启动(无加载)。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>模型频繁驱逐:</strong> 超过95%的模型在内存中保持时间少于15秒，表明在多租户环境中模型频繁被重新加载和驱逐</li>
+                  <li><strong>高缓存未命中率:</strong> 在两个追踪中，SSD加载(即缓存未命中)分别占64%和36%，表明仅依赖内存缓存是不足的</li>
+                  <li><strong>性能影响:</strong> 大量的SSD加载或远程存储加载严重影响了可扩展性和用户体验</li>
+                  <li><strong>现有方案的局限性:</strong> 这些数据突显了现有解决方案在扩展效率和资源成本之间的刚性权衡</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">关键洞察</h3>
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>高速互连:</strong> 现代GPU集群越来越多地采用GPU节点之间的高速互连(例如100-400Gbps，具有RDMA能力)</li>
+              <li><strong>多播通信:</strong> 基于多播的集体通信技术天生适合跨节点模型扩展，能够快速将模型实例分发到接收节点</li>
+              <li><strong>边加载边执行:</strong> 模型可以在完全加载之前开始计算，实现"边加载边执行"的方法</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">主要挑战</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+            <div class="tech-card bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-bolt mr-2"></i>C1: 低延迟模型加载
+              </h4>
+              <p class="text-sm text-gray-700">平台必须处理不同的扩展需求，同时持续实现高扩展性能。因此，实现跨节点的高效、低延迟模型加载仍然是一个挑战。</p>
+            </div>
+            
+            <div class="tech-card bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-sync-alt mr-2"></i>C2: 动态模型执行
+              </h4>
+              <p class="text-sm text-gray-700">与为静态环境设计的现有分布式推理解决方案不同，"边加载边执行"方法需要在模型加载时节点之间进行协作式分布式推理。</p>
+            </div>
+            
+            <div class="tech-card bg-teal-50 p-4 rounded-lg border border-teal-200">
+              <h4 class="font-bold text-teal-700 text-base md:text-lg mb-2">
+                <i class="fa-solid fa-database mr-2"></i>C3: 跨存储层的高效模型管理
+              </h4>
+              <p class="text-sm text-gray-700">平台应高效管理跨各种存储层(包括GPU内存和主机内存)的模型，同时提供快速模型扩展。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">λScale系统架构</h3>
+          
+          <!-- 图4占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图4 - λScale架构概述
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: λScale架构概述
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: λScale架构概述" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> λScale架构概述。在此示例中，节点A根据[24, 29]为划分为三个模型块的模型启动二项式管道多播。有关超立方体二项式管道的详细说明，请参阅RDMC[24; 图3]。每个参与的工作节点按顺序步骤传输模型块(由数据流箭头上的编号标签指示)。接收节点将其接收到的块转发给其邻居(例如，节点B在步骤2和3转发块a)。颜色编码的模型块对应于数据流路径。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>集群管理器:</strong> 负责调度终端用户查询到工作节点，管理全局资源，协调模型扩展和管道执行</li>
+                  <li><strong>模型扩展控制器:</strong> 协调参与节点之间的细粒度模型分发，使用基于二项式管道的方法传输模型</li>
+                  <li><strong>管道执行控制器:</strong> 在模型扩展期间跨节点分发推理执行，遵循优化的块传输顺序</li>
+                  <li><strong>工作节点:</strong> 部署用户提供的模型作为模型服务实例，运行节点控制器与集群管理器同步</li>
+                  <li><strong>模型管理器:</strong> 跟踪本地资源(如GPU和主机内存)并管理模型实例，负责模型执行和传输任务</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">实现方法:</strong>
+                    <p>λScale基于二项式管道算法[24, 29]实现轻量级但高效的多播框架，利用RDMA和GDR实现快速数据传输。系统使用Derecho的RDMC[24, 9]作为基础，扩展支持单边RDMA和GPUDirect RDMA。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">技术选择:</strong>
+                    <p>选择二项式管道算法而非NCCL，因为NCCL缺乏处理动态工作负载下频繁重新配置通信组的灵活性，且引入额外开销延迟端到端模型加载。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">优化策略:</strong>
+                    <p>利用GDR在GPU之间高效交换数据，绕过通过主机到GPU的数据移动。支持通过RDMA直接访问存储在远程内存中的模型，提高网络资源效率和分布式推理性能。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">λPipe设计</h3>
+          
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-purple-700 mb-3 flex items-center">
+              <i class="fas fa-project-diagram mr-2"></i>λPipe的三个关键设计
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>自适应模型多播:</strong> 基于二项式管道算法，支持各种扩展场景下的快速模型分发</li>
+              <li><strong>管道化推理执行:</strong> 在运行时智能地将节点分组为执行管道，提高整体资源效率</li>
+              <li><strong>模式切换:</strong> 模型加载完成后，允许工作节点无缝切换到本地执行模式</li>
+            </ul>
+          </div>
+          
+          <!-- 图5占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-code-branch mr-2"></i>技术细节：图5 - 2→8扩展示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: 2→8扩展示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: 2→8扩展示例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 2→8扩展示例。每个子组以循环移位顺序并行传输模型块，以构建三个管道并行推理执行流(节点3和6，节点4和7，以及节点5和8)。此策略允许在分发足够模型块后立即启动多个执行管道，同时启用非阻塞二项式管道多播[24, 29]。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>k路传输策略:</strong> 将模型块划分为k个等大小的块，通过循环移位这些块为每个子组生成块传输顺序</li>
+                  <li><strong>并行执行:</strong> 子组协同工作，第一个完整模型实例在仅b/k时间步后即可用</li>
+                  <li><strong>增量组装:</strong> 随着多播的进行，目标节点增量收集和组装完整的模型实例，实现高效且可扩展的模型执行</li>
+                  <li><strong>非阻塞多播:</strong> 允许在模型传输过程中同时进行推理执行，提高系统吞吐量</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图6占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-network-wired mr-2"></i>技术细节：图6 - 执行管道示例
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: 执行管道示例
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: 执行管道示例" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 执行管道示例。(a)一个4节点执行管道，其中每个节点为其关联的模型块并行执行多个进行中的请求。(b)跨多GPU节点的执行管道，其中每个管道包含来自不同节点的GPU。(c)节点内模型复制以扩展推理性能，其中每个本地模型块副本形成单独的跨节点执行管道。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>2D执行管道:</strong> 4节点执行管道使用2维流水线策略并行处理多个批次的推理请求</li>
+                  <li><strong>多GPU模型支持:</strong> 支持跨多GPU节点的执行管道，用于不适合单个GPU的大型模型</li>
+                  <li><strong>节点内扩展:</strong> 机会性地利用同一节点上的多个本地GPU加速扩展，使用NVLink等高速节点本地通信介质</li>
+                  <li><strong>混合方法:</strong> 最大化资源利用率并通过机会性减少数据移动开销来增强推理性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">高效模型管理</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+                <i class="fas fa-rocket mr-2"></i>位置驱动的模型启动
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>GPU(热启动):</strong> 模型完全加载到GPU内存中，实现快速本地执行</li>
+                <li><strong>内存(温启动):</strong> 模型缓存在主机内存中，直接加载到GPU进行推理执行</li>
+                <li><strong>空(冷启动):</strong> 模型未缓存在GPU或主机内存中，需要从远程GPU和/或内存节点直接检索模型块</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-memory mr-2"></i>高效内存管理
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>张量打包:</strong> 将每个模型块映射到连续内存区域以增强传输效率</li>
+                <li><strong>GPU内存预分配:</strong> 为模型块和中间结果预分配内存块，最小化运行时内存分配开销</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">实验设置</h3>
+          
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <h4 class="font-bold text-gray-700 mb-3">测试平台配置</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="py-2 px-4 border-b text-left">测试平台</th>
+                    <th class="py-2 px-4 border-b text-left">GPU</th>
+                    <th class="py-2 px-4 border-b text-left">NIC</th>
+                    <th class="py-2 px-4 border-b text-left">内存带宽</th>
+                    <th class="py-2 px-4 border-b text-left">SSD带宽</th>
+                    <th class="py-2 px-4 border-b text-left">节点数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Testbed1</td>
+                    <td class="py-2 px-4 border-b">1×H800</td>
+                    <td class="py-2 px-4 border-b">1×400Gb/s IB</td>
+                    <td class="py-2 px-4 border-b">64GB/s</td>
+                    <td class="py-2 px-4 border-b">5GB/s</td>
+                    <td class="py-2 px-4 border-b">12</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-4 border-b">Testbed2</td>
+                    <td class="py-2 px-4 border-b">4×H800</td>
+                    <td class="py-2 px-4 border-b">1×400Gb/s IB</td>
+                    <td class="py-2 px-4 border-b">64GB/s</td>
+                    <td class="py-2 px-4 border-b">5GB/s</td>
+                    <td class="py-2 px-4 border-b">6</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-sm text-gray-600 mt-2">每个节点配备1TB RAM和4TB NVMe SSD本地存储</p>
+          </div>
+          
+          <div class="mb-6">
+            <h4 class="font-bold text-gray-700 mb-2">基线系统</h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>ServerlessLLM:</strong> 最先进的无服务器LLM推理系统，专为动态扩展设计</li>
+              <li><strong>FaaSNet:</strong> 行业采用的无服务器函数容器供应系统，优化P2P传输拓扑以实现自动扩展</li>
+              <li><strong>NCCL:</strong> NVIDIA开发的行业标准通信库，用于多GPU训练和推理</li>
+            </ul>
+          </div>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">多播性能评估</h3>
+          
+          <!-- 图7占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-tachometer-alt mr-2"></i>技术细节：图7 - 端到端模型多播延迟
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 7: 端到端模型多播延迟
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig7.png" alt="论文图7: 端到端模型多播延迟" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 端到端模型多播延迟。4节点测试涉及16个GPU，每个节点包含4个GPU。8节点和12节点测试分别使用8个GPU和12个GPU。所有测试都有k=1(单个源)。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: NVIDIA H800 GPU, 400Gb/s InfiniBand</li>
+                      <li>软件栈: 基于Derecho/RDMC的自定义实现</li>
+                      <li>工作负载: Llama-2系列模型(7B, 13B, 70B)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能提升: 相比FaaSNet和NCCL分别提升1.82×和1.53×</li>
+                      <li>扩展性: 模型大小和集群规模增加时，性能优势更加明显</li>
+                      <li>优化效果: 二项式管道将模型分割成块并利用整个集群带宽资源传输块</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图8占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-hourglass-half mr-2"></i>技术细节：图8 - 模型块传输延迟CDF
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 模型块传输延迟CDF
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 模型块传输延迟CDF" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 模型块传输延迟CDF。我们从集群中随机选择两个节点(A和B)，并报告每个块的到达延迟。其他节点显示类似模式。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>块到达一致性:</strong> λScale在所有集群大小下几乎同时接收第一个和最后一个模型块</li>
+                  <li><strong>NCCL初始化开销:</strong> NCCL在第一个块上经历显著高的尾部延迟，由于高组初始化开销</li>
+                  <li><strong>FaaSNet扩展性限制:</strong> FaaSNet的尾部延迟随着集群大小增加而增长，而λScale对所有块保持一致的低延迟</li>
+                  <li><strong>网络I/O并行性:</strong> λScale的二项式管道有效提高了每个步骤的网络I/O并行性(活动发送者数量)</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">吞吐量性能评估</h3>
+          
+          <!-- 图9占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图9 - 通过GDR的吞吐量扩展
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: 通过GDR的吞吐量扩展
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: 通过GDR的吞吐量扩展" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 通过GDR的吞吐量扩展，具有不同模型大小。ServerlessLLM在扩展期间依赖本地SSD，而所有其他系统使用GDR进行节点间通信。k配置仅适用于λScale。小图显示ServerlessLLM的扩展时间线。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: Testbed1和Testbed2配置</li>
+                      <li>软件栈: λScale与三个基线系统对比</li>
+                      <li>工作负载: 高压力负载，变化k值</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>性能优势: λScale(绿色)在各种k级别上始终优于基线</li>
+                      <li>扩展速度: 当k增加时，λScale有效减半其提升时间</li>
+                      <li>协作执行: λPipe的块传输和机会性执行管道允许GPU在足够模型块加载到GPU内存后立即协作加载和服务请求</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">真实世界LLM工作负载评估</h3>
+          
+          <!-- 图14占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-cloud-upload-alt mr-2"></i>技术细节：图14 - BurstGPT工作负载下的GPU分配时间线
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 14: GPU分配时间线
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig14.png" alt="论文图14: GPU分配时间线" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 在30分钟BurstGPT工作负载下的GPU分配时间线。顶部：随时间变化的RPS。中间(第2-5行)：共享相同时间线的系统特定结果。底部：所有系统的累积GPU消耗。RPS时间线包括标记的峰值(顶部)。绿色虚线阴影λScale的扩展行为，允许直接与其他系统比较。
+                </div>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 与之前测试相同的配置</li>
+                      <li>软件栈: λScale与三个基线系统对比</li>
+                      <li>工作负载: BurstGPT，来自区域Azure OpenAI GPT服务的真实世界LLM工作负载追踪</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>扩展速度: λScale在三个模型大小上比其他系统显著更快地扩展和缩减</li>
+                      <li>成本效益: λScale消耗比FaaSNet、NCCL和ServerlessLLM分别少17.8%、18.1%和31.3%的GPU资源</li>
+                      <li>接近理想情况: λScale保持最接近理想扩展情况的GPU消耗，差距范围从4.3%到18.6%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mb-4">敏感性分析和消融研究</h3>
+          
+          <!-- 图18占位符 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sliders-h mr-2"></i>技术细节：图18 - 不同传输块数量的延迟
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 18: 不同传输块数量的延迟
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig18.png" alt="论文图18: 不同传输块数量的延迟" class="max-w-full h-auto rounded-lg">
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>最优块数量:</strong> 16个块实现最低的传输延迟，可能在RDMA请求处理开销和高效数据传输之间取得平衡</li>
+                  <li><strong>较少块的限制:</strong> 较少的块(例如8个)导致更高的延迟，因为较大的块大小增加了RDMA请求处理开销</li>
+                  <li><strong>较多块的限制:</strong> 更多的块(例如24-48个)也增加延迟，可能由于管理和传输大量较小块的额外开销</li>
+                  <li><strong>收益递减:</strong> 延迟最多减少到16个块，但超过此点上升，突显收益递减和增加的复杂性</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">本文提出了λScale，一个实现快速模型扩展的无服务器推理系统。λScale利用高速RDMA网络在GPU节点之间进行快速模型多播，并在模型传输期间启用跨节点协作推理执行。</p>
+          
+          <p class="mb-4">λScale通过λPipe实现了这种"边加载边执行"的方法，λPipe是一种新颖的模型扩展方案，支持低延迟模型加载和动态管道化推理执行。结合高效的模型管理，λScale提供了卓越的扩展性能，有效维持负载峰值，并在最先进的系统上实现了高达5倍的尾部延迟加速。</p>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-green-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>主要贡献总结
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>提出了λPipe模型扩展方案，支持自适应模型多播和动态构建执行管道</li>
+              <li>实现了基于二项式管道的多播算法，利用高速RDMA网络实现低延迟模型传输</li>
+              <li>设计了跨存储层的高效模型管理机制，优化模型启动性能</li>
+              <li>在实际LLM推理追踪上验证了系统性能，实现高达5倍的尾部延迟改进和31.3%的成本降低</li>
+            </ul>
+          </div>
+          
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200 mt-6">
+            <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>论文局限性
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li><strong>性能平台期:</strong> 当k≥2时，λScale表现出阶梯状性能平台期，可能是由于实现开销未完全优化</li>
+              <li><strong>模型支持范围:</strong> 当前主要关注LLM推理，对其他类型模型的支持验证有限</li>
+              <li><strong>张量并行支持:</strong> 论文提到可以扩展支持张量并行或混合并行，但这部分工作留待未来</li>
+              <li><strong>实验环境限制:</strong> 实验在受控的HPC集群中进行，真实生产环境的性能可能有所不同</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片的初始状态
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(detail => {
+        detail.open = false;
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LavaStore: ByteDance's Purpose-built, High-performance, Cost-effective Local Storage Engine for Cloud Services</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          LavaStore: ByteDance's Purpose-built, High-performance, Cost-effective Local Storage Engine for Cloud Services
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Hao Wang, Jiaxin Ou, Ming Zhao, Sheng Qiu, Yizheng Jiao, Yi Wang, Qizhong Mao, Zhengyu Yang, Yang Liu, Jianshun Zhang, Jianyang Hu, Jingwei Zhang, Jinrui Liu, Jiaqiang Chen, Yong Shen, Lixun Cao, Heng Zhang, Hongde Li, Ming Li, Yue Ma, Lei Zhang, Jian Liu, Guanghui Zhang, Fei Liu, Jianjun Chen</div>
+                <div class="text-sm text-gray-600 mt-1">ByteDance</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>PVLDB, 17(12): 3799 - 3812, 2024</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.14778/3685800.3685807</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Key-Value存储</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">LSM树</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">存储引擎</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">云服务</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+          <h4 class="font-bold text-green-700 mb-2 flex items-center">
+            <i class="fas fa-trophy mr-2"></i>核心贡献
+          </h4>
+          <ul class="list-disc list-inside space-y-1 text-gray-700">
+            <li>提出了LavaStore，一个专为字节跳动云服务设计的高性能、成本效益高的本地存储引擎</li>
+            <li>设计了独特的KV分离架构，将垃圾收集与压缩解耦</li>
+            <li>开发了专门的LavaLog引擎用于写前日志工作负载</li>
+            <li>实现了用户空间追加文件系统LavaFS，优化同步写入性能</li>
+          </ul>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>持久性键值存储被字节跳动的云服务广泛用作本地存储引擎，RocksDB曾是事实上的实现标准。论文深入分析了字节跳动本地存储引擎的使用情况，解释了为什么高度写密集型工作负载与对成本效率和点查找尾延迟的严格要求相结合可能对通用本地存储引擎如RocksDB构成挑战，并介绍了LavaStore的设计和实现。</p>
+          
+          <p>LavaStore通过有选择地定制基于RocksDB的通用本地存储引擎的几个组件来实现其设计目标，包括将垃圾收集与压缩解耦的独特KV分离设计、针对常见写前日志工作负载的专用引擎类型，以及定制的用户空间仅追加文件系统。</p>
+          
+          <p>LavaStore已部署到生产环境，运行实例超过10万个，存储超过100 PB的数据，每秒处理数十亿请求，相比原始本地存储引擎带来了显著的性能改进和成本降低。</p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>持久性键值存储在字节跳动的云服务中被广泛用作本地存储引擎。例如，ByteNDB（专有的在线事务处理系统）将数据库页面版本存储在持久性KV存储中；ABase（专有的分布式NoSQL数据库）也在持久性KV存储之上实现了兼容Redis的数据结构。</p>
+          
+          <p>RocksDB是一个基于日志结构合并树的高性能持久性KV存储，专为大规模分布式系统开发并针对固态硬盘进行了优化。由于其可配置性，RocksDB可以适应各种工作负载和需求，并成为字节跳动许多云服务的事实上的本地存储引擎实现。</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
+          <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-database mr-2"></i>ByteNDB
+            </h4>
+            <p class="text-sm text-gray-700">字节跳动的云原生分布式OLTP数据库套件，完全兼容MySQL和PostgreSQL</p>
+          </div>
+          <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+            <h4 class="font-bold text-green-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-server mr-2"></i>ABase
+            </h4>
+            <p class="text-sm text-gray-700">字节跳动的分布式KV存储系统，支持广告、电商、推荐、搜索和视频平台等服务</p>
+          </div>
+          <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2">
+              <i class="fa-solid fa-stream mr-2"></i>Apache Flink
+            </h4>
+            <p class="text-sm text-gray-700">有状态计算框架和分布式处理引擎，在字节跳动每天支持超过30,000个流处理和100,000个批处理作业</p>
+          </div>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>随着字节跳动热门应用的巨大增长，一些云服务开始遇到基于RocksDB的本地存储引擎的性能和成本问题。经过多次调整RocksDB配置的尝试，作者得出结论，这些云服务的独特工作负载特征、性能要求和成本目标需要一个与RocksDB有显著不同权衡的本地存储引擎设计。</p>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>字节跳动应用程序的独特工作负载特征早期就出现了写入吞吐量这一主要瓶颈。具体来说，字节跳动应用程序在其架构的多个层积极部署内存缓存（如Redis和Memcached）以减少读取延迟，只留下少量读取请求由本地存储引擎处理。此外，由于应用程序通常批量写入请求以获得更高的吞吐量，写入工作负载主要由大值写入主导。</p>
+        </div>
+        
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-red-700 mb-3 flex items-center">
+            <i class="fas fa-fire mr-2"></i>RocksDB的局限性
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>写入放大问题：</strong>对于大值大小，LSM树的固有写入放大严重限制了RocksDB的写入吞吐量</li>
+            <li><strong>KV分离不足：</strong>即使使用BlobDB（RocksDB的KV分离实现），写入吞吐量仍远低于应用要求</li>
+            <li><strong>同步写入性能：</strong>启用同步写入时的吞吐量和延迟损失很大，大多数应用选择"非同步"写入并增加复制</li>
+            <li><strong>尾延迟问题：</strong>点查找查询的尾延迟比SLA要求高出几个数量级</li>
+          </ul>
+        </div>
+        
+        <!-- 图1: KV分离对比 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图1 - KV分离对比
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 1: KV分离对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig1.png" alt="论文图1: RocksDB与LavaKV的KV分离对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Comparison of key-value separation between RocksDB and LavaKV.
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>RocksDB BlobDB设计:</strong> 将blob文件编号、值偏移和值长度三元组存储在SSTables中，每个键的空间开销约为24字节</li>
+                <li><strong>GC与压缩耦合:</strong> Blob GC需要将有效值重写到新文件，并在关联的SSTables中更新其三元组，这些更改只能在压缩期间进行</li>
+                <li><strong>LavaKV创新:</strong> 将GC过程与压缩解耦，压缩仅更新有关垃圾的信息，而专用任务执行GC的实际I/O操作</li>
+                <li><strong>灵活性优势:</strong> 允许独立调整压缩和GC，使用户能够根据当前磁盘使用情况优化更高的磁盘利用率或优先考虑更快的写入操作</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>除了BlobDB和Titan的写入性能瓶颈外，它们在2018年至2019年期间的不稳定性和不可用性阻止了它们在生产环境中的直接应用，促使作者设计自己的KV分离方法。</p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 图2: LavaStore架构 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-sitemap mr-2"></i>技术细节：图2 - LavaStore架构
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: LavaStore架构
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: LavaStore系统架构" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> LavaStore Architecture
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>LavaKV:</strong> 作为RocksDB的直接替代品，针对通用写密集型工作负载，包含改进的KV分离策略</li>
+                <li><strong>LavaLog:</strong> 全新开发的专用引擎，针对高顺序性的日志样式工作负载，利用基于LSM-tree的方法进行元数据管理</li>
+                <li><strong>LavaFS:</strong> 用户空间文件系统，专门设计用于适应LavaKV和LavaLog的仅追加写入模式</li>
+                <li><strong>模块化设计:</strong> 上层引擎层和下层文件系统层的分离架构，提供灵活性和可扩展性</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">LavaKV实现方法:</strong>
+                  <p>使用相同的SSTable格式用于blob文件，在每个blob文件中包含完全排序的索引。在GC期间，新blob文件中重写的有效值在清单文件中与旧编号一起跟踪，创建可管理的继承树，定期修剪以保持效率。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">LavaLog技术选择:</strong>
+                  <p>使用两个共享日志（metalog和datalog）记录用户操作。metalog记录创建、删除和修剪操作，而datalog记录追加操作。LavaLog将来自不同用户的日志操作缓冲在队列中，而后台任务合并日志并将其刷新到磁盘。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">LavaFS优化策略:</strong>
+                  <p>采用更轻量级的日志机制，通过仅将元数据更改刷新到专用日志文件来提交元数据更改到磁盘，无需就地元数据更新。定制的fdatasync实现不刷新文件大小更改的文件元数据，除非文件范围也有更改。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>LavaStore采用模块化和灵活的架构，分为上层引擎层和下层文件系统层。LavaKV作为RocksDB的直接替代品，针对通用写密集型工作负载。它包含改进的KV分离策略，显著减少写入放大和尾延迟，同时提供与RocksDB相当或更好的读取性能。</p>
+          
+          <p>LavaLog全新开发，专门针对高顺序性的日志样式工作负载。它利用基于LSM-tree的方法进行元数据管理，支持接近1的写入放大因子并支持即时持久性。</p>
+          
+          <p>LavaFS是一个用户空间文件系统，专门设计用于适应LavaKV和LavaLog的仅追加写入模式。通过完全管理LavaStore内的I/O路径，作者实现了以前需要内核修改的增强功能，从而以内核文件系统如Ext4不可行的方式改进同步写入性能。</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-blue-700 text-lg mb-4 flex items-center">
+              <i class="fas fa-bolt mr-2"></i>写入性能优化
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>独特的KV分离设计，GC与压缩解耦</li>
+              <li>按需关联压缩和GC</li>
+              <li>用户空间仅追加文件系统LavaFS</li>
+              <li>同步写入优化，WAF接近1</li>
+            </ul>
+          </div>
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h4 class="font-bold text-green-700 text-lg mb-4 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>读取性能优化
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>内存高效的Ctrl-bit Tree索引</li>
+              <li>统一缓存系统</li>
+              <li>缓存预热支持</li>
+              <li>点查找查询优化</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 图3: SSTable和blob依赖关系 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-project-diagram mr-2"></i>技术细节：图3 - SSTable和blob依赖关系
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 3: SSTable和blob依赖关系
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig3.png" alt="论文图3: 解决SSTable和blob依赖关系" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Resolving SSTable and blob dependencies.
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>问题识别:</strong> 始终将blob GC与SSTable压缩分开执行会带来显著挑战</li>
+                <li><strong>引用计数增加:</strong> 压缩过程在不包括它们引用的blob的情况下重新分配键，导致总引用计数从2增加到6</li>
+                <li><strong>性能问题:</strong> 识别仍然有效的键变得非常耗时，需要跨更多SSTable进行反向搜索</li>
+                <li><strong>局部性损失:</strong> blob中的值保持其原始无序顺序，抵消了SSTable的局部性优势</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>解决方案：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">按需关联压缩和GC:</strong>
+                  <p>LavaKV可选地在SSTable压缩期间执行blob文件重建。当选择SSTable进行压缩时，它们的关联blob也根据垃圾比率和blob重叠比率等标准进行选择，旨在回收空间并减少blob-SSTable链接，同时增强blob之间的顺序性。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">灵活性优势:</strong>
+                  <p>在LavaKV中，blob可以独立或与SSTable压缩联合进行垃圾收集，提供更大的灵活性以适应写入吞吐量和空间约束的变化。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>LavaKV的KV分离技术旨在在写入吞吐量方面超越RocksDB，在设计阶段有意权衡空间效率。这种方法带来了出色的写入性能，以及有竞争力的读取功能和更大的配置灵活性。</p>
+          
+          <p>LavaLog提供一组API供用户创建、打开和删除日志文件。在创建并打开逻辑日志后，用户可以通过指定LSN和保存日志数据的缓冲区向其追加新记录。用户还可以在给定LSN之前修剪日志中的所有过时数据。此外，用户可以使用LSN读取数据，或在给定LSN之后扫描日志。</p>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>作者使用合成和生产工作负载验证了LavaStore的设计和实现，证明它成功满足了字节跳动云服务的性能要求和成本目标。</p>
+        </div>
+        
+        <!-- 图4: 性能对比 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-chart-bar mr-2"></i>技术细节：图4 - 性能对比分析
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 4: 性能对比
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig4.png" alt="论文图4: 性能对比分析" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Evaluating the trade-offs in write performance and space utilization between RocksDB, Titan and LavaStore with KV separation.
+              </div>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">测试配置:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>基准测试: db_bench</li>
+                    <li>工作负载: 多种读写混合场景</li>
+                    <li>对比系统: RocksDB, Titan, LavaStore</li>
+                    <li>关键参数: 键长36字节，值长16KB</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">关键结果:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>写入性能: LavaStore显著优于RocksDB和Titan</li>
+                    <li>空间效率: LavaStore在空间使用和性能间取得更好平衡</li>
+                    <li>尾延迟: LavaStore的尾延迟大幅降低</li>
+                    <li>稳定性: LavaStore表现更加稳定一致</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 图5: 覆写性能 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-balance-scale mr-2"></i>技术细节：图5 - 覆写性能对比
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 5: 覆写性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig5.png" alt="论文图5: 覆写性能对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Comparing overwrite performance.
+              </div>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">测试环境:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>工作负载: 覆写密集型</li>
+                    <li>写入速率: 统一限制为60 MB/s</li>
+                    <li>运行次数: 12次(RocksDB), 6次(Titan和LavaStore)</li>
+                    <li>对比指标: 平均和尾写入延迟</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">关键结果:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>BlobDB问题: GC操作不足以处理大并发写入流量，导致频繁写入停顿</li>
+                    <li>Titan表现: 优于BlobDB，但重新插入KV导致更高的写入放大</li>
+                    <li>LavaStore优势: 平均和尾延迟显著低于Titan和BlobDB</li>
+                    <li>稳定性: LavaStore在所有运行中表现一致稳定</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 图6: 同步写入性能 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-tachometer-alt mr-2"></i>技术细节：图6 - 同步写入性能
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 6: 同步写入性能
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig6.png" alt="论文图6: 同步写入性能对比" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> Comparing sync write performance.
+              </div>
+            </div>
+            
+            <!-- 性能分析部分 -->
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-2"></i>性能分析：
+              </h5>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                <div>
+                  <strong class="text-purple-700">测试配置:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>对比系统: Ext4, LavaFS</li>
+                    <li>写入模式: 同步写入</li>
+                    <li>工作负载: 随机写入</li>
+                    <li>线程数: 1-32个并发线程</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong class="text-purple-700">关键结果:</strong>
+                  <ul class="list-disc list-inside mt-1 text-gray-700">
+                    <li>性能提升: LavaFS在1个线程时比Ext4快3.5倍，32个线程时快2.5倍</li>
+                    <li>优化效果: 通过减少元数据刷新和优化fdatasync实现显著性能提升</li>
+                    <li>扩展性: 随着线程数增加，LavaFS保持稳定的性能优势</li>
+                    <li>实用性: 使应用能够使用同步写入，减少对复制的依赖</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>除了合成基准测试，作者还使用生产工作负载评估了LavaStore。在ByteNDB中，LavaStore将写入吞吐量提高了2.5倍，并将P99尾延迟降低了两个数量级。在ABase中，LavaStore将写入吞吐量提高了2.3倍，并将P99尾延迟降低了三个数量级。</p>
+        </div>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <h4 class="font-bold text-blue-700 mb-3 flex items-center">
+            <i class="fas fa-rocket mr-2"></i>生产环境部署成果
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
+            <div>
+              <h5 class="font-semibold text-blue-600 mb-2">部署规模</h5>
+              <ul class="list-disc list-inside space-y-1">
+                <li>超过10万个运行实例</li>
+                <li>存储超过100 PB的数据</li>
+                <li>每秒处理数十亿请求</li>
+                <li>支持ByteNDB、ABase、Flink等多个关键服务</li>
+              </ul>
+            </div>
+            <div>
+              <h5 class="font-semibold text-blue-600 mb-2">性能改进</h5>
+              <ul class="list-disc list-inside space-y-1">
+                <li>写入吞吐量提升2.3-2.5倍</li>
+                <li>P99尾延迟降低2-3个数量级</li>
+                <li>同步写入性能显著改善</li>
+                <li>整体系统稳定性大幅提升</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700 mb-8">
+          <p>论文介绍了LavaStore，一个专为字节跳动云服务设计的高性能、成本效益高的本地存储引擎。通过分析现有本地存储引擎在字节跳动独特工作负载下的局限性，作者设计了LavaStore，包括三个关键组件：LavaKV、LavaLog和LavaFS。</p>
+          
+          <p>LavaKV通过将垃圾收集与压缩解耦，提供了独特的KV分离设计，显著减少了写入放大和尾延迟。LavaLog针对日志样式工作负载进行了优化，支持接近1的写入放大因子。LavaFS是一个用户空间仅追加文件系统，通过优化同步写入性能，使应用能够使用同步写入，减少对复制的依赖。</p>
+        </div>
+        
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-8">
+          <h4 class="font-bold text-green-700 mb-3 flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>主要成果总结
+          </h4>
+          <ul class="list-disc list-inside space-y-2 text-gray-700">
+            <li><strong>性能提升:</strong> 相比RocksDB，写入吞吐量提升2.3-2.5倍，P99尾延迟降低2-3个数量级</li>
+            <li><strong>成本效益:</strong> 通过优化存储效率和减少资源消耗，显著降低了总体拥有成本</li>
+            <li><strong>生产验证:</strong> 已在字节跳动大规模部署，支持超过10万个实例，存储超过100 PB数据</li>
+            <li><strong>技术创新:</strong> 独特的KV分离架构、专用日志引擎和用户空间文件系统</li>
+          </ul>
+        </div>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p>LavaStore已在字节跳动生产环境中部署，运行实例超过10万个，存储超过100 PB的数据，每秒处理数十亿请求。相比原始本地存储引擎，LavaStore带来了显著的性能改进和成本降低。</p>
+          
+          <p>未来，作者计划继续优化LavaStore，包括改进GC策略、增强多租户支持，以及探索新的硬件加速技术。作者还计划开源LavaStore，以促进更广泛的研究和采用。</p>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

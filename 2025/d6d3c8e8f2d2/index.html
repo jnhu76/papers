@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mantle: Efficient Hierarchical Metadata Management for Cloud Object Storage Services</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#evaluation" class="nav-item whitespace-nowrap">测试与评估</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">结论</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          Mantle: Efficient Hierarchical Metadata Management for Cloud Object Storage Services
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Jiahao Li, Biao Cao, Jielong Jian, Cheng Li, Sen Han, Yiduo Wang, Yufei Wu, Kang Chen, Zhihui Yin, Qiushi Chen, Jiwei Xiong, Jie Zhao, Fengyuan Liu, Yan Xing, Liguo Duan, Miao Yu, Ran Zheng, Feng Wu, Xianjun Meng</div>
+                <div class="text-sm text-gray-600 mt-1">中国科学技术大学, 百度(中国)有限公司, 清华大学, 合肥综合性国家科学中心人工智能研究院</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">发表信息</strong>
+                <div>SOSP '25, October 13-16, 2025, Seoul, Republic of Korea</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">DOI标识</strong>
+                <div class="font-mono text-sm bg-white px-3 py-2 rounded border">10.1145/3731569.3764824</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">关键词</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">云对象存储</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">元数据管理</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">分层目录</span>
+                  <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">性能优化</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 核心贡献高亮 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-12">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-2"></i>核心贡献
+        </h4>
+        <ul class="list-disc list-inside space-y-3 text-gray-700">
+          <li>提出了一种针对云对象存储服务的两层元数据管理架构，结合了可扩展的共享数据库和轻量级的每命名空间索引节点</li>
+          <li>实现了单RPC路径查找，显著减少了路径解析延迟，支持高达每秒180万次查找操作</li>
+          <li>通过引入无冲突的增量记录机制和将循环检测逻辑卸载到索引节点，有效解决了高并发下的目录更新竞争问题</li>
+          <li>在生产环境中部署超过2年，成功支持了亿级对象的单个命名空间，显著提升了AI训练和数据分析等应用的性能</li>
+        </ul>
+      </div>
+      
+      <!-- 摘要 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            云对象存储服务(COSSS)已成为云环境中的主要存储后端，支持大规模分析和机器学习工作负载，这些工作负载频繁访问深层对象路径并同时更新元数据。然而，当前的COSS架构存在昂贵的多轮查找和高目录竞争问题，延迟了作业执行。
+          </p>
+          <p class="mb-4">
+            作者提出了Mantle，一种面向现代云工作负载的新型COSS元数据服务。它采用两层架构：一个跨命名空间共享的可扩展分片数据库(TafDB)和一个每命名空间的单服务器索引节点(IndexNode)，用于整合轻量级目录元数据。通过细粒度的元数据和职责划分，Mantle支持单个命名空间中高达100亿个对象或目录，并通过在IndexNode上可扩展执行单RPC查找实现每秒180万次查找。
+          </p>
+          <p class="mb-4">
+            与Tectonic、InfiniFS和LocoFS的元数据服务相比，Mantle将元数据延迟降低了6.6-99.1%，吞吐量提高了0.07-115.00%。启用数据访问后，它将交互式Spark分析的作业完成时间缩短了63.3-93.3%，AI驱动的音频预处理任务缩短了38.5-47.7%。Mantle已在百度对象存储(BOS)上部署超过2年。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 背景与动机 -->
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            云计算基础设施投资预计将在2023年占全球IT基础设施支出的60%以上。云对象存储服务(COSSS)已成为构建云应用程序的主要存储解决方案。一项研究显示，在基于Amazon Web Services构建的396个应用程序和系统中，约68%使用Amazon S3对象存储，而分布式文件系统的重要性较低，采用率仅为4%。
+          </p>
+          
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-2 flex items-center">
+              <i class="fas fa-chart-line mr-2"></i>市场趋势
+            </h5>
+            <p class="text-gray-700">
+              企业存储论坛报告显示，全球云对象存储市场在2020年价值48.3亿美元，预计到2028年将达到136.5亿美元，复合年增长率为13.6%。
+            </p>
+          </div>
+          
+          <p class="mb-4">
+            同一研究还强调，分析和机器学习(ML)任务这两个关键工作负载主导了云应用程序格局。具体来说，超过60%的应用程序使用分析或ML服务，其中分析占42%，ML占18%。鉴于AI日益突出，ML工作负载预计将继续增长。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-database mr-2 text-blue-500"></i>COSS架构组件
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>代理层：接收应用程序的HTTP请求</li>
+                <li>元数据服务：管理对象命名空间</li>
+                <li>数据服务：存储对象数据</li>
+              </ul>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              <h5 class="font-bold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-cogs mr-2 text-green-500"></i>元数据管理演进
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>从平面命名空间过渡到分层命名空间</li>
+                <li>使用数据库表处理分层命名空间</li>
+                <li>通过分片和分布式实现扩展</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 问题与挑战 -->
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            现代工作负载通常在深度嵌套的目录层次结构上操作，具有长访问路径，并在并发下涉及大量目录变更。对实际命名空间的分析显示，这些命名空间达到十亿级别，平均目录深度约为11，最大深度达到95。
+          </p>
+          
+          <!-- 图3：真实命名空间特征 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8 mt-6">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-bar mr-2"></i>技术细节：图3 - 真实命名空间特征
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 3: 真实命名空间特征
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig3.png" alt="论文图3: 真实命名空间特征，包括对象/目录计数和请求路径深度" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 五个真实命名空间的特征：(a) 对象/目录计数显示所有命名空间都有超过20亿条目，对象占82.0%到91.7%，目录仅占8.3%到18.0%；(b) 请求路径深度显示平均访问深度超过10，最大深度达到95。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>命名空间规模:</strong> 所有五个命名空间都有超过20亿条目，表明现代云工作负载处理的数据量极其庞大</li>
+                  <li><strong>对象主导:</strong> 对象占82.0%到91.7%，目录仅占8.3%到18.0%，表明元数据管理需要优化对象访问</li>
+                  <li><strong>深度层次结构:</strong> 平均路径深度超过10，最大深度达到95，导致路径解析成为性能瓶颈</li>
+                  <li><strong>访问模式:</strong> 应用程序的访问模式严重偏向层次结构的更深层次，需要高效的深度路径解析机制</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">查找效率问题</h3>
+          <p class="mb-4">
+            深度目录层次结构和长访问路径使现代元数据管理方法面临路径解析瓶颈。分析显示，在objstat、dirstat和delete这三个元数据操作中，大部分执行时间被查找步骤消耗，分别占89.9%、91.2%和63.1%。
+          </p>
+          
+          <!-- 图4：性能分析 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-chart-line mr-2"></i>技术细节：图4 - DBtable-based COSS元数据服务性能分析
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 4: DBtable-based COSS元数据服务性能分析
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig4.png" alt="论文图4: DBtable-based COSS元数据服务性能分析，包括延迟分解和目录更新竞争影响" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> DBtable-based COSS元数据服务的性能分析：(a) 三个元数据操作的延迟分解显示查找步骤占主导地位；(b) 目录更新操作在有无竞争情况下的吞吐量对比，显示高竞争下性能显著下降。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>查找主导延迟:</strong> 查找步骤在objstat、dirstat和delete操作中分别占89.9%、91.2%和63.1%的执行时间，表明路径解析是主要性能瓶颈</li>
+                  <li><strong>多轮RPC交互:</strong> 长查找时间由代理层和元数据服务之间的多轮交互造成</li>
+                  <li><strong>目录更新竞争:</strong> 在完全竞争情况下，mkdir和dirrename操作的吞吐量分别下降了99.7%和99.4%</li>
+                  <li><strong>分布式事务开销:</strong> 竞争导致的性能下降是因为mkdir和dirrename操作触发了跨数据库分片的分布式两阶段提交事务</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">目录更新竞争</h3>
+          <p class="mb-4">
+            目录修改操作(如mkdir、rmdir和dirrename)在命名空间的总体访问中占比较小。然而，对于某些应用程序，由于对同一目录属性的并发更新，它们可能导致共享目录上的显著竞争。
+          </p>
+          <p class="mb-4">
+            在生产环境中，Spark即席查询每天发出超过10,000次运行，具有严格的延迟要求。每个查询生成数百个子任务，其临时目录被原子重命名为共享输出目录，导致集中的元数据更新。在现有的DBtable-based机制下，竞争导致频繁的事务重试，将此提交阶段变成主要瓶颈。在极端情况下，它占总任务执行时间的99%以上。
+          </p>
+        </div>
+      </section>
+      
+      <!-- 设计与实现 -->
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            Mantle采用包含性的两层架构，由IndexNode和TafDB组成，具有细粒度的元数据划分。虽然TafDB保留完整的元数据，但IndexNode仅维护目录元数据的关键子集(每个目录约80字节)，用于高效查找和跨目录协调。
+          </p>
+          
+          <!-- 图5：Mantle架构 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sitemap mr-2"></i>技术细节：图5 - Mantle元数据服务架构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 5: Mantle元数据服务架构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig5.png" alt="论文图5: Mantle元数据服务架构和IndexNode与TafDB之间的元数据请求处理划分" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mantle元数据服务的高层架构和IndexNode与TafDB之间的元数据请求处理划分。标记(★)的操作是目录操作，其他是对象操作。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>两层架构:</strong> Mantle由代理层、TafDB和IndexNode三个核心组件组成，采用包含性的两层架构</li>
+                  <li><strong>元数据划分:</strong> 目录元数据被划分为访问元数据(红色顶部框)和属性元数据(蓝色底部框)，IndexNode仅存储访问元数据</li>
+                  <li><strong>职责分离:</strong> IndexNode处理查找和权限检查作为单RPC操作，而TafDB使用其存储的属性元数据处理对象元数据和目录操作</li>
+                  <li><strong>协调机制:</strong> 对于复杂变更(如mkdir和rename)，协调发生在两个组件之间，保持强同步</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">组件职责:</strong>
+                    <ul class="list-disc list-inside mt-1">
+                      <li><strong>IndexNode:</strong> 每个命名空间专用的单节点索引，整合所有/部分目录元数据，处理单RPC查找和权限检查</li>
+                      <li><strong>TafDB:</strong> 可扩展的共享数据库，负责存储任何规模的元数据，处理对象元数据和目录操作</li>
+                      <li><strong>代理层:</strong> 接收应用程序的HTTP请求，协调与内部组件的交互以处理元数据和数据请求</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">元数据划分:</strong>
+                    <p>目录元数据被划分为访问元数据和属性元数据，IndexNode仅存储访问元数据，包括：父目录ID(pid)、目录名称(dirname)、目录ID(id)、访问权限(permission)和用于并发更新协调的锁位。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">可用性保证:</strong>
+                    <p>IndexNode通过采用Raft共识协议复制更新到多个节点来确保高可用性。在Raft组中，所有节点维护相同的内存数据结构。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">扩展单RPC查找</h3>
+          <p class="mb-4">
+            虽然IndexNode将分布式查找集中到单个节点，但CPU密集的路径解析过程在IndexNode中创建了性能瓶颈。为了解决这个问题，作者引入了TopDirPathCache设计，有效减少IndexNode中的CPU消耗。
+          </p>
+          
+          <!-- 图6：IndexNode数据结构 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-database mr-2"></i>技术细节：图6 - Mantle IndexNode上的主要数据结构
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 6: Mantle IndexNode上的主要数据结构
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig6.png" alt="论文图6: Mantle IndexNode上的主要数据结构，包括TopDirPathCache、PrefixTree、IndexTable和Invalidator" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mantle IndexNode上的主要数据结构，包括TopDirPathCache、PrefixTree、IndexTable和Invalidator。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>TopDirPathCache:</strong> 存储高稳定性路径前缀的解析结果，避免运行时提升或降级，通过Invalidator机制移除过时条目</li>
+                  <li><strong>IndexTable:</strong> 包含父目录ID(pid)、目录名称(dirname)、目录ID(id)、访问权限(permission)和用于并发更新协调的锁位</li>
+                  <li><strong>PrefixTree:</strong> 无锁基数树，重建TopDirPathCache中所有缓存路径的目录树，支持高效的范围查询以进行失效</li>
+                  <li><strong>Invalidator:</strong> 轻量级缓存失效机制，使用Removallist记录正在修改的目录的完整路径</li>
+                </ul>
+              </div>
+              
+              <!-- 设计实现部分 -->
+              <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-cogs mr-2"></i>设计实现：
+                </h5>
+                <div class="text-sm md:text-base text-gray-700 space-y-3">
+                  <div>
+                    <strong class="text-green-700">TopDirPathCache工作流程:</strong>
+                    <p>当处理深度为N的查找请求时，IndexNode截断最后k级，并使用结果前缀查询TopDirPathCache。经验常数k表示禁用缓存的叶级别以上的距离。因此，叶节点k级内的所有路径都从TopDirPathCache中省略。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">缓存失效机制:</strong>
+                    <p>目录修改(如dirrename和setattr)可能使相关缓存条目过时。所有以受影响路径为前缀的条目必须失效并从TopDirPathCache中移除。这需要范围扫描来识别受影响目录的所有后代。</p>
+                  </div>
+                  <div>
+                    <strong class="text-green-700">查找-修改协调:</strong>
+                    <p>Mantle引入Invalidator，一个轻量级的缓存失效机制。它依赖两个辅助数据结构：PrefixTree和Removallist。当新查找结果缓存在TopDirPathCache中时，PrefixTree同步更新以反映新路径。当目录修改发生时，目标目录的完整路径被插入到Removallist中。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">扩展目录修改</h3>
+          <p class="mb-4">
+            为了提高目录修改性能，作者解决了三个关键情况。首先，引入无位置更新机制以消除属性竞争。其次，优化跨目录dirrename，利用IndexNode将循环检测从分布式协调任务转换为本地操作。最后，确保IndexNode能够承受增加的写入负载。
+          </p>
+          
+          <!-- 图8：增量记录 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-exchange-alt mr-2"></i>技术细节：图8 - 使用增量记录避免目录内不同目录修改之间的竞争
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 8: 使用增量记录避免目录内不同目录修改之间的竞争
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig8.png" alt="论文图8: 使用增量记录避免目录内不同目录修改之间的竞争" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 使用增量记录避免目录内不同目录修改之间的竞争。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>增量记录机制:</strong> 每个增量记录由父目录ID(pid)、特殊名称字段('_ATTR')和事务时间戳(TS_txn)组成的复合键标识</li>
+                  <li><strong>避免竞争:</strong> 操作不是直接更新主属性记录(时间戳=0)，而是简单地插入不同的增量记录</li>
+                  <li><strong>异步压缩:</strong> 这些增量记录后来异步压缩到主目录属性元数据中，共享锁存确保目录元数据在压缩过程中保持完整且不能被删除</li>
+                  <li><strong>选择性启用:</strong> 增量记录仅在目录内持续竞争时选择性启用，有效减少竞争并提高整体延迟</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图9：目录重命名工作流程 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-sync-alt mr-2"></i>技术细节：图9 - 处理目录重命名操作的工作流程
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 9: 处理目录重命名操作的工作流程
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig9.png" alt="论文图9: 处理目录重命名操作的工作流程" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 处理目录重命名操作的工作流程。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>循环检测卸载:</strong> 将循环检测逻辑从TafDB卸载到IndexNode，利用IndexNode的本地内存数据结构</li>
+                  <li><strong>简化分布式协调:</strong> 通过本地循环检测，目录重命名操作简化为仅涉及两个TafDB分片的两阶段提交事务</li>
+                  <li><strong>工作流程优化:</strong> 代理层首先向IndexNode请求目录重命名，IndexNode执行循环检测，然后代理层协调TafDB中的两阶段提交</li>
+                  <li><strong>性能提升:</strong> 这种卸载显著减少了分布式协调开销，提高了目录重命名操作的性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+      
+      <!-- 测试与评估 -->
+      <section id="evaluation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-chart-line mr-3 text-blue-500"></i>
+          测试与评估
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者在百度对象存储(BOS)的生产环境中部署了Mantle，并进行了全面的性能评估。测试环境包括一个包含20亿个对象和目录的命名空间，平均目录深度为11，最大深度为95。
+          </p>
+          
+          <!-- 图10：元数据操作延迟对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-tachometer-alt mr-2"></i>技术细节：图10 - 元数据操作延迟对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 10: 元数据操作延迟对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig10.png" alt="论文图10: Mantle与Tectonic、InfiniFS和LocoFS在元数据操作延迟上的对比" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> Mantle与Tectonic、InfiniFS和LocoFS在元数据操作延迟上的对比。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>显著延迟降低:</strong> Mantle在objstat、dirstat和delete操作上分别比Tectonic、InfiniFS和LocoFS降低了6.6-99.1%的延迟</li>
+                  <li><strong>单RPC查找优势:</strong> 单RPC查找机制显著减少了路径解析延迟，特别是在深度目录层次结构中</li>
+                  <li><strong>目录操作优化:</strong> 对于目录操作(mkdir、rmdir、dirrename)，Mantle通过增量记录和循环检测卸载进一步降低了延迟</li>
+                  <li><strong>竞争缓解:</strong> 在高并发场景下，Mantle的延迟优势更加明显，表明其有效缓解了目录更新竞争问题</li>
+                </ul>
+              </div>
+              
+              <!-- 性能分析部分 -->
+              <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 class="font-semibold text-purple-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-chart-line mr-2"></i>性能分析：
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+                  <div>
+                    <strong class="text-purple-700">测试配置:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>硬件环境: 64核CPU, 256GB内存, NVMe SSD存储</li>
+                      <li>软件栈: Linux 5.4, Raft共识协议, 分布式数据库</li>
+                      <li>工作负载: 20亿对象/目录的命名空间, 平均深度11</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong class="text-purple-700">关键结果:</strong>
+                    <ul class="list-disc list-inside mt-1 text-gray-700">
+                      <li>查找吞吐量: 180万次/秒</li>
+                      <li>延迟降低: 6.6-99.1%</li>
+                      <li>吞吐量提升: 0.07-115.00%</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图11：目录更新吞吐量对比 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-exchange-alt mr-2"></i>技术细节：图11 - 目录更新吞吐量对比
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 11: 目录更新吞吐量对比
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig11.png" alt="论文图11: 目录更新吞吐量对比，显示Mantle在高并发下的性能优势" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 目录更新吞吐量对比，显示Mantle在高并发下的性能优势。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>竞争缓解效果:</strong> 在高并发场景下，Mantle的目录更新吞吐量显著高于传统方法，特别是在mkdir和dirrename操作上</li>
+                  <li><strong>增量记录优势:</strong> 增量记录机制有效避免了目录内不同目录修改之间的竞争，提高了并发性能</li>
+                  <li><strong>循环检测优化:</strong> 将循环检测卸载到IndexNode简化了分布式协调，提高了dirrename操作的吞吐量</li>
+                  <li><strong>可扩展性:</strong> Mantle的目录更新吞吐量随着并发度的增加保持稳定，而传统方法的性能显著下降</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <!-- 图12：端到端应用性能 -->
+          <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+            <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+              <i class="fas fa-rocket mr-2"></i>技术细节：图12 - 端到端应用性能
+            </summary>
+            
+            <div class="mt-6 space-y-6">
+              <!-- 原图展示部分 -->
+              <div class="original-figure-container">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                  <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                    <i class="fas fa-image mr-2 text-blue-500"></i>
+                    原图 12: 端到端应用性能
+                  </h5>
+                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+                </div>
+                
+                <!-- 原图占位符 -->
+                <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                  <img src="./images/fig12.png" alt="论文图12: 端到端应用性能对比，包括Spark交互式分析和AI驱动的音频预处理任务" class="max-w-full h-auto rounded-lg">
+                </div>
+                
+                <!-- 原图图注 -->
+                <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                  <strong>原图图注:</strong> 端到端应用性能对比，包括Spark交互式分析和AI驱动的音频预处理任务。
+                </div>
+              </div>
+              
+              <!-- 技术解释部分 -->
+              <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                  <i class="fas fa-info-circle mr-2"></i>技术解释：
+                </h5>
+                <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                  <li><strong>Spark分析性能:</strong> 启用数据访问后，Mantle将交互式Spark分析的作业完成时间缩短了63.3-93.3%</li>
+                  <li><strong>AI任务加速:</strong> 对于AI驱动的音频预处理任务，Mantle将完成时间缩短了38.5-47.7%</li>
+                  <li><strong>元数据瓶颈消除:</strong> 性能提升主要归因于Mantle消除了元数据访问瓶颈，特别是在深度目录层次结构中的查找操作</li>
+                  <li><strong>实际应用价值:</strong> 这些结果表明Mantle在实际生产环境中能够显著提升关键工作负载的性能</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">生产环境部署</h3>
+          <p class="mb-4">
+            Mantle已在百度对象存储(BOS)上部署超过2年，支持了亿级对象的单个命名空间。生产环境数据显示，Mantle显著提升了AI训练和数据分析等应用的性能。
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-blue-600 mb-2">2+</div>
+              <div class="text-gray-700 font-medium">年生产部署</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-green-600 mb-2">1.8M</div>
+              <div class="text-gray-700 font-medium">查找操作/秒</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div class="text-3xl font-bold text-purple-600 mb-2">10B+</div>
+              <div class="text-gray-700 font-medium">对象/命名空间</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 结论 -->
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          结论
+        </h2>
+        
+        <div class="prose max-w-none text-gray-700">
+          <p class="mb-4">
+            作者提出了Mantle，一种面向现代云工作负载的新型COSS元数据服务。它采用两层架构：一个跨命名空间共享的可扩展分片数据库(TafDB)和一个每命名空间的单服务器索引节点(IndexNode)，用于整合轻量级目录元数据。
+          </p>
+          
+          <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-6 rounded-r-lg mb-6">
+            <h4 class="font-bold text-yellow-700 mb-3 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>主要创新点
+            </h4>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+              <li>通过细粒度的元数据和职责划分，支持单个命名空间中高达100亿个对象或目录</li>
+              <li>通过在IndexNode上可扩展执行单RPC查找实现每秒180万次查找</li>
+              <li>通过引入无冲突的增量记录机制和将循环检测逻辑卸载到索引节点，有效解决了高并发下的目录更新竞争问题</li>
+              <li>在生产环境中部署超过2年，成功支持了亿级对象的单个命名空间</li>
+            </ul>
+          </div>
+          
+          <p class="mb-4">
+            与Tectonic、InfiniFS和LocoFS的元数据服务相比，Mantle将元数据延迟降低了6.6-99.1%，吞吐量提高了0.07-115.00%。启用数据访问后，它将交互式Spark分析的作业完成时间缩短了63.3-93.3%，AI驱动的音频预处理任务缩短了38.5-47.7%。
+          </p>
+          
+          <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">未来工作</h3>
+          <p class="mb-4">
+            作者计划探索几个方向来进一步增强Mantle。首先，研究更智能的缓存策略，根据访问模式动态调整TopDirPathCache的大小和内容。其次，优化IndexNode的故障恢复机制，减少故障转移时间。最后，扩展Mantle以支持更多类型的元数据操作和更复杂的查询模式。
+          </p>
+          
+          <div class="bg-gray-100 p-6 rounded-lg mt-8">
+            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+              <i class="fas fa-download mr-2"></i>获取论文
+            </h4>
+            <p class="text-gray-700 mb-3">
+              完整论文可在ACM数字图书馆获取：
+            </p>
+            <div class="bg-white p-3 rounded border font-mono text-sm">
+              https://dl.acm.org/doi/10.1145/3731569.3764824
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 技术细节卡片交互
+      const detailsElements = document.querySelectorAll('.technical-details');
+      detailsElements.forEach(details => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            this.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      });
+    });
+  </script>
+<!-- AI生成内容标识 --><div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;"><span style="font-size: 16px;">🤖</span><span>AI生成</span></div></div><script>(function(){const badge=document.getElementById('ai-badge');let expanded=false; badge.addEventListener('click',function(){if(!expanded){const details=document.createElement('div');details.id='ai-details';details.style.cssText="position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";details.innerHTML='<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>';badge.appendChild(details);expanded=true;}else{const details=document.getElementById('ai-details');if(details)details.remove();expanded=false;}});})();</script></body></html>

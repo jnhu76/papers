@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaxosLease: Diskless Paxos for Leases</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif; 
+      scroll-behavior: smooth;
+    }
+    .mobile-optimized { 
+      margin-bottom: 2rem !important; 
+    }
+    @media (max-width: 768px) {
+      .content-section { 
+        padding: 1rem; 
+        margin-bottom: 1.5rem;
+      }
+      .technical-details {
+        margin: 1rem 0;
+      }
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .nav-item {
+      @apply px-4 py-2 rounded-lg transition-colors duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50;
+    }
+    .nav-item.active {
+      @apply text-blue-600 bg-blue-100;
+    }
+    .algorithm-step {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-400 via-purple-500 to-pink-400 min-h-screen">
+  <!-- 导航系统 -->
+  <nav class="nav-scroll bg-white/90 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex overflow-x-auto space-x-6 hide-scrollbar">
+        <a href="#abstract" class="nav-item whitespace-nowrap">摘要</a>
+        <a href="#background-motivation" class="nav-item whitespace-nowrap">背景与动机</a>
+        <a href="#challenges" class="nav-item whitespace-nowrap">问题与挑战</a>
+        <a href="#design-implementation" class="nav-item whitespace-nowrap">设计与实现</a>
+        <a href="#algorithm" class="nav-item whitespace-nowrap">算法详解</a>
+        <a href="#limitations" class="nav-item whitespace-nowrap">不足与局限</a>
+        <a href="#conclusion" class="nav-item whitespace-nowrap">总结</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
+      <!-- 论文标题和元数据 -->
+      <div class="mb-12 md:mb-16">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          PaxosLease: Diskless Paxos for Leases
+        </h1>
+        
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">作者信息</strong>
+                <div class="text-lg">Marton Trencseni, Attila Gazso, Holger Reinhardt</div>
+                <div class="text-sm text-gray-600 mt-1">开源Keyspace和ScalienDB复制键值存储开发者</div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">论文类型</strong>
+                <div>分布式系统算法论文</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <strong class="text-blue-700 block mb-1">关键技术</strong>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">分布式系统</span>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Paxos算法</span>
+                  <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">租约机制</span>
+                  <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">无磁盘写入</span>
+                </div>
+              </div>
+              <div>
+                <strong class="text-blue-700 block mb-1">应用系统</strong>
+                <div class="text-sm">Keyspace和ScalienDB复制键值存储</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI生成内容标识 -->
+      <div class="mt-6 mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-r-lg shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 mt-0.5">
+            <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full border border-amber-200">
+                ⚠️ AI生成内容
+              </span>
+              <span class="text-xs text-amber-700 font-medium px-2 py-1 bg-amber-50 rounded">
+                法律要求标识
+              </span>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              根据《人工智能生成合成内容标识办法》要求，本文的<strong class="text-amber-700">解析、评述及总结内容由人工智能模型生成</strong>。生成内容可能存在不准确、过时或偏差，仅作为学习参考之用。
+            </p>
+            <div class="mt-3 pt-3 border-t border-amber-200">
+              <p class="text-xs text-gray-600 flex items-start">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                建议您：1) 核对原始论文；2) 结合专业知识判断；3) 不依赖AI生成内容做出关键学术决策。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心贡献突出显示 -->
+      <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-r-lg mb-10">
+        <h4 class="font-bold text-green-700 mb-4 flex items-center text-xl">
+          <i class="fas fa-trophy mr-3"></i>核心贡献
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <div class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span class="font-medium">无磁盘写入</span>
+            </div>
+            <p class="text-sm text-gray-700 ml-6">传统的Paxos需要在磁盘上持久化状态，PaxosLease无需磁盘写入</p>
+            
+            <div class="flex items-start mt-3">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span class="font-medium">无需时钟同步</span>
+            </div>
+            <p class="text-sm text-gray-700 ml-6">不要求节点间的时钟同步，更适应真实分布式环境</p>
+          </div>
+          
+          <div class="space-y-2">
+            <div class="flex items-start">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span class="font-medium">租约专用优化</span>
+            </div>
+            <p class="text-sm text-gray-700 ml-6">专门为租约场景设计的Paxos变体，简化了传统Paxos的多轮协商</p>
+            
+            <div class="flex items-start mt-3">
+              <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+              <span class="font-medium">资源消耗极低</span>
+            </div>
+            <p class="text-sm text-gray-700 ml-6">每个实例仅需~100字节内存，可支持千万级资源租约</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 各技术章节 -->
+      <section id="abstract" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-file-alt mr-3 text-blue-500"></i>
+          摘要
+        </h2>
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <p class="text-gray-700 leading-relaxed mb-4">
+            本文描述了<strong>PaxosLease</strong>，一种用于租约协商的分布式算法。PaxosLease基于著名的<code>Paxos</code>共识算法，但有两个关键改进：
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-hdd mr-2"></i>无需磁盘写入
+              </h4>
+              <p class="text-sm text-gray-700">传统Paxos需要将状态写入磁盘，PaxosLease完全避免了磁盘操作</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-clock mr-2"></i>无需时钟同步
+              </h4>
+              <p class="text-sm text-gray-700">不要求节点间时钟同步，更适应真实世界的分布式环境</p>
+            </div>
+          </div>
+          <p class="text-gray-700 leading-relaxed">
+            该算法已应用于开源的Keyspace和ScalienDB复制键值存储中，用于主节点租约协商。PaxosLease是Paxos算法在租约场景下的自然特化，保留了Paxos的容错特性，同时大大简化了实现复杂度。
+          </p>
+        </div>
+      </section>
+      
+      <section id="background-motivation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-layer-group mr-3 text-blue-500"></i>
+          背景与动机
+        </h2>
+        
+        <!-- 租约与锁对比可视化 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-lock mr-2 text-blue-500"></i>为什么需要租约？
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 mb-3 flex items-center">
+                <i class="fas fa-times-circle mr-2"></i>传统锁的问题
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>锁持有者故障会导致整个系统阻塞</li>
+                <li>分布式环境下重启系统很困难</li>
+                <li>单点故障影响整个系统可用性</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>租约的解决方案
+              </h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li><strong>租约 = 锁 + 过期时间</strong></li>
+                <li>持有者故障时自动过期释放</li>
+                <li>避免系统因单点故障而阻塞</li>
+                <li>天然支持故障恢复</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2 flex items-center">
+              <i class="fas fa-lightbulb mr-2"></i>简单理解
+            </h4>
+            <p class="text-sm text-gray-700">
+              <strong>租约就像租房合同</strong>：有明确的租期，到期后无论租客在不在，房东都可以重新出租。
+              而<strong>传统锁就像永久产权</strong>：如果房主失踪了，房子就永远空着没人能住。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 系统组成 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-network-wired mr-2 text-blue-500"></i>系统组成
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="text-center">
+              <div class="bg-blue-100 p-6 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-user-tie text-4xl text-blue-600"></i>
+              </div>
+              <h4 class="font-bold text-blue-700 mb-2">提议者 (Proposers)</h4>
+              <p class="text-sm text-gray-600">想要获取租约的节点，运行提议者算法</p>
+              <div class="mt-3">
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">发送请求</span>
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs ml-2">生成投票号</span>
+              </div>
+            </div>
+            
+            <div class="text-center">
+              <div class="bg-green-100 p-6 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-check-circle text-4xl text-green-600"></i>
+              </div>
+              <h4 class="font-bold text-green-700 mb-2">接受者 (Acceptors)</h4>
+              <p class="text-sm text-gray-600">决定租约归属的节点，运行接受者算法</p>
+              <div class="mt-3">
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">存储状态</span>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs ml-2">响应请求</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-700">
+              <strong>重要假设：</strong>系统是非拜占庭的（节点不会恶意作弊），接受者数量固定不变。
+              在实际实现中，一个节点可以同时担任提议者和接受者角色。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="challenges" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-triangle mr-3 text-blue-500"></i>
+          问题与挑战
+        </h2>
+        
+        <!-- 简单多数投票算法的问题 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-vote-yea mr-2 text-red-500"></i>简单多数投票算法的问题
+          </h3>
+          
+          <div class="mb-6">
+            <p class="text-gray-700 mb-4">
+              最简单的租约算法：每个提议者设置T秒超时，向接受者请求租约。接受者同意后，提议者需要获得多数接受者的同意才能获得租约。
+            </p>
+            
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+              <h4 class="font-bold text-red-700 mb-2">阻塞问题示例</h4>
+              <div class="flex flex-col items-center">
+                <div class="flex justify-center space-x-8 my-4">
+                  <div class="text-center">
+                    <div class="bg-blue-100 p-4 rounded-full w-20 h-20 mb-2 flex items-center justify-center mx-auto">
+                      <span class="font-bold text-blue-700">提议者1</span>
+                    </div>
+                    <div class="text-sm">获得接受者A</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="bg-green-100 p-4 rounded-full w-20 h-20 mb-2 flex items-center justify-center mx-auto">
+                      <span class="font-bold text-green-700">提议者2</span>
+                    </div>
+                    <div class="text-sm">获得接受者B</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="bg-purple-100 p-4 rounded-full w-20 h-20 mb-2 flex items-center justify-center mx-auto">
+                      <span class="font-bold text-purple-700">提议者3</span>
+                    </div>
+                    <div class="text-sm">获得接受者C</div>
+                  </div>
+                </div>
+                <div class="text-center text-red-600 font-bold">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>没有提议者获得多数票，系统阻塞！
+                </div>
+              </div>
+            </div>
+            
+            <p class="text-gray-700">
+              如示例所示，当三个提议者分别获得一个接受者的同意时，没有任何提议者能获得多数票（需要至少2个）。
+              系统只能等待超时后重试，但很可能再次陷入同样的阻塞状态。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 传统Paxos的局限性 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-history mr-2 text-orange-500"></i>传统Paxos的局限性
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="font-bold text-orange-700 mb-3">传统Paxos的特点</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>需要将状态<strong>写入磁盘</strong>持久化</li>
+                <li>主要用于<strong>复制状态机</strong>的共识</li>
+                <li>通过多轮Paxos协商状态转换序列</li>
+                <li>设计过于通用，对租约场景不最优</li>
+              </ul>
+            </div>
+            
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-3">Fatlease的问题</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>模仿Google的多轮Paxos实现，复杂度过高</li>
+                <li><strong>要求节点间时钟同步</strong></li>
+                <li>未充分利用租约的<strong>时间特性</strong></li>
+                <li>实现复杂，不适合真实生产环境</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+            <h4 class="font-bold text-purple-700 mb-2">PaxosLease的创新思路</h4>
+            <p class="text-sm text-gray-700">
+              作者意识到：租约具有<strong>天然的时间特性</strong>——会自动过期。
+              因此不需要像传统Paxos那样永久持久化状态，也不需要多轮协商。
+              可以利用超时机制让状态自动清除，大大简化算法。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="design-implementation" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-cogs mr-3 text-blue-500"></i>
+          设计与实现
+        </h2>
+        
+        <!-- 关键设计决策 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-chess-board mr-2 text-blue-500"></i>关键设计决策
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+            <div class="tech-card bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-ban mr-2"></i>无磁盘写入
+              </h4>
+              <p class="text-sm text-gray-700">接受者不将状态写入磁盘，重启后从空白状态开始</p>
+            </div>
+            
+            <div class="tech-card bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-hourglass-end mr-2"></i>状态自动过期
+              </h4>
+              <p class="text-sm text-gray-700">通过超时机制自动清除状态，无需显式删除</p>
+            </div>
+            
+            <div class="tech-card bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-clock mr-2"></i>无需时钟同步
+              </h4>
+              <p class="text-sm text-gray-700">只使用相对时间（时间间隔），不要求全局时钟</p>
+            </div>
+            
+            <div class="tech-card bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 class="font-bold text-red-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-user-clock mr-2"></i>最大租约时间M
+              </h4>
+              <p class="text-sm text-gray-700">全局已知的最大租约时间，重启节点等待M秒后加入</p>
+            </div>
+            
+            <div class="tech-card bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <h4 class="font-bold text-yellow-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-sort-numeric-up mr-2"></i>全局唯一投票号
+              </h4>
+              <p class="text-sm text-gray-700">投票号由提议者ID、重启计数器和运行计数器组成</p>
+            </div>
+            
+            <div class="tech-card bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <h4 class="font-bold text-indigo-700 text-base md:text-lg mb-2 flex items-center">
+                <i class="fas fa-handshake mr-2"></i>两阶段协议
+              </h4>
+              <p class="text-sm text-gray-700">prepare和propose两阶段，避免简单多数算法的阻塞</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 消息结构 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-envelope mr-2 text-blue-500"></i>消息结构
+          </h3>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">消息类型</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">内容</th>
+                  <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">目的</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">prepare请求</td>
+                  <td class="px-4 py-3 text-sm text-gray-700 font-mono">投票号</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">试探接受者状态，准备提出提案</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">prepare响应</td>
+                  <td class="px-4 py-3 text-sm text-gray-700 font-mono">投票号, 答案, 已接受的提案</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">告知提议者当前状态，承诺不再接受更低投票号的提案</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">propose请求</td>
+                  <td class="px-4 py-3 text-sm text-gray-700 font-mono">投票号, 租约</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">正式提出租约提案</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">propose响应</td>
+                  <td class="px-4 py-3 text-sm text-gray-700 font-mono">投票号, 答案</td>
+                  <td class="px-4 py-3 text-sm text-gray-700">告知提议者是否接受了提案</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-700">
+              <strong>租约结构：</strong>包含提议者ID和时间跨度T。
+              <strong>提案：</strong>由投票号和租约组成。
+              <strong>投票号：</strong>全局唯一且单调递增，格式为[提议者ID].[重启计数器].[运行计数器]。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 接受者状态 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-database mr-2 text-blue-500"></i>接受者状态管理
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-bold text-blue-700 mb-3">存储的状态</h4>
+              <div class="space-y-3">
+                <div class="bg-white p-3 rounded border">
+                  <div class="font-medium text-sm text-gray-700">最高承诺投票号</div>
+                  <div class="text-xs text-gray-500 mt-1">忽略比这个值低的投票号消息</div>
+                </div>
+                <div class="bg-white p-3 rounded border">
+                  <div class="font-medium text-sm text-gray-700">已接受的提案</div>
+                  <div class="text-xs text-gray-500 mt-1">最后接受的提案（投票号+租约），可能为空</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-bold text-green-700 mb-3">状态生命周期</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>收到propose请求时设置已接受的提案</li>
+                <li>启动T秒超时定时器</li>
+                <li>超时后自动将"已接受的提案"重置为空</li>
+                <li>"最高承诺投票号"<strong>永不重置</strong>（除非重启）</li>
+                <li>重启后所有状态为空，等待M秒后重新加入</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-yellow-700 mb-2">为什么不需要磁盘写入？</h4>
+            <p class="text-sm text-gray-700">
+              传统Paxos需要磁盘写入来保证"一旦值被选定，就永远被选定"。但租约场景不同：
+              租约会自动过期，状态不需要永久保存。重启的节点等待M秒（最大租约时间）后，
+              之前所有租约肯定已过期，因此可以安全地重新加入。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="algorithm" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-code-branch mr-3 text-blue-500"></i>
+          算法详解
+        </h2>
+        
+        <!-- 算法流程图 -->
+        <div class="original-figure-container bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h5 class="font-semibold text-gray-700 text-lg">
+              <i class="fas fa-project-diagram mr-2 text-blue-500"></i>
+              图1: PaxosLease算法流程
+            </h5>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">论文核心流程</span>
+          </div>
+          
+          <!-- 算法流程图可视化 -->
+          <div class="bg-gradient-to-br from-gray-50 to-blue-50 p-6 rounded-lg border-2 border-dashed border-gray-300">
+            <div class="space-y-6">
+              <!-- 第1步 -->
+              <div class="flex items-start">
+                <div class="algorithm-step">1</div>
+                <div class="flex-1">
+                  <div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200">
+                    <h6 class="font-bold text-blue-700 mb-2">准备阶段 (Prepare Phase)</h6>
+                    <p class="text-sm text-gray-700">提议者生成投票号，向多数接受者发送prepare请求</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                      <i class="fas fa-arrow-right mr-1"></i>
+                      <code>Proposer::Propose()</code> - 生成投票号并广播prepare请求
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第2步 -->
+              <div class="flex items-start">
+                <div class="algorithm-step">2</div>
+                <div class="flex-1">
+                  <div class="bg-white p-4 rounded-lg shadow-sm border border-green-200">
+                    <h6 class="font-bold text-green-700 mb-2">接受者响应 (Acceptor Response)</h6>
+                    <p class="text-sm text-gray-700">接受者检查投票号，如果更高则承诺并返回当前状态</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                      <i class="fas fa-arrow-right mr-1"></i>
+                      <code>Acceptor::OnPrepareRequest()</code> - 更新最高承诺投票号并响应
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第3步 -->
+              <div class="flex items-start">
+                <div class="algorithm-step">3</div>
+                <div class="flex-1">
+                  <div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200">
+                    <h6 class="font-bold text-blue-700 mb-2">提议阶段 (Propose Phase)</h6>
+                    <p class="text-sm text-gray-700">如果多数接受者状态为空，提议者启动定时器并发送propose请求</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                      <i class="fas fa-arrow-right mr-1"></i>
+                      <code>Proposer::OnPrepareResponse()</code> - 检查响应并广播propose请求
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第4步 -->
+              <div class="flex items-start">
+                <div class="algorithm-step">4</div>
+                <div class="flex-1">
+                  <div class="bg-white p-4 rounded-lg shadow-sm border border-green-200">
+                    <h6 class="font-bold text-green-700 mb-2">接受提案 (Accept Proposal)</h6>
+                    <p class="text-sm text-gray-700">接受者接受提案，启动超时定时器，存储提案并响应</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                      <i class="fas fa-arrow-right mr-1"></i>
+                      <code>Acceptor::OnProposeRequest()</code> - 接受提案并启动T秒超时
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第5步 -->
+              <div class="flex items-start">
+                <div class="algorithm-step">5</div>
+                <div class="flex-1">
+                  <div class="bg-white p-4 rounded-lg shadow-sm border border-purple-200">
+                    <h6 class="font-bold text-purple-700 mb-2">获得租约 (Acquire Lease)</h6>
+                    <p class="text-sm text-gray-700">如果多数接受者接受提案，提议者获得租约直到本地定时器超时</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                      <i class="fas fa-arrow-right mr-1"></i>
+                      <code>Proposer::OnProposeResponse()</code> - 检查多数响应并获取租约
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 图注 -->
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+            <strong>算法流程说明:</strong> PaxosLease算法分为两阶段5个步骤，正常情况下需要两个往返时间(RTT)来获取租约。整个过程避免了简单多数投票算法的阻塞问题。
+          </div>
+        </div>
+        
+        <!-- 时间流图 -->
+        <details class="technical-details bg-gray-50 rounded-lg p-4 md:p-6 mb-8">
+          <summary class="cursor-pointer font-semibold text-lg md:text-xl text-gray-800 hover:text-blue-600 transition-colors py-2">
+            <i class="fas fa-microscope mr-2"></i>技术细节：图2 - 时间流证明
+          </summary>
+          
+          <div class="mt-6 space-y-6">
+            <!-- 原图展示部分 -->
+            <div class="original-figure-container">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h5 class="font-semibold text-gray-700 text-base md:text-lg">
+                  <i class="fas fa-image mr-2 text-blue-500"></i>
+                  原图 2: 提议者获取租约的时间流
+                </h5>
+                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded self-start sm:self-auto">论文原图</span>
+              </div>
+              
+              <!-- 原图占位符 -->
+              <div class="image-placeholder bg-gradient-to-br from-gray-100 to-gray-200 p-6 md:p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <img src="./images/fig2.png" alt="论文图2: 提议者获取租约的时间流图，展示时间点关系" class="max-w-full h-auto rounded-lg">
+              </div>
+              
+              <!-- 原图图注 -->
+              <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <strong>原图图注:</strong> 提议者在t_start启动定时器，在t_acquire获得租约，租约持续到t_end = t_start + T。接受者在稍后时间接受提案并启动自己的定时器。
+              </div>
+            </div>
+            
+            <!-- 技术解释部分 -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h5 class="font-semibold text-blue-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-info-circle mr-2"></i>技术解释：
+              </h5>
+              <ul class="list-disc list-inside space-y-2 text-sm md:text-base text-gray-700">
+                <li><strong>时间点关系:</strong> 提议者先启动定时器(t_start)，然后接受者才接受提案并启动定时器</li>
+                <li><strong>安全性保证:</strong> 由于接受者的定时器在提议者之后启动，在提议者租约到期前，其他提议者无法获得多数接受</li>
+                <li><strong>租约不变性证明:</strong> 图2直观展示了为什么不会有两个提议者同时认为自己是租约持有者</li>
+                <li><strong>创新点:</strong> 利用时间流的先后关系，无需磁盘持久化也能保证安全性</li>
+              </ul>
+            </div>
+            
+            <!-- 设计实现部分 -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h5 class="font-semibold text-green-700 mb-3 flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-2"></i>设计实现：
+              </h5>
+              <div class="text-sm md:text-base text-gray-700 space-y-3">
+                <div>
+                  <strong class="text-green-700">实现方法:</strong>
+                  <p>提议者在发送propose请求前启动本地定时器，接受者在接受提案后才启动定时器。这种时间差保证了租约的安全性。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">技术选择:</strong>
+                  <p>选择相对时间而非绝对时间，避免了时钟同步的需求。使用超时机制而非显式删除，简化了状态管理。</p>
+                </div>
+                <div>
+                  <strong class="text-green-700">优化策略:</strong>
+                  <p>通过仔细设计时间流，在保证正确性的前提下，移除了磁盘写入和时钟同步这两个最复杂的分布式系统需求。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+        
+        <!-- 算法伪代码 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-code mr-2 text-blue-500"></i>
+            关键伪代码片段
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-bold text-blue-700 mb-3">提议者算法核心</h4>
+              <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+<span class="text-green-400">// 生成投票号并发送prepare请求</span>
+<span class="text-yellow-400">Proposer::Propose()</span> {
+  state.ballotNumber = <span class="text-blue-400">NextBallotNumber</span>()
+  request.type = <span class="text-purple-400">PrepareRequest</span>
+  request.ballotNumber = state.ballotNumber
+  <span class="text-blue-400">Broadcast</span>(request)
+}
+
+<span class="text-green-400">// 处理prepare响应</span>
+<span class="text-yellow-400">Proposer::OnPrepareResponse</span>() {
+  <span class="text-red-400">if</span> (response.ballotNumber != state.ballotNumber) 
+    <span class="text-red-400">return</span> <span class="text-green-400">// 其他提案的响应</span>
+  
+  <span class="text-red-400">if</span> (response.acceptedProposal == <span class="text-purple-400">'empty'</span>)
+    numOpen++
+  
+  <span class="text-red-400">if</span> (numOpen < majority) <span class="text-red-400">return</span>
+  
+  <span class="text-green-400">// 多数接受者状态为空，发送propose请求</span>
+  state.timeout = T
+  <span class="text-blue-400">SetTimeout</span>(state.timeout)
+  request.type = <span class="text-purple-400">ProposeRequest</span>
+  request.ballotNumber = state.ballotNumber
+  request.proposal.proposerID = self.proposerID
+  request.proposal.timeout = state.timeout
+  <span class="text-blue-400">Broadcast</span>(request)
+}</pre>
+            </div>
+            
+            <div>
+              <h4 class="font-bold text-green-700 mb-3">接受者算法核心</h4>
+              <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+<span class="text-green-400">// 处理prepare请求</span>
+<span class="text-yellow-400">Acceptor::OnPrepareRequest</span>() {
+  <span class="text-red-400">if</span> (request.ballotNumber < state.highestPromised)
+    <span class="text-red-400">return</span>
+  
+  state.highestPromised = request.ballotNumber
+  response.type = <span class="text-purple-400">PrepareResponse</span>
+  response.ballotNumber = request.ballotNumber
+  response.acceptedProposal = state.acceptedProposal <span class="text-green-400">// 可能为空</span>
+  <span class="text-blue-400">Send</span>(response)
+}
+
+<span class="text-green-400">// 处理propose请求</span>
+<span class="text-yellow-400">Acceptor::OnProposeRequest</span>() {
+  <span class="text-red-400">if</span> (request.ballotNumber < state.highestPromised)
+    <span class="text-red-400">return</span>
+  
+  state.acceptedProposal = request.proposal
+  <span class="text-blue-400">SetTimeout</span>(state.acceptedProposal.timeout)
+  response.type = <span class="text-purple-400">ProposeResponse</span>
+  response.ballotNumber = request.ballotNumber
+  <span class="text-blue-400">Send</span>(response)
+}
+
+<span class="text-green-400">// 超时处理</span>
+<span class="text-yellow-400">Acceptor::OnTimeout</span>() {
+  state.acceptedProposal = <span class="text-purple-400">empty</span>
+}</pre>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-yellow-50 p-4 rounded-lg">
+            <h4 class="font-bold text-yellow-700 mb-2">简单理解算法</h4>
+            <p class="text-sm text-gray-700">
+              <strong>第一阶段（prepare）：</strong> 提议者"探路"，看看有没有接受者已经有其他提案。<br>
+              <strong>第二阶段（propose）：</strong> 如果"路是通的"（多数接受者没有承诺其他提案），就正式提出自己的租约请求。<br>
+              <strong>关键技巧：</strong> 提议者先启动自己的定时器，然后接受者才接受提案。这样保证在提议者租约到期前，其他提议者无法获得多数票。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 扩展功能 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mt-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-expand-alt mr-2 text-blue-500"></i>
+            扩展功能
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>租约扩展
+              </h4>
+              <p class="text-sm text-gray-700">提议者可以在租约到期前重新提议自己，延长租约时间。接受者算法无需修改。</p>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 class="font-bold text-green-700 mb-2 flex items-center">
+                <i class="fas fa-door-open mr-2"></i>租约释放
+              </h4>
+              <p class="text-sm text-gray-700">提议者可以主动发送释放消息，让接受者立即清除状态，不必等待超时。</p>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h4 class="font-bold text-purple-700 mb-2 flex items-center">
+                <i class="fas fa-boxes mr-2"></i>多资源支持
+              </h4>
+              <p class="text-sm text-gray-700">通过资源标识符为不同资源运行独立实例，每个实例仅需~100字节内存。</p>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-bold text-gray-700 mb-2">内存使用计算</h4>
+            <p class="text-sm text-gray-700">
+              每个PaxosLease实例：~100字节<br>
+              1GB内存可支持：1,000,000,000 ÷ 100 ≈ 10,000,000个资源租约<br>
+              这意味着PaxosLease可以用于细粒度的分布式锁，而不会消耗过多内存。
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      <section id="limitations" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-exclamation-circle mr-3 text-orange-500"></i>
+          不足与局限
+        </h2>
+        
+        <!-- 活性问题 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-pause-circle mr-2 text-orange-500"></i>活性问题
+          </h3>
+          
+          <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-4">
+            <h4 class="font-bold text-orange-700 mb-2">动态死锁可能性</h4>
+            <p class="text-sm text-gray-700">
+              与所有Paxos类算法一样，PaxosLease存在动态死锁的可能：
+              两个提议者可能不断生成更高的投票号，相互覆盖对方的承诺，导致谁都无法获得多数接受。
+            </p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-red-50 p-4 rounded-lg">
+              <h5 class="font-bold text-red-700 mb-2">问题场景</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>提议者P1生成投票号b1</li>
+                <li>提议者P2生成更高投票号b2 > b1</li>
+                <li>P1覆盖P2的承诺</li>
+                <li>P2生成更高投票号b3 > b2</li>
+                <li>P2覆盖P1的承诺</li>
+                <li>无限循环...</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h5 class="font-bold text-green-700 mb-2">解决方案</h5>
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+                <li>提议者失败后等待随机时间重试</li>
+                <li>引入指数退避机制</li>
+                <li>实践中很少发生，可工作良好</li>
+                <li>静态死锁（简单多数算法的问题）已完全避免</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 其他局限性 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-clipboard-list mr-2 text-orange-500"></i>其他局限性
+          </h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-start p-4 bg-red-50 rounded-lg border border-red-200">
+              <i class="fas fa-times-circle text-red-500 mt-1 mr-3"></i>
+              <div>
+                <h4 class="font-bold text-red-700 mb-1">租约感知范围有限</h4>
+                <p class="text-sm text-gray-700">
+                  只有租约持有者自己知道持有租约，无法可靠地告知其他节点（因为消息传输延迟不确定）。
+                  其他节点只能知道自己没有租约，不知道谁有租约。
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-3"></i>
+              <div>
+                <h4 class="font-bold text-yellow-700 mb-1">重启等待时间</h4>
+                <p class="text-sm text-gray-700">
+                  节点重启后必须等待M秒（最大租约时间）才能重新加入系统，这期间无法参与租约协商。
+                  对于需要快速故障恢复的场景，这可能是个问题。
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <i class="fas fa-users-slash text-blue-500 mt-1 mr-3"></i>
+              <div>
+                <h4 class="font-bold text-blue-700 mb-1">不接受节点动态加入</h4>
+                <p class="text-sm text-gray-700">
+                  接受者数量固定，不支持动态添加或移除接受者。
+                  对于需要弹性扩展的系统，这是一个限制。
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <i class="fas fa-shield-alt text-purple-500 mt-1 mr-3"></i>
+              <div>
+                <h4 class="font-bold text-purple-700 mb-1">非拜占庭容错</h4>
+                <p class="text-sm text-gray-700">
+                  假设节点不会恶意行为（非拜占庭故障模型）。
+                  如果节点可能被攻击或表现出恶意行为，PaxosLease无法保证正确性。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+            <h4 class="font-bold text-purple-700 mb-2">与Fatlease对比</h4>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">特性</th>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">PaxosLease</th>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fatlease</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-700">磁盘写入</td>
+                    <td class="px-4 py-2 text-sm text-green-600 font-bold">不需要</td>
+                    <td class="px-4 py-2 text-sm text-red-600">需要</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-700">时钟同步</td>
+                    <td class="px-4 py-2 text-sm text-green-600 font-bold">不需要</td>
+                    <td class="px-4 py-2 text-sm text-red-600">需要</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-700">实现复杂度</td>
+                    <td class="px-4 py-2 text-sm text-green-600">简单优雅</td>
+                    <td class="px-4 py-2 text-sm text-red-600">复杂</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-700">Paxos轮数</td>
+                    <td class="px-4 py-2 text-sm text-green-600">租约专用优化</td>
+                    <td class="px-4 py-2 text-sm text-red-600">多轮连续Paxos</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="conclusion" class="content-section mobile-optimized mb-12 md:mb-16">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8 flex items-center">
+          <i class="fas fa-flag-checkered mr-3 text-blue-500"></i>
+          总结
+        </h2>
+        
+        <!-- 技术总结 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-graduation-cap mr-2 text-blue-500"></i>
+            核心要点总结
+          </h3>
+          
+          <div class="space-y-4">
+            <div class="flex items-start">
+              <div class="bg-green-100 p-2 rounded-full mr-3">
+                <i class="fas fa-check text-green-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-700 mb-1">解决了什么问题？</h4>
+                <p class="text-sm text-gray-600">分布式系统中安全、高效的租约协商，避免简单多数投票算法的阻塞问题。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="bg-blue-100 p-2 rounded-full mr-3">
+                <i class="fas fa-lightbulb text-blue-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-700 mb-1">关键创新是什么？</h4>
+                <p class="text-sm text-gray-600">利用租约的时间特性，移除了传统Paxos的磁盘写入和时钟同步要求。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="bg-purple-100 p-2 rounded-full mr-3">
+                <i class="fas fa-cogs text-purple-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-700 mb-1">如何工作的？</h4>
+                <p class="text-sm text-gray-600">两阶段协议：prepare阶段探路，propose阶段正式提议。利用时间流保证安全性。</p>
+              </div>
+            </div>
+            
+            <div class="flex items-start">
+              <div class="bg-red-100 p-2 rounded-full mr-3">
+                <i class="fas fa-balance-scale text-red-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-700 mb-1">优势 vs 劣势</h4>
+                <p class="text-sm text-gray-600">
+                  优势：无磁盘、无时钟同步、实现简单、内存消耗极低。<br>
+                  劣势：可能存在动态死锁、租约感知范围有限、不支持动态成员变更。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+            <h4 class="font-bold text-green-700 mb-2">教学启示</h4>
+            <p class="text-sm text-gray-700">
+              PaxosLease展示了如何针对特定应用场景（租约）优化通用算法（Paxos）。
+              通过深入理解问题特性（时间自动过期），可以移除不必要的复杂机制（磁盘持久化、时钟同步）。
+              这是一个"少即是多"的优秀案例：更简单的设计反而更适合实际生产环境。
+            </p>
+          </div>
+        </div>
+        
+        <!-- 实践应用 -->
+        <div class="bg-white p-6 rounded-lg border border-gray-200">
+          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-rocket mr-2 text-blue-500"></i>
+            实践应用
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-bold text-blue-700 mb-3">实际系统</h4>
+              <ul class="space-y-2">
+                <li class="flex items-center">
+                  <i class="fas fa-database text-blue-500 mr-2"></i>
+                  <div>
+                    <div class="font-medium text-gray-700">Keyspace</div>
+                    <div class="text-xs text-gray-500">复制键值存储</div>
+                  </div>
+                </li>
+                <li class="flex items-center">
+                  <i class="fas fa-database text-green-500 mr-2"></i>
+                  <div>
+                    <div class="font-medium text-gray-700">ScalienDB</div>
+                    <div class="text-xs text-gray-500">Keyspace的后继系统</div>
+                  </div>
+                </li>
+              </ul>
+              <div class="mt-4">
+                <a href="https://github.com/scalien/keyspace" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                  <i class="fab fa-github mr-2"></i> GitHub: scalien/keyspace
+                </a>
+                <a href="https://github.com/scalien/scaliendb" class="text-blue-600 hover:text-blue-800 text-sm flex items-center mt-1">
+                  <i class="fab fa-github mr-2"></i> GitHub: scalien/scaliendb
+                </a>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-bold text-green-700 mb-3">适用场景</h4>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+                <li>主节点选举和租约</li>
+                <li>分布式锁服务</li>
+                <li>工作分配协调</li>
+                <li>资源访问控制</li>
+                <li>细粒度分布式锁</li>
+              </ul>
+              <div class="mt-4 bg-white p-3 rounded border">
+                <p class="text-xs text-gray-600">
+                  许可证：AGPL v3.0<br>
+                  实现包含许多实践优化，适合学习和生产使用。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 bg-yellow-50 p-4 rounded-lg">
+            <h4 class="font-bold text-yellow-700 mb-2">给博士生的学习建议</h4>
+            <div class="space-y-3 text-sm text-gray-700">
+              <p>1. <strong>先理解简单多数投票算法的问题</strong>：理解为什么需要PaxosLease</p>
+              <p>2. <strong>掌握两阶段协议的核心思想</strong>：prepare探路，propose正式提议</p>
+              <p>3. <strong>重点理解时间流证明</strong>：为什么提议者先启动定时器就能保证安全性</p>
+              <p>4. <strong>对比传统Paxos和PaxosLease</strong>：理解移除了哪些复杂机制，为什么可以移除</p>
+              <p>5. <strong>运行示例代码</strong>：从GitHub下载实现，运行并观察算法行为</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <!-- 交互脚本 -->
+  <script>
+    // 智能导航和交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('section');
+      
+      function highlightNav() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (window.scrollY >= (sectionTop - 100)) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navItems.forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('href') === `#${current}`) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', highlightNav);
+      
+      // 平滑滚动
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href');
+          const targetSection = document.querySelector(targetId);
+          window.scrollTo({
+            top: targetSection.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        });
+      });
+      
+      // 初始化高亮
+      highlightNav();
+    });
+  </script>
+  
+  <!-- AI生成内容标识 -->
+  <div id="ai-badge" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; cursor: pointer;">
+    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;">
+      <span style="font-size: 16px;">🤖</span>
+      <span>AI生成内容</span>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      const badge = document.getElementById('ai-badge');
+      let expanded = false;
+      
+      badge.addEventListener('click', function() {
+        if (!expanded) {
+          const details = document.createElement('div');
+          details.id = 'ai-details';
+          details.style.cssText = "position:absolute;bottom:50px;right:0;background:white;color:#333;padding:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:200px;font-size:12px;line-height:1.5;border:1px solid #e5e7eb;";
+          details.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#6366f1">人工智能生成内容</div><div style="color:#666">本页面内容通过AI技术自动生成，仅供参考。生成时间：' + new Date().toLocaleDateString('zh-CN') + '</div>';
+          badge.appendChild(details);
+          expanded = true;
+        } else {
+          const details = document.getElementById('ai-details');
+          if (details) details.remove();
+          expanded = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

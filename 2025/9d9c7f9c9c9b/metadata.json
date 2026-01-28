@@ -1,0 +1,10 @@
+{
+  "id": "9d9c7f9c9c9b",
+  "title": "Why Language Models Hallucinate",
+  "authors": ["Adam Tauman Kalai", "Ohr Nachum", "Santosh S. Vempala", "Edwin Zhang"],
+  "year": 2025,
+  "conference": "arXiv",
+  "category": "自然语言处理",
+  "keywords": ["语言模型", "幻觉", "预训练", "后训练", "评估基准", "不确定性", "错误分析"],
+  "abstract": "Like students facing hard exam questions, large language models sometimes guess when uncertain, producing plausible yet incorrect statements instead of admitting uncertainty. Such \"hallucinations\" persist even in state-of-the-art systems and undermine trust. We argue that language models hallucinate because the training and evaluation procedures reward guessing over acknowledging uncertainty, and we analyze the statistical causes of hallucinations in the modern training pipeline. Hallucinations need not be mysterious--they originate simply as errors in binary classification. If incorrect statements cannot be distinguished from facts, then hallucinations in pretrained language models will arise through natural statistical pressures. We then argue that hallucinations persist due to the way most evaluations are graded--language models are optimized to be good test-takers, and guessing when uncertain improves test performance. This \"epidemic\" of penalizing uncertain responses can only be addressed through a socio-technical mitigation: modifying the scoring of existing benchmarks that are misaligned but dominate leaderboards, rather than introducing additional hallucination evaluations. This change may steer the field toward more trustworthy AI systems."
+}
